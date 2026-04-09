@@ -25,26 +25,33 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build koboe
-        run: ./gradlew :koboe:build
+      - name: Build klarinet
+        run: ./gradlew :klarinet:build
 
-      - name: Run koboe tests
-        run: ./gradlew :koboe:allTests
+      - name: Run klarinet tests
+        run: ./gradlew :klarinet:allTests
 
-      - name: Build koboe Android
-        run: ./gradlew :koboe:assembleDebug
+      - name: Build klarinet Android
+        run: ./gradlew :klarinet:assembleDebug
 
-      - name: Build koboe (iOS)
-        run: ./gradlew :koboe:compileKotlinIosSimulatorArm64
+      - name: Build klarinet (iOS)
+        run: ./gradlew :klarinet:compileKotlinIosSimulatorArm64
 
-      - name: Build koboe (macOS)
-        run: ./gradlew :koboe:compileKotlinMacosArm64
+      - name: Build klarinet (macOS)
+        run: ./gradlew :klarinet:compileKotlinMacosArm64
 
       - name: Build demo app
         run: ./gradlew :demo:assembleDebug
 
+      - name: Run C++ DSP tests
+        run: |
+          cd klarinet/src/cpp/dsp
+          cmake -B build -DKLARINET_DSP_BUILD_TESTS=ON
+          cmake --build build
+          cd build && ctest --output-on-failure
+
       - name: Run Darwin tests (iOS Simulator)
-        run: ./gradlew :koboe:iosSimulatorArm64Test
+        run: ./gradlew :klarinet:iosSimulatorArm64Test
         continue-on-error: true
 
   android-instrumented-tests:
@@ -72,5 +79,5 @@ jobs:
         with:
           api-level: 30
           arch: x86_64
-          script: ./gradlew :koboe:connectedDebugAndroidTest
+          script: ./gradlew :klarinet:connectedDebugAndroidTest
         continue-on-error: true

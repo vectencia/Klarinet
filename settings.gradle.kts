@@ -1,4 +1,4 @@
-rootProject.name = "koboe"
+rootProject.name = "klarinet"
 
 pluginManagement {
     repositories {
@@ -27,5 +27,5 @@ dependencyResolutionManagement {
     }
 }
 
-include(":koboe")
+include(":klarinet")
 include(":demo")

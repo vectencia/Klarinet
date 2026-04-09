@@ -1,0 +1,6 @@
+headers = klarinet_dsp.h
+headerFilter = klarinet_dsp.h
+compilerOpts = -I${KLARINET_DSP_INCLUDE_DIR}
+libraryPaths = ${KLARINET_DSP_LIB_DIR}
+staticLibraries = libklarinet-dsp.a
+linkerOpts = -lc++

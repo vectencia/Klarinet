@@ -1,27 +1,27 @@
-.PHONY: build koboe demo test test-koboe test-android test-ios test-all clean publish
+.PHONY: build klarinet demo test test-klarinet test-android test-ios test-all clean publish
 
 build:
 	./gradlew build
 
-koboe:
-	./gradlew :koboe:build
+klarinet:
+	./gradlew :klarinet:build
 
 demo:
 	./gradlew :demo:assembleDebug
 
-test: test-koboe
+test: test-klarinet
 
-test-koboe:
-	./gradlew :koboe:allTests
+test-klarinet:
+	./gradlew :klarinet:allTests
 
 test-android:
-	./gradlew :koboe:connectedDebugAndroidTest
+	./gradlew :klarinet:connectedDebugAndroidTest
 
 test-ios:
-	./gradlew :koboe:iosSimulatorArm64Test
+	./gradlew :klarinet:iosSimulatorArm64Test
 
 test-all:
-	./gradlew :koboe:allTests :koboe:iosSimulatorArm64Test
+	./gradlew :klarinet:allTests :klarinet:iosSimulatorArm64Test
 
 clean:
 	./gradlew clean

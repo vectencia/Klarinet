@@ -38,7 +38,7 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
-            implementation(project(":koboe"))
+            implementation(project(":klarinet"))
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -47,11 +47,11 @@ kotlin {
 }
 
 android {
-    namespace = "com.vectencia.koboe.demo"
+    namespace = "com.vectencia.klarinet.demo"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "com.vectencia.koboe.demo"
+        applicationId = "com.vectencia.klarinet.demo"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1

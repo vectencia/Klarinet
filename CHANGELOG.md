@@ -9,25 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `AudioFileReader` for decoding WAV, MP3, AAC, M4A files to PCM buffers
-- `AudioFileWriter` for encoding PCM buffers to WAV, AAC, M4A files
-- `AudioFileInfo` and `AudioFileTags` for file metadata and tag reading/writing
-- `AudioEngine.playFile()` convenience extension for file playback
-- `AudioEngine.recordToFile()` convenience extension for recording to file
-- `AudioFileFormat` enum (WAV, MP3, AAC, M4A)
-- `UnsupportedFormatException` and `AudioFileException` error types
-- File Player screen in demo app
-- **koboe**: Common audio API with `AudioEngine`, `AudioPlayer`, `AudioRecorder`, and `AudioFormat`
-- **koboe**: `AudioBuffer` for efficient sample data management
-- **koboe**: `AudioState` and `AudioException` for consistent state management and error handling
-- **koboe**: Sample rate, channel count, and bit depth configuration
-- **koboe**: Android implementation using `AudioTrack` and `AudioRecord`
-- **koboe**: Low-latency playback support via performance mode hints
-- **koboe**: iOS/iPadOS implementation using AVAudioEngine
-- **koboe**: macOS implementation using AVAudioEngine
-- **koboe**: tvOS target support
-- **koboe**: Audio session category and routing configuration
-- **demo**: Demo application with playback and recording examples
+- **klarinet**: Real-time audio effects via shared C++ DSP core with 16 built-in effects
+- **klarinet**: `AudioEffect` and `AudioEffectChain` with hot-swap support (add/remove/reorder while streaming)
+- **klarinet**: Built-in effects: Gain, Pan, Mute/Solo, Compressor, Limiter, NoiseGate, ParametricEQ (8-band), LowPassFilter, HighPassFilter, BandPassFilter, Delay, Reverb (Freeverb), Chorus, Flanger, Phaser, Tremolo
+- **klarinet**: Lock-free parameter updates via `std::atomic` and SPSC ring buffer for batch changes
+- **klarinet**: C++ DSP primitives: Biquad (IIR filter), CircularBuffer, LFO, EnvelopeFollower
+- **klarinet**: `EffectFactory` and C API (`klarinet_dsp.h`) for Kotlin/Native cinterop
+- **klarinet**: `AudioEffectType` enum, parameter ID constants for all effects
+- **demo**: Effects Demo screen with real-time effect chain manipulation
+- **klarinet**: Common audio API with `AudioEngine`, `AudioStream`, `AudioStreamConfig`, and `AudioStreamCallback`
+- **klarinet**: `AudioDeviceInfo` for device enumeration and `LatencyInfo` for latency measurement
+- **klarinet**: `StreamState` and `KlarinetException` hierarchy for consistent state management and error handling
+- **klarinet**: `AudioFormat` (PCM_FLOAT, PCM_I16, PCM_I24, PCM_I32), `PerformanceMode`, `SharingMode`, `StreamDirection` enums
+- **klarinet**: Sample rate, channel count, and buffer capacity configuration via `AudioStreamConfig`
+- **klarinet**: Android implementation using Google Oboe (AAudio / OpenSL ES) via JNI/C++
+- **klarinet**: Low-latency playback and recording with callback and blocking I/O modes
+- **klarinet**: iOS/iPadOS implementation using AVAudioEngine
+- **klarinet**: macOS implementation using AVAudioEngine
+- **klarinet**: tvOS target support
+- **klarinet**: `AudioSessionManager` with category and mode configuration (Apple platforms)
+- **klarinet**: Audio route change notifications via `AudioRouteChangeInfo`
+- **klarinet**: `AudioFileReader` for decoding WAV, MP3, AAC, M4A files to PCM buffers
+- **klarinet**: `AudioFileWriter` for encoding PCM buffers to WAV, AAC, M4A files
+- **klarinet**: `AudioFileInfo` and `AudioFileTags` for file metadata and tag reading
+- **klarinet**: `AudioEngine.playFile()` convenience extension for file playback
+- **klarinet**: `AudioEngine.recordToFile()` convenience extension for recording to file
+- **klarinet**: `AudioFileFormat` enum (WAV, MP3, AAC, M4A)
+- **klarinet**: `UnsupportedFormatException` and `AudioFileException` error types
+- **demo**: Demo application with Tone Generator, Mic Meter, Latency Benchmark, and File Player screens
 - CI workflow with GitHub Actions (build, test across platforms)
 - Release workflow for Maven Central publishing
 - Dependabot configuration for dependency updates

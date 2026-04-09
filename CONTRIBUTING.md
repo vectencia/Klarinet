@@ -1,6 +1,6 @@
-# Contributing to Koboe
+# Contributing to Klarinet
 
-Thank you for your interest in contributing to Koboe! This document provides guidelines and instructions for contributing.
+Thank you for your interest in contributing to Klarinet! This document provides guidelines and instructions for contributing.
 
 ## Development Setup
 
@@ -14,8 +14,8 @@ Thank you for your interest in contributing to Koboe! This document provides gui
 ### Clone and Build
 
 ```bash
-git clone https://github.com/vectencia/koboe.git
-cd koboe
+git clone https://github.com/vectencia/klarinet.git
+cd klarinet
 ```
 
 ## Build Commands
@@ -29,10 +29,10 @@ Build all modules:
 Build individual modules:
 
 ```bash
-./gradlew :koboe:build
-./gradlew :koboe:assembleDebug
-./gradlew :koboe:compileKotlinIosSimulatorArm64
-./gradlew :koboe:compileKotlinMacosArm64
+./gradlew :klarinet:build
+./gradlew :klarinet:assembleDebug
+./gradlew :klarinet:compileKotlinIosSimulatorArm64
+./gradlew :klarinet:compileKotlinMacosArm64
 ./gradlew :demo:assembleDebug
 ```
 
@@ -41,32 +41,48 @@ Build individual modules:
 Run all common tests:
 
 ```bash
-./gradlew :koboe:allTests
+./gradlew :klarinet:allTests
 ```
 
 Run Android instrumented tests (requires emulator or device):
 
 ```bash
-./gradlew :koboe:connectedDebugAndroidTest
+./gradlew :klarinet:connectedDebugAndroidTest
 ```
 
 Run iOS simulator tests (macOS only):
 
 ```bash
-./gradlew :koboe:iosSimulatorArm64Test
+./gradlew :klarinet:iosSimulatorArm64Test
 ```
 
 Run all tests:
 
 ```bash
-./gradlew :koboe:allTests :koboe:iosSimulatorArm64Test
+./gradlew :klarinet:allTests :klarinet:iosSimulatorArm64Test
 ```
+
+## Makefile Shortcuts
+
+The project includes a `Makefile` for common commands:
+
+| Command | Description |
+|---|---|
+| `make build` | Build all modules |
+| `make klarinet` | Build the library only |
+| `make demo` | Build the demo app (Android) |
+| `make test` | Run common tests |
+| `make test-android` | Run Android instrumented tests |
+| `make test-ios` | Run iOS simulator tests |
+| `make test-all` | Run all tests across platforms |
+| `make clean` | Clean build artifacts |
+| `make publish` | Publish to Maven Central |
 
 ## Project Structure
 
 | Module | Description |
 |---|---|
-| `koboe` | KMP audio SDK: common API + Android and Apple backends |
+| `klarinet` | KMP audio SDK: common API + Android and Apple backends |
 | `demo` | Demo application |
 
 ## Pull Request Guidelines
@@ -78,7 +94,7 @@ Run all tests:
 5. **Update documentation** if your change affects the public API.
 6. **Run tests locally** before submitting:
    ```bash
-   ./gradlew :koboe:allTests
+   ./gradlew :klarinet:allTests
    ```
 7. **Write a clear PR description** explaining what changed and why.
 
@@ -98,4 +114,4 @@ Use clear, descriptive commit messages. Prefer the imperative mood:
 
 ## License
 
-By contributing to Koboe, you agree that your contributions will be licensed under the [Apache License 2.0](LICENSE).
+By contributing to Klarinet, you agree that your contributions will be licensed under the [Apache License 2.0](LICENSE).

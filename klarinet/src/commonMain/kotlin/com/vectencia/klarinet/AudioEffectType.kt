@@ -1,0 +1,9 @@
+package com.vectencia.klarinet
+
+enum class AudioEffectType {
+    GAIN, PAN, MUTE_SOLO,
+    COMPRESSOR, LIMITER, NOISE_GATE,
+    PARAMETRIC_EQ, LOW_PASS_FILTER, HIGH_PASS_FILTER, BAND_PASS_FILTER,
+    DELAY, REVERB,
+    CHORUS, FLANGER, PHASER, TREMOLO,
+}

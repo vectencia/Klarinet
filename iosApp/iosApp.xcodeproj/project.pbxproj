@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		EF06EE9C1982E5935E81FBF9 /* koboe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = koboe.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EF06EE9C1982E5935E81FBF9 /* klarinet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = klarinet.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -59,7 +59,7 @@
 		A5C93C17B2C56ABD3C9F925F /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				EF06EE9C1982E5935E81FBF9 /* koboe.app */,
+				EF06EE9C1982E5935E81FBF9 /* klarinet.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -87,7 +87,7 @@
 			packageProductDependencies = (
 			);
 			productName = iosApp;
-			productReference = EF06EE9C1982E5935E81FBF9 /* koboe.app */;
+			productReference = EF06EE9C1982E5935E81FBF9 /* klarinet.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */

@@ -1,20 +1,20 @@
-# Koboe
+# Klarinet
 
-[![CI](https://github.com/vectencia/koboe/actions/workflows/ci.yml/badge.svg)](https://github.com/vectencia/koboe/actions/workflows/ci.yml)
-[![Maven Central](https://img.shields.io/maven-central/v/com.vectencia.koboe/koboe)](https://central.sonatype.com/namespace/com.vectencia.koboe)
+[![CI](https://github.com/vectencia/klarinet/actions/workflows/ci.yml/badge.svg)](https://github.com/vectencia/klarinet/actions/workflows/ci.yml)
+[![Maven Central](https://img.shields.io/maven-central/v/com.vectencia.klarinet/klarinet)](https://central.sonatype.com/namespace/com.vectencia.klarinet)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-**Koboe** is a Kotlin Multiplatform audio library that provides a unified API for low-latency audio playback and recording across Android and Apple platforms. It bridges platform-native audio engines behind a single, idiomatic Kotlin API so you can write audio code once and run it everywhere.
+**Klarinet** is a Kotlin Multiplatform audio library that provides a unified API for low-latency audio playback and recording across Android and Apple platforms. It bridges platform-native audio engines behind a single, idiomatic Kotlin API so you can write audio code once and run it everywhere.
 
-## Why Koboe?
+## Why Klarinet?
 
-Writing cross-platform audio code today means maintaining separate implementations for Android (AudioTrack/Oboe) and Apple (AVAudioEngine/Core Audio), each with different threading models, buffer management, and lifecycle semantics. Koboe eliminates this duplication with a common API that delegates to the best native backend on each platform, while preserving low-latency characteristics and real-time safety.
+Writing cross-platform audio code today means maintaining separate implementations for Android (AudioTrack/Oboe) and Apple (AVAudioEngine/Core Audio), each with different threading models, buffer management, and lifecycle semantics. Klarinet eliminates this duplication with a common API that delegates to the best native backend on each platform, while preserving low-latency characteristics and real-time safety.
 
 ## Supported Platforms
 
 | Platform | Backend | Status |
 |---|---|---|
-| Android (API 24+) | AudioTrack / AudioRecord | Supported |
+| Android (API 24+) | Google Oboe (AAudio / OpenSL ES) | Supported |
 | iOS / iPadOS | AVAudioEngine | Supported |
 | macOS | AVAudioEngine | Supported |
 | tvOS | AVAudioEngine | Supported |
@@ -35,7 +35,7 @@ repositories {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("com.vectencia.koboe:koboe:1.0.0")
+            implementation("com.vectencia.klarinet:klarinet:0.0.1")
         }
     }
 }
@@ -46,7 +46,7 @@ kotlin {
 ### Playback (Sine Wave)
 
 ```kotlin
-import com.vectencia.koboe.*
+import com.vectencia.klarinet.*
 import kotlin.math.sin
 
 val engine = AudioEngine.create()
@@ -86,7 +86,7 @@ engine.release()
 ### Recording
 
 ```kotlin
-import com.vectencia.koboe.*
+import com.vectencia.klarinet.*
 
 val engine = AudioEngine.create()
 
@@ -114,7 +114,7 @@ engine.release()
 #### Reading file metadata and tags
 
 ```kotlin
-import com.vectencia.koboe.*
+import com.vectencia.klarinet.*
 
 val reader = AudioFileReader("/path/to/song.mp3")
 val info = reader.info
@@ -136,7 +136,7 @@ reader.close()
 #### Decoding a file to PCM
 
 ```kotlin
-import com.vectencia.koboe.*
+import com.vectencia.klarinet.*
 
 val reader = AudioFileReader("/path/to/audio.wav")
 
@@ -156,7 +156,7 @@ reader.close()
 #### Playing a file with AudioEngine.playFile()
 
 ```kotlin
-import com.vectencia.koboe.*
+import com.vectencia.klarinet.*
 
 val engine = AudioEngine.create()
 val stream = engine.playFile("/path/to/song.mp3")
@@ -170,7 +170,7 @@ engine.release()
 #### Recording to file with AudioEngine.recordToFile()
 
 ```kotlin
-import com.vectencia.koboe.*
+import com.vectencia.klarinet.*
 
 val engine = AudioEngine.create()
 val stream = engine.recordToFile(
@@ -184,27 +184,63 @@ stream.close()
 engine.release()
 ```
 
+### Audio Effects
+
+```kotlin
+import com.vectencia.klarinet.*
+
+val engine = AudioEngine.create()
+
+// Create effects
+val reverb = engine.createEffect(AudioEffectType.REVERB)
+reverb.setParameter(ReverbParams.ROOM_SIZE, 0.7f)
+reverb.setParameter(ReverbParams.WET_DRY_MIX, 0.3f)
+
+val compressor = engine.createEffect(AudioEffectType.COMPRESSOR)
+compressor.setParameter(CompressorParams.THRESHOLD, -20f)
+compressor.setParameter(CompressorParams.RATIO, 4f)
+
+// Build an effect chain
+val chain = engine.createEffectChain()
+chain.add(compressor)
+chain.add(reverb)
+
+// Attach to a stream
+val stream = engine.openStream(config, callback)
+stream.effectChain = chain
+stream.start()
+
+// Update parameters in real-time (lock-free)
+reverb.setParameter(ReverbParams.WET_DRY_MIX, 0.6f)
+
+// Hot-swap: add/remove effects while playing
+chain.add(engine.createEffect(AudioEffectType.DELAY))
+chain.remove(compressor)
+
+stream.stop()
+stream.close()
+engine.release()
+```
+
 ## Architecture
 
 ```mermaid
 graph TD
-    A[Your App] --> B[koboe]
-    B --> C[AudioTrack / AudioRecord]
+    A[Your App] --> B[klarinet]
+    B --> C[Oboe / AAudio / OpenSL ES]
     B --> D[AVAudioEngine / Core Audio]
 ```
 
-**koboe** is a single Kotlin Multiplatform module that defines the common API (`AudioEngine`, `AudioStream`, `AudioStreamConfig`, `AudioStreamCallback`) as `expect` declarations in `commonMain`, with `actual` implementations in `androidMain` (backed by AudioTrack/AudioRecord + Oboe JNI) and `appleMain` (backed by AVAudioEngine).
+**klarinet** is a single Kotlin Multiplatform module that defines the common API (`AudioEngine`, `AudioStream`, `AudioStreamConfig`, `AudioStreamCallback`) as `expect` declarations in `commonMain`, with `actual` implementations in `androidMain` (backed by Google Oboe via JNI/C++) and `appleMain` (backed by AVAudioEngine).
 
 ## Modules
 
 | Module | Artifact | Description |
 |---|---|---|
-| `koboe` | `com.vectencia.koboe:koboe` | KMP audio SDK: common API + Android and Apple backends |
+| `klarinet` | `com.vectencia.klarinet:klarinet` | KMP audio SDK: common API + Android and Apple backends |
 | `demo` | -- | Demo app with playback and recording examples |
 
-## v1.0.0 Scope
-
-### Included
+## Features
 
 - Playback and recording streams with callback and blocking I/O modes
 - Low-latency performance mode
@@ -215,13 +251,20 @@ graph TD
 - Stream state lifecycle with error callbacks
 - Latency measurement via `LatencyInfo`
 - Audio route change notifications
-- Android: API 24+ support
-- Apple: iOS, iPadOS, macOS, tvOS support
+- Audio file I/O: decode (WAV, MP3, AAC, M4A) and encode (WAV, AAC, M4A) via `AudioFileReader` / `AudioFileWriter`
+- Convenience extensions: `AudioEngine.playFile()` and `AudioEngine.recordToFile()`
+- File metadata and tag reading via `AudioFileInfo` / `AudioFileTags`
+- Real-time audio effects via shared C++ DSP core: 16 built-in effects (Gain, Pan, Compressor, Limiter, NoiseGate, ParametricEQ, LPF, HPF, BPF, Delay, Reverb, Chorus, Flanger, Phaser, Tremolo, Mute/Solo)
+- `AudioEffectChain` with hot-swap support (add/remove/reorder effects while streaming)
+- Lock-free parameter updates via atomics and ring buffer for batch changes
+- Kotlin DSL control plane with `AudioEffect`, `AudioEffectChain`, and parameter constants
+- Android: API 24+ with Google Oboe (AAudio / OpenSL ES) via JNI/C++
+- Apple: iOS, iPadOS, macOS, tvOS via AVAudioEngine
 
 ### Not Included (Future)
 
-- Audio effects / DSP processing chain
-- Audio file I/O (WAV, MP3, etc.)
+- Node graph topology (effects use linear chain for now)
+- Sidechain input
 - MIDI support
 - Desktop JVM (Windows, Linux) targets
 - Web (Kotlin/JS, Kotlin/Wasm) targets
