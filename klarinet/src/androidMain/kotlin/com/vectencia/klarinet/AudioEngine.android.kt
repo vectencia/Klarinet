@@ -17,6 +17,35 @@ actual class AudioEngine private constructor() {
 
     actual fun openStream(config: AudioStreamConfig, callback: AudioStreamCallback?): AudioStream {
         check(engineHandle != 0L) { "AudioEngine has been released" }
+        val stream = AudioStream(config)
+
+        val wrappedCallback = if (callback != null) {
+            object : AudioStreamCallback {
+                override fun onAudioReady(buffer: FloatArray, numFrames: Int): Int {
+                    val result = callback.onAudioReady(buffer, numFrames)
+                    var peak = 0f
+                    for (i in buffer.indices) {
+                        val abs = if (buffer[i] >= 0f) buffer[i] else -buffer[i]
+                        if (abs > peak) peak = abs
+                    }
+                    stream.peakLevelAtomic.set(peak)
+                    return result
+                }
+
+                override fun onStreamStateChanged(stream: AudioStream, state: StreamState) {
+                    callback.onStreamStateChanged(stream, state)
+                }
+
+                override fun onStreamError(stream: AudioStream, error: KlarinetException) {
+                    callback.onStreamError(stream, error)
+                }
+
+                override fun onStreamUnderrun(stream: AudioStream, count: Int) {
+                    callback.onStreamUnderrun(stream, count)
+                }
+            }
+        } else null
+
         val streamHandle = JniBridge.nativeOpenStream(
             engineHandle = engineHandle,
             sampleRate = config.sampleRate,
@@ -26,12 +55,11 @@ actual class AudioEngine private constructor() {
             performanceMode = config.performanceMode.ordinal,
             sharingMode = config.sharingMode.ordinal,
             direction = config.direction.ordinal,
-            callbackObj = callback,
+            callbackObj = wrappedCallback,
         )
         if (streamHandle == 0L) {
             throw StreamCreationException("Failed to open native audio stream")
         }
-        val stream = AudioStream(config)
         stream.streamHandle = streamHandle
         streams.add(stream)
         return stream

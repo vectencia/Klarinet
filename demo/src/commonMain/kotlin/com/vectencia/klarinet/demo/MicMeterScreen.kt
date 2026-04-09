@@ -15,6 +15,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,25 +31,36 @@ import com.vectencia.klarinet.AudioStream
 import com.vectencia.klarinet.AudioStreamCallback
 import com.vectencia.klarinet.AudioStreamConfig
 import com.vectencia.klarinet.StreamDirection
-import kotlin.math.abs
+import com.vectencia.klarinet.coroutines.levelFlow
+
+/** Holds native resources outside Compose State so cleanup is reliable. */
+private class MicResources {
+    var engine: AudioEngine? = null
+    var stream: AudioStream? = null
+
+    fun release() {
+        try {
+            stream?.stop()
+            stream?.close()
+        } catch (_: Exception) {}
+        try {
+            engine?.release()
+        } catch (_: Exception) {}
+        stream = null
+        engine = null
+    }
+}
 
 @Composable
 fun MicMeterScreen() {
     var isRecording by remember { mutableStateOf(false) }
     var level by remember { mutableStateOf(0f) }
     var inputLatency by remember { mutableStateOf("--") }
-    var engine by remember { mutableStateOf<AudioEngine?>(null) }
-    var stream by remember { mutableStateOf<AudioStream?>(null) }
+    val resources = remember { MicResources() }
 
     DisposableEffect(Unit) {
         onDispose {
-            try {
-                stream?.stop()
-                stream?.close()
-            } catch (_: Exception) {}
-            try {
-                engine?.release()
-            } catch (_: Exception) {}
+            resources.release()
         }
     }
 
@@ -98,7 +110,7 @@ fun MicMeterScreen() {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text("Peak: ${(level * 100).toInt()}%", fontSize = 14.sp)
+                Text("Peak: ${(level * 100).toInt()}% (raw: ${"%.4f".format(level)})", fontSize = 14.sp)
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -111,34 +123,16 @@ fun MicMeterScreen() {
         Button(
             onClick = {
                 if (isRecording) {
-                    // Stop
-                    try {
-                        stream?.stop()
-                        stream?.close()
-                    } catch (_: Exception) {}
-                    try {
-                        engine?.release()
-                    } catch (_: Exception) {}
-                    stream = null
-                    engine = null
+                    resources.release()
                     isRecording = false
                     level = 0f
                 } else {
-                    // Record
                     try {
                         val newEngine = AudioEngine.create()
-                        engine = newEngine
+                        resources.engine = newEngine
 
                         val callback = object : AudioStreamCallback {
                             override fun onAudioReady(buffer: FloatArray, numFrames: Int): Int {
-                                var peak = 0f
-                                for (i in 0 until numFrames) {
-                                    val sample = abs(buffer[i])
-                                    if (sample > peak) {
-                                        peak = sample
-                                    }
-                                }
-                                level = peak
                                 return numFrames
                             }
                         }
@@ -149,7 +143,7 @@ fun MicMeterScreen() {
                         )
 
                         val newStream = newEngine.openStream(config, callback)
-                        stream = newStream
+                        resources.stream = newStream
                         newStream.start()
                         isRecording = true
 
@@ -164,6 +158,15 @@ fun MicMeterScreen() {
             },
         ) {
             Text(if (isRecording) "Stop" else "Record")
+        }
+
+        val currentStream = resources.stream
+        if (isRecording && currentStream != null) {
+            LaunchedEffect(currentStream) {
+                currentStream.levelFlow(intervalMs = 50L).collect { peakLevel ->
+                    level = peakLevel
+                }
+            }
         }
     }
 }

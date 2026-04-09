@@ -28,4 +28,5 @@ dependencyResolutionManagement {
 }
 
 include(":klarinet")
+include(":klarinet-coroutines")
 include(":demo")

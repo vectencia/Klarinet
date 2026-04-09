@@ -87,6 +87,13 @@ actual class AudioStream internal constructor(
                 val buffer = FloatArray(totalSamples)
                 cb.onAudioReady(buffer, numFrames)
 
+                var peak = 0f
+                for (i in buffer.indices) {
+                    val abs = if (buffer[i] >= 0f) buffer[i] else -buffer[i]
+                    if (abs > peak) peak = abs
+                }
+                stream.peakLevelAtomic.set(peak)
+
                 // Copy Kotlin FloatArray into Core Audio buffer.
                 // AudioBufferList.mBuffers is the first AudioBuffer (flexible array member).
                 // Access the mData pointer from it.
@@ -153,6 +160,13 @@ actual class AudioStream internal constructor(
             }
 
             callback.onAudioReady(audioData, frameLength)
+
+            var peakLevel = 0f
+            for (i in audioData.indices) {
+                val abs = if (audioData[i] >= 0f) audioData[i] else -audioData[i]
+                if (abs > peakLevel) peakLevel = abs
+            }
+            peakLevelAtomic.set(peakLevel)
         }
     }
 
@@ -257,4 +271,8 @@ actual class AudioStream internal constructor(
     }
 
     actual var effectChain: AudioEffectChain? = null
+
+    actual val peakLevel: Float get() = peakLevelAtomic.get()
+
+    internal actual val peakLevelAtomic = AtomicFloat(0f)
 }

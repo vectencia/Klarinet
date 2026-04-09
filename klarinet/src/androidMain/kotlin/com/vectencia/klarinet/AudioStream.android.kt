@@ -63,4 +63,8 @@ actual class AudioStream internal constructor(actual val config: AudioStreamConf
             }
             field = value
         }
+
+    actual val peakLevel: Float get() = peakLevelAtomic.get()
+
+    internal actual val peakLevelAtomic = AtomicFloat(0f)
 }

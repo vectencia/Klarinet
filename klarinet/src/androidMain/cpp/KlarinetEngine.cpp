@@ -40,11 +40,10 @@ jlong KlarinetEngine::openStream(
 
     if (sampleRate > 0) {
         builder.setSampleRate(sampleRate);
-        // Enable sample rate conversion so Oboe resamples if the device
-        // native rate differs from the requested rate (e.g., file at 22050 Hz,
-        // device at 48000 Hz). Without this, audio plays at the wrong speed.
         builder.setSampleRateConversionQuality(
             oboe::SampleRateConversionQuality::Medium);
+        builder.setChannelConversionAllowed(true);
+        builder.setFormatConversionAllowed(true);
     }
 
     if (bufferCapacityInFrames > 0) {

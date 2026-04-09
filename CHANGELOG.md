@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **klarinet-coroutines**: Optional Kotlin Coroutines extensions module
+- **klarinet-coroutines**: `AudioStream.stateFlow` and `awaitState()` for reactive state observation
+- **klarinet-coroutines**: `AudioStream.levelFlow()` for real-time audio level metering via Flow
+- **klarinet-coroutines**: `AudioFileReader.readAllSuspend()` and `readFramesSuspend()` for async file I/O
+- **klarinet-coroutines**: `AudioFileReader.asFlow()` for streaming decoded audio as Flow
+- **klarinet**: `AudioStream.peakLevel` property for lock-free audio level reading
 - **klarinet**: Real-time audio effects via shared C++ DSP core with 16 built-in effects
 - **klarinet**: `AudioEffect` and `AudioEffectChain` with hot-swap support (add/remove/reorder while streaming)
 - **klarinet**: Built-in effects: Gain, Pan, Mute/Solo, Compressor, Limiter, NoiseGate, ParametricEQ (8-band), LowPassFilter, HighPassFilter, BandPassFilter, Delay, Reverb (Freeverb), Chorus, Flanger, Phaser, Tremolo

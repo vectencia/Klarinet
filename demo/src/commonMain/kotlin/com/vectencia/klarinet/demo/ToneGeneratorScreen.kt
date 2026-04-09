@@ -16,6 +16,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,14 +41,17 @@ fun ToneGeneratorScreen() {
     // Phase accumulator shared with the callback — must be mutable outside the callback
     val phase = remember { floatArrayOf(0f) }
 
+    val currentStream by rememberUpdatedState(stream)
+    val currentEngine by rememberUpdatedState(engine)
+
     DisposableEffect(Unit) {
         onDispose {
             try {
-                stream?.stop()
-                stream?.close()
+                currentStream?.stop()
+                currentStream?.close()
             } catch (_: Exception) {}
             try {
-                engine?.release()
+                currentEngine?.release()
             } catch (_: Exception) {}
         }
     }

@@ -103,4 +103,14 @@ expect class AudioStream {
      * pipeline. Setting it to null detaches the current chain.
      */
     var effectChain: AudioEffectChain?
+
+    /**
+     * Current peak audio level from the last callback buffer.
+     * This is primarily intended for use by klarinet-coroutines module.
+     * Values range from 0.0 (silence) to 1.0 (full scale).
+     */
+    val peakLevel: Float
+
+    /** Internal peak level written by audio callback, read by klarinet-coroutines. */
+    internal val peakLevelAtomic: AtomicFloat
 }

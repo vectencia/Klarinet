@@ -222,6 +222,42 @@ stream.close()
 engine.release()
 ```
 
+### Coroutines Extensions (Optional)
+
+Add the optional coroutines module for Flow-based observation and suspending file I/O:
+
+```kotlin
+// build.gradle.kts
+commonMain.dependencies {
+    implementation("com.vectencia.klarinet:klarinet-coroutines:0.0.1")
+}
+```
+
+```kotlin
+import com.vectencia.klarinet.coroutines.*
+
+// Observe stream state as Flow
+stream.stateFlow.collect { state ->
+    println("Stream state: $state")
+}
+
+// Real-time level metering (20 updates/sec)
+stream.levelFlow().collect { level ->
+    // Update VU meter (0.0 to 1.0)
+}
+
+// Suspend until stream reaches a state
+stream.awaitState(StreamState.STARTED)
+
+// Async file I/O on Dispatchers.IO
+val samples = reader.readAllSuspend()
+
+// Stream decoded audio as Flow
+reader.asFlow(chunkSize = 4096).collect { chunk ->
+    // Process chunk
+}
+```
+
 ## Architecture
 
 ```mermaid
@@ -238,6 +274,7 @@ graph TD
 | Module | Artifact | Description |
 |---|---|---|
 | `klarinet` | `com.vectencia.klarinet:klarinet` | KMP audio SDK: common API + Android and Apple backends |
+| `klarinet-coroutines` | `com.vectencia.klarinet:klarinet-coroutines` | Optional Kotlin Coroutines extensions |
 | `demo` | -- | Demo app with playback and recording examples |
 
 ## Features
