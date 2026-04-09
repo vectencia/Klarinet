@@ -1,49 +1,81 @@
-# Klarinet
+<p align="center">
+  <img src="img/klarinet-logo.png" alt="Klarinet" width="600">
+</p>
 
-[![CI](https://github.com/vectencia/klarinet/actions/workflows/ci.yml/badge.svg)](https://github.com/vectencia/klarinet/actions/workflows/ci.yml)
-[![Maven Central](https://img.shields.io/maven-central/v/com.vectencia.klarinet/klarinet)](https://central.sonatype.com/namespace/com.vectencia.klarinet)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+<p align="center">
+  <strong>Low-latency audio SDK for Kotlin Multiplatform</strong>
+</p>
 
-**Klarinet** is a Kotlin Multiplatform audio library that provides a unified API for low-latency audio playback and recording across Android and Apple platforms. It bridges platform-native audio engines behind a single, idiomatic Kotlin API so you can write audio code once and run it everywhere.
+<p align="center">
+  <a href="https://github.com/vectencia/klarinet/actions/workflows/ci.yml"><img src="https://github.com/vectencia/klarinet/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://central.sonatype.com/namespace/com.vectencia.klarinet"><img src="https://img.shields.io/maven-central/v/com.vectencia.klarinet/klarinet" alt="Maven Central"></a>
+  <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a>
+  <a href="https://kotlinlang.org"><img src="https://img.shields.io/badge/Kotlin-2.3.20-7F52FF.svg?logo=kotlin" alt="Kotlin"></a>
+</p>
 
-## Why Klarinet?
+---
 
-Writing cross-platform audio code today means maintaining separate implementations for Android (AudioTrack/Oboe) and Apple (AVAudioEngine/Core Audio), each with different threading models, buffer management, and lifecycle semantics. Klarinet eliminates this duplication with a common API that delegates to the best native backend on each platform, while preserving low-latency characteristics and real-time safety.
+**Klarinet** is an open-source Kotlin Multiplatform audio library that provides a unified, idiomatic API for low-latency audio playback, recording, file I/O, and real-time effects processing across Android and Apple platforms.
+
+Write your audio code once in Kotlin. Klarinet delegates to the best native backend on each platform — Google Oboe on Android, AVAudioEngine on Apple — while preserving low-latency characteristics and real-time safety.
+
+## Highlights
+
+- **One API, every platform** --- Common Kotlin API with native performance on Android and Apple
+- **Low-latency by default** --- Google Oboe (AAudio/OpenSL ES) on Android, AVAudioEngine on Apple
+- **16 built-in audio effects** --- Gain, EQ, Compressor, Reverb, Delay, Chorus, and more --- powered by a shared C++ DSP core
+- **Hot-swappable effect chains** --- Add, remove, and reorder effects while audio is streaming
+- **File I/O** --- Decode and encode WAV, MP3, AAC, M4A with metadata reading
+- **Coroutines support** --- Optional `klarinet-coroutines` module with Flow-based metering and async I/O
+- **SwiftUI ready** --- Use directly from native Swift/SwiftUI apps via Kotlin/Native framework export
 
 ## Supported Platforms
 
-| Platform | Backend | Status |
+| Platform | Backend | Min Version |
 |---|---|---|
-| Android (API 24+) | Google Oboe (AAudio / OpenSL ES) | Supported |
-| iOS / iPadOS | AVAudioEngine | Supported |
-| macOS | AVAudioEngine | Supported |
-| tvOS | AVAudioEngine | Supported |
+| Android | Google Oboe (AAudio / OpenSL ES) | API 24 |
+| iOS / iPadOS | AVAudioEngine | iOS 15+ |
+| macOS | AVAudioEngine | macOS 12+ |
+| tvOS | AVAudioEngine | tvOS 15+ |
 
-## Setup
+## Installation
 
-Add the dependency to your KMP module:
+### Kotlin Multiplatform (Compose Multiplatform / KMP)
 
 ```kotlin
-// settings.gradle.kts or build.gradle.kts repositories
+// build.gradle.kts
 repositories {
     mavenCentral()
 }
-```
 
-```kotlin
-// shared/build.gradle.kts
 kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation("com.vectencia.klarinet:klarinet:0.0.1")
+
+            // Optional: Coroutines extensions
+            implementation("com.vectencia.klarinet:klarinet-coroutines:0.0.1")
         }
     }
 }
 ```
 
+### Native iOS / SwiftUI
+
+Klarinet exports a Kotlin/Native framework that Swift can import directly:
+
+```swift
+import Klarinet
+
+let engine = AudioEngine.companion.create()
+// ... use the full Klarinet API from Swift
+```
+
+See the [SwiftUI Demo](#demo-app) for a complete example.
+
 ## Quick Start
 
-### Playback (Sine Wave)
+### Playback --- Sine Wave Generator
 
 ```kotlin
 import com.vectencia.klarinet.*
@@ -51,15 +83,12 @@ import kotlin.math.sin
 
 val engine = AudioEngine.create()
 
-// Generate a 440 Hz sine wave via callback
 val callback = object : AudioStreamCallback {
     private var phase = 0.0
-    private val frequency = 440.0
 
     override fun onAudioReady(buffer: FloatArray, numFrames: Int): Int {
-        val sampleRate = 48000.0
         for (i in 0 until numFrames) {
-            buffer[i] = sin(2.0 * Math.PI * frequency * phase / sampleRate).toFloat()
+            buffer[i] = sin(2.0 * Math.PI * 440.0 * phase / 48000.0).toFloat()
             phase += 1.0
         }
         return numFrames
@@ -83,11 +112,9 @@ stream.close()
 engine.release()
 ```
 
-### Recording
+### Recording --- Microphone Input
 
 ```kotlin
-import com.vectencia.klarinet.*
-
 val engine = AudioEngine.create()
 
 val stream = engine.openStream(
@@ -109,86 +136,11 @@ stream.close()
 engine.release()
 ```
 
-### File I/O
-
-#### Reading file metadata and tags
-
-```kotlin
-import com.vectencia.klarinet.*
-
-val reader = AudioFileReader("/path/to/song.mp3")
-val info = reader.info
-
-println("Format: ${info.format}")           // MP3
-println("Duration: ${info.durationMs} ms")  // 210000
-println("Sample rate: ${info.sampleRate}")   // 44100
-println("Channels: ${info.channelCount}")    // 2
-println("Bit rate: ${info.bitRate}")         // 320000
-
-val tags = info.tags
-println("Title: ${tags.title}")   // "My Song"
-println("Artist: ${tags.artist}") // "Artist Name"
-println("Album: ${tags.album}")   // "Album Name"
-
-reader.close()
-```
-
-#### Decoding a file to PCM
-
-```kotlin
-import com.vectencia.klarinet.*
-
-val reader = AudioFileReader("/path/to/audio.wav")
-
-// Read all samples at once
-val allSamples = reader.readAll() // FloatArray of interleaved PCM [-1.0, 1.0]
-
-// Or read in chunks
-reader.seekTo(0)
-while (!reader.isAtEnd) {
-    val chunk = reader.readFrames(maxFrames = 4096)
-    // Process chunk...
-}
-
-reader.close()
-```
-
-#### Playing a file with AudioEngine.playFile()
-
-```kotlin
-import com.vectencia.klarinet.*
-
-val engine = AudioEngine.create()
-val stream = engine.playFile("/path/to/song.mp3")
-stream.start()
-// ... audio is playing ...
-stream.stop()
-stream.close()
-engine.release()
-```
-
-#### Recording to file with AudioEngine.recordToFile()
-
-```kotlin
-import com.vectencia.klarinet.*
-
-val engine = AudioEngine.create()
-val stream = engine.recordToFile(
-    filePath = "/path/to/recording.wav",
-    format = AudioFileFormat.WAV,
-)
-stream.start()
-// ... recording ...
-stream.stop()
-stream.close()
-engine.release()
-```
-
 ### Audio Effects
 
-```kotlin
-import com.vectencia.klarinet.*
+Klarinet includes 16 built-in effects powered by a shared C++ DSP core. Effects run natively in the audio callback --- zero JNI overhead on Android, zero interop overhead on Apple.
 
+```kotlin
 val engine = AudioEngine.create()
 
 // Create effects
@@ -210,51 +162,103 @@ val stream = engine.openStream(config, callback)
 stream.effectChain = chain
 stream.start()
 
-// Update parameters in real-time (lock-free)
+// Update parameters in real-time (lock-free, audio-thread safe)
 reverb.setParameter(ReverbParams.WET_DRY_MIX, 0.6f)
 
-// Hot-swap: add/remove effects while playing
+// Hot-swap: add/remove effects while audio is playing
 chain.add(engine.createEffect(AudioEffectType.DELAY))
 chain.remove(compressor)
+```
 
-stream.stop()
-stream.close()
-engine.release()
+#### Available Effects
+
+| Category | Effects |
+|---|---|
+| **Basic** | Gain, Pan, Mute/Solo |
+| **Dynamics** | Compressor, Limiter, Noise Gate |
+| **EQ / Filters** | Parametric EQ (8-band), Low-Pass, High-Pass, Band-Pass |
+| **Time-based** | Delay, Reverb (Freeverb) |
+| **Modulation** | Chorus, Flanger, Phaser, Tremolo |
+
+### File I/O
+
+#### Reading metadata
+
+```kotlin
+val reader = AudioFileReader("/path/to/song.mp3")
+val info = reader.info
+
+println("Format: ${info.format}")           // MP3
+println("Duration: ${info.durationMs} ms")  // 210000
+println("Sample rate: ${info.sampleRate}")   // 44100
+println("Channels: ${info.channelCount}")    // 2
+
+val tags = info.tags
+println("Title: ${tags.title}")   // "My Song"
+println("Artist: ${tags.artist}") // "Artist Name"
+
+reader.close()
+```
+
+#### Decoding to PCM
+
+```kotlin
+val reader = AudioFileReader("/path/to/audio.wav")
+
+// Read all at once
+val samples = reader.readAll() // FloatArray of interleaved PCM [-1.0, 1.0]
+
+// Or stream in chunks
+reader.seekTo(0)
+while (!reader.isAtEnd) {
+    val chunk = reader.readFrames(maxFrames = 4096)
+    // Process chunk...
+}
+
+reader.close()
+```
+
+#### Playback and recording shortcuts
+
+```kotlin
+// Play a file
+val stream = engine.playFile("/path/to/song.mp3")
+stream.start()
+
+// Record to a file
+val stream = engine.recordToFile(
+    filePath = "/path/to/recording.wav",
+    format = AudioFileFormat.WAV,
+)
+stream.start()
 ```
 
 ### Coroutines Extensions (Optional)
 
-Add the optional coroutines module for Flow-based observation and suspending file I/O:
-
-```kotlin
-// build.gradle.kts
-commonMain.dependencies {
-    implementation("com.vectencia.klarinet:klarinet-coroutines:0.0.1")
-}
-```
+The `klarinet-coroutines` module provides Flow-based observation and suspending file I/O without adding coroutines as a dependency to the core module.
 
 ```kotlin
 import com.vectencia.klarinet.coroutines.*
 
-// Observe stream state as Flow
+// Observe stream state reactively
 stream.stateFlow.collect { state ->
     println("Stream state: $state")
 }
 
-// Real-time level metering (20 updates/sec)
+// Real-time audio level metering (20 updates/sec)
 stream.levelFlow().collect { level ->
-    // Update VU meter (0.0 to 1.0)
+    // Update VU meter UI (0.0 to 1.0)
 }
 
-// Suspend until stream reaches a state
+// Wait for a stream state
 stream.awaitState(StreamState.STARTED)
 
-// Async file I/O on Dispatchers.IO
+// Async file I/O (runs on Dispatchers.IO)
 val samples = reader.readAllSuspend()
 
-// Stream decoded audio as Flow
+// Stream decoded audio as a Flow
 reader.asFlow(chunkSize = 4096).collect { chunk ->
-    // Process chunk
+    // Process each chunk
 }
 ```
 
@@ -262,49 +266,186 @@ reader.asFlow(chunkSize = 4096).collect { chunk ->
 
 ```mermaid
 graph TD
-    A[Your App] --> B[klarinet]
-    B --> C[Oboe / AAudio / OpenSL ES]
-    B --> D[AVAudioEngine / Core Audio]
+    A["Your App (Kotlin/Swift)"] --> B[Klarinet SDK]
+    B --> C["C++ DSP Core<br/>(Effects, Filters, Reverb)"]
+    B --> D["Google Oboe<br/>(AAudio / OpenSL ES)"]
+    B --> E["AVAudioEngine<br/>(Core Audio)"]
+    
+    style A fill:#7F52FF,color:#fff
+    style B fill:#1a1a2e,color:#0ff
+    style C fill:#16213e,color:#0ff
+    style D fill:#0d7377,color:#fff
+    style E fill:#0d7377,color:#fff
 ```
 
-**klarinet** is a single Kotlin Multiplatform module that defines the common API (`AudioEngine`, `AudioStream`, `AudioStreamConfig`, `AudioStreamCallback`) as `expect` declarations in `commonMain`, with `actual` implementations in `androidMain` (backed by Google Oboe via JNI/C++) and `appleMain` (backed by AVAudioEngine).
+Klarinet is a single Kotlin Multiplatform module using `expect`/`actual` declarations:
+
+- **`commonMain`** --- Public API: `AudioEngine`, `AudioStream`, `AudioStreamConfig`, `AudioStreamCallback`, `AudioEffect`, `AudioEffectChain`, data classes, enums
+- **`androidMain`** --- Android implementation via Google Oboe (C++17/JNI). Audio effects process directly in the native Oboe callback --- zero JNI crossing for DSP.
+- **`appleMain`** --- Apple implementation via AVAudioEngine. Shared across iOS, macOS, and tvOS.
+- **`cpp/dsp`** --- Shared C++ DSP library compiled for all platforms. Contains all 16 effects, DSP primitives (Biquad, LFO, EnvelopeFollower, CircularBuffer), lock-free effect chain, and SPSC ring buffer.
 
 ## Modules
 
 | Module | Artifact | Description |
 |---|---|---|
-| `klarinet` | `com.vectencia.klarinet:klarinet` | KMP audio SDK: common API + Android and Apple backends |
-| `klarinet-coroutines` | `com.vectencia.klarinet:klarinet-coroutines` | Optional Kotlin Coroutines extensions |
-| `demo` | -- | Demo app with playback and recording examples |
+| `klarinet` | `com.vectencia.klarinet:klarinet` | Core SDK: audio I/O, effects, file I/O |
+| `klarinet-coroutines` | `com.vectencia.klarinet:klarinet-coroutines` | Optional Flow & suspending extensions |
+| `demo` | --- | Compose Multiplatform demo app |
+| `iosApp` | --- | Native SwiftUI demo app |
 
-## Features
+## Demo App
 
-- Playback and recording streams with callback and blocking I/O modes
-- Low-latency performance mode
-- PCM Float, I16, I24, I32 sample formats
-- Mono and stereo channel configurations
-- Audio device enumeration and default device selection
-- Audio session management (Apple platforms)
-- Stream state lifecycle with error callbacks
-- Latency measurement via `LatencyInfo`
-- Audio route change notifications
-- Audio file I/O: decode (WAV, MP3, AAC, M4A) and encode (WAV, AAC, M4A) via `AudioFileReader` / `AudioFileWriter`
-- Convenience extensions: `AudioEngine.playFile()` and `AudioEngine.recordToFile()`
-- File metadata and tag reading via `AudioFileInfo` / `AudioFileTags`
-- Real-time audio effects via shared C++ DSP core: 16 built-in effects (Gain, Pan, Compressor, Limiter, NoiseGate, ParametricEQ, LPF, HPF, BPF, Delay, Reverb, Chorus, Flanger, Phaser, Tremolo, Mute/Solo)
-- `AudioEffectChain` with hot-swap support (add/remove/reorder effects while streaming)
-- Lock-free parameter updates via atomics and ring buffer for batch changes
-- Kotlin DSL control plane with `AudioEffect`, `AudioEffectChain`, and parameter constants
-- Android: API 24+ with Google Oboe (AAudio / OpenSL ES) via JNI/C++
-- Apple: iOS, iPadOS, macOS, tvOS via AVAudioEngine
+The project includes two demo applications showcasing all SDK features:
 
-### Not Included (Future)
+### Compose Multiplatform Demo (Android + iOS)
 
-- Node graph topology (effects use linear chain for now)
-- Sidechain input
-- MIDI support
-- Desktop JVM (Windows, Linux) targets
-- Web (Kotlin/JS, Kotlin/Wasm) targets
+5 screens: Tone Generator, Mic Meter, Latency Benchmark, File Player, Effects Chain
+
+### Native SwiftUI Demo (iOS)
+
+5 matching screens built with pure SwiftUI and MVVM architecture, demonstrating how to use Klarinet directly from Swift without Compose.
+
+The iOS app provides a landing screen where you can choose between the Compose Multiplatform demo and the native SwiftUI demo.
+
+## API Reference
+
+### Core Types
+
+| Type | Description |
+|---|---|
+| `AudioEngine` | Entry point. Creates streams, effects, and queries devices. |
+| `AudioStream` | Playback or recording stream with lifecycle control. |
+| `AudioStreamConfig` | Stream configuration: sample rate, channels, format, direction. |
+| `AudioStreamCallback` | Real-time callback for audio processing (`onAudioReady`). |
+| `AudioEffect` | A single audio effect with typed parameters. |
+| `AudioEffectChain` | Ordered chain of effects attached to a stream. |
+| `AudioFileReader` | Decodes audio files (WAV, MP3, AAC, M4A) to PCM. |
+| `AudioFileWriter` | Encodes PCM to audio files (WAV, AAC, M4A). |
+| `AudioDeviceInfo` | Information about an audio input/output device. |
+| `AudioSessionManager` | Audio session configuration (Apple platforms). |
+| `LatencyInfo` | Input/output latency measurements. |
+
+### Enums
+
+| Enum | Values |
+|---|---|
+| `AudioFormat` | `PCM_FLOAT`, `PCM_I16`, `PCM_I24`, `PCM_I32` |
+| `StreamDirection` | `OUTPUT`, `INPUT` |
+| `PerformanceMode` | `NONE`, `LOW_LATENCY`, `POWER_SAVING` |
+| `SharingMode` | `SHARED`, `EXCLUSIVE` |
+| `StreamState` | `UNINITIALIZED`, `OPEN`, `STARTING`, `STARTED`, `PAUSING`, `PAUSED`, `STOPPING`, `STOPPED`, `CLOSING`, `CLOSED` |
+| `AudioEffectType` | `GAIN`, `PAN`, `MUTE_SOLO`, `COMPRESSOR`, `LIMITER`, `NOISE_GATE`, `PARAMETRIC_EQ`, `LOW_PASS_FILTER`, `HIGH_PASS_FILTER`, `BAND_PASS_FILTER`, `DELAY`, `REVERB`, `CHORUS`, `FLANGER`, `PHASER`, `TREMOLO` |
+| `AudioFileFormat` | `WAV`, `MP3`, `AAC`, `M4A` |
+
+### Exception Hierarchy
+
+```
+KlarinetException
+  +-- StreamCreationException
+  +-- StreamOperationException
+  +-- DeviceNotFoundException
+  +-- AudioSessionException
+  +-- PermissionException
+  +-- UnsupportedFormatException
+  +-- AudioFileException
+```
+
+## Building from Source
+
+### Prerequisites
+
+- **JDK 17** (Temurin recommended)
+- **Android SDK** with API level 24+ and NDK
+- **Xcode 15+** (for Apple targets, macOS only)
+
+### Build
+
+```bash
+# All modules
+./gradlew build
+
+# Library only
+./gradlew :klarinet:build
+
+# Demo app (Android)
+./gradlew :demo:assembleDebug
+
+# iOS app (via Xcode)
+open iosApp/iosApp.xcodeproj
+```
+
+### Test
+
+```bash
+# Kotlin tests (all platforms)
+./gradlew :klarinet:allTests
+
+# C++ DSP tests
+cd klarinet/src/cpp/dsp
+cmake -B build -DKLARINET_DSP_BUILD_TESTS=ON
+cmake --build build
+cd build && ctest --output-on-failure
+
+# Coroutines module tests
+./gradlew :klarinet-coroutines:allTests
+```
+
+### Makefile Shortcuts
+
+| Command | Description |
+|---|---|
+| `make build` | Build all modules |
+| `make klarinet` | Build the library only |
+| `make demo` | Build the demo app (Android) |
+| `make test` | Run common tests |
+| `make test-all` | Run all tests across platforms |
+| `make clean` | Clean build artifacts |
+| `make publish` | Publish to Maven Central |
+
+## SwiftUI Integration Guide
+
+Klarinet exports a Kotlin/Native framework that native Swift apps can use directly:
+
+```swift
+import Klarinet  // or ComposeApp if using the demo framework
+
+// Create engine
+let engine = AudioEngine.companion.create()
+
+// Create a callback using the bridge class
+let callback = AudioStreamCallbackImpl { buffer, numFrames in
+    let frames = numFrames.intValue
+    for i in 0..<frames {
+        buffer.set(index: Int32(i), value: sinf(phase) * 0.5)
+    }
+    return numFrames
+}
+
+// Configure and open stream
+let config = AudioStreamConfig(
+    sampleRate: 48000,
+    channelCount: 1,
+    audioFormat: .pcmFloat,
+    bufferCapacityInFrames: 0,
+    performanceMode: .lowLatency,
+    sharingMode: .shared,
+    direction: .output
+)
+
+let stream = engine.openStream(config: config, callback: callback)
+stream.start()
+
+// Real-time level metering via polling
+Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
+    let level = stream.peakLevel  // 0.0 to 1.0
+}
+
+// Cleanup
+stream.stop()
+stream.close()
+engine.release()
+```
 
 ## Contributing
 
@@ -327,3 +468,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ```
+
+---
+
+<p align="center">
+  Built with native performance by <a href="https://github.com/vectencia">Vectencia</a>
+</p>
