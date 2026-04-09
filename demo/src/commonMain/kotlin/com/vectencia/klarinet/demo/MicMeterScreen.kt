@@ -110,7 +110,7 @@ fun MicMeterScreen() {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text("Peak: ${(level * 100).toInt()}% (raw: ${"%.4f".format(level)})", fontSize = 14.sp)
+                Text("Peak: ${(level * 100).toInt()}%", fontSize = 14.sp)
 
                 Spacer(modifier = Modifier.height(8.dp))
 

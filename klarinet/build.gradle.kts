@@ -14,13 +14,22 @@ kotlin {
         publishLibraryVariants("release")
     }
 
-    iosArm64()
-    iosSimulatorArm64()
-    iosX64()
-    macosArm64()
-    macosX64()
-    tvosArm64()
-    tvosSimulatorArm64()
+    val appleTargets = listOf(
+        iosArm64(),
+        iosSimulatorArm64(),
+        iosX64(),
+        macosArm64(),
+        macosX64(),
+        tvosArm64(),
+        tvosSimulatorArm64(),
+    )
+
+    appleTargets.forEach { target ->
+        target.binaries.framework {
+            baseName = "Klarinet"
+            isStatic = true
+        }
+    }
 
     applyDefaultHierarchyTemplate()
 
@@ -63,7 +72,10 @@ android {
         externalNativeBuild {
             cmake {
                 cppFlags += "-std=c++17"
-                arguments += "-DANDROID_STL=c++_shared"
+                arguments += listOf(
+                    "-DANDROID_STL=c++_shared",
+                    "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON",
+                )
             }
         }
     }

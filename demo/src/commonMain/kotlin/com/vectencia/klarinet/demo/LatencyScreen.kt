@@ -17,6 +17,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,6 +26,9 @@ import androidx.compose.ui.unit.sp
 import com.vectencia.klarinet.AudioEngine
 import com.vectencia.klarinet.AudioStream
 import com.vectencia.klarinet.AudioStreamConfig
+import com.vectencia.klarinet.StreamState
+import com.vectencia.klarinet.coroutines.awaitState
+import kotlinx.coroutines.launch
 
 @Composable
 fun LatencyScreen() {
@@ -37,6 +41,8 @@ fun LatencyScreen() {
     var sampleRate by remember { mutableStateOf("--") }
     var bufferSize by remember { mutableStateOf("--") }
     var performanceMode by remember { mutableStateOf("--") }
+
+    val scope = rememberCoroutineScope()
 
     DisposableEffect(Unit) {
         onDispose {
@@ -97,33 +103,36 @@ fun LatencyScreen() {
                     isMeasuring = false
                 } else {
                     // Measure
-                    try {
-                        val newEngine = AudioEngine.create()
-                        engine = newEngine
+                    scope.launch {
+                        try {
+                            val newEngine = AudioEngine.create()
+                            engine = newEngine
+                            val config = AudioStreamConfig()
+                            val newStream = newEngine.openStream(config)
+                            stream = newStream
+                            newStream.start()
+                            isMeasuring = true
 
-                        val config = AudioStreamConfig()
+                            // Wait for stream to be fully started before reading latency
+                            newStream.awaitState(StreamState.STARTED)
 
-                        val newStream = newEngine.openStream(config)
-                        stream = newStream
-                        newStream.start()
-                        isMeasuring = true
+                            val latency = newStream.latencyInfo
+                            val streamConfig = newStream.config
 
-                        val latency = newStream.latencyInfo
-                        val streamConfig = newStream.config
-
-                        outputLatency = "${latency.outputLatencyMs.toInt()} ms"
-                        inputLatency = "${latency.inputLatencyMs.toInt()} ms"
-                        sampleRate = "${streamConfig.sampleRate} Hz"
-                        bufferSize = if (streamConfig.bufferCapacityInFrames > 0) {
-                            "${streamConfig.bufferCapacityInFrames} frames"
-                        } else {
-                            "Platform default"
+                            outputLatency = "${latency.outputLatencyMs.toInt()} ms"
+                            inputLatency = "${latency.inputLatencyMs.toInt()} ms"
+                            sampleRate = "${streamConfig.sampleRate} Hz"
+                            bufferSize = if (streamConfig.bufferCapacityInFrames > 0) {
+                                "${streamConfig.bufferCapacityInFrames} frames"
+                            } else {
+                                "Platform default"
+                            }
+                            performanceMode = streamConfig.performanceMode.name
+                        } catch (e: Exception) {
+                            isMeasuring = false
+                            outputLatency = "Error"
+                            inputLatency = e.message ?: "Unknown error"
                         }
-                        performanceMode = streamConfig.performanceMode.name
-                    } catch (e: Exception) {
-                        isMeasuring = false
-                        outputLatency = "Error"
-                        inputLatency = e.message ?: "Unknown error"
                     }
                 }
             },

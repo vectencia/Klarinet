@@ -13,6 +13,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,6 +28,7 @@ import com.vectencia.klarinet.AudioStream
 import com.vectencia.klarinet.AudioStreamCallback
 import com.vectencia.klarinet.AudioStreamConfig
 import com.vectencia.klarinet.StreamState
+import com.vectencia.klarinet.coroutines.stateFlow
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
@@ -53,6 +55,15 @@ fun ToneGeneratorScreen() {
             try {
                 currentEngine?.release()
             } catch (_: Exception) {}
+        }
+    }
+
+    val activeStream = stream
+    if (activeStream != null) {
+        LaunchedEffect(activeStream) {
+            activeStream.stateFlow.collect { newState ->
+                streamState = newState
+            }
         }
     }
 
@@ -101,7 +112,6 @@ fun ToneGeneratorScreen() {
                     stream = null
                     engine = null
                     isPlaying = false
-                    streamState = StreamState.STOPPED
                 } else {
                     // Play
                     try {
@@ -134,7 +144,6 @@ fun ToneGeneratorScreen() {
                         stream = newStream
                         newStream.start()
                         isPlaying = true
-                        streamState = newStream.state
                     } catch (e: Exception) {
                         streamState = StreamState.UNINITIALIZED
                         isPlaying = false

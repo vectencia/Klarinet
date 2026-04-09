@@ -17,6 +17,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +38,8 @@ import com.vectencia.klarinet.DelayParams
 import com.vectencia.klarinet.GainParams
 import com.vectencia.klarinet.ReverbParams
 import com.vectencia.klarinet.StreamState
+import com.vectencia.klarinet.coroutines.levelFlow
+import com.vectencia.klarinet.coroutines.stateFlow
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
@@ -47,6 +50,7 @@ fun EffectsScreen() {
     var engine by remember { mutableStateOf<AudioEngine?>(null) }
     var stream by remember { mutableStateOf<AudioStream?>(null) }
     var effectChain by remember { mutableStateOf<AudioEffectChain?>(null) }
+    var outputLevel by remember { mutableStateOf(0f) }
 
     var gainEffect by remember { mutableStateOf<AudioEffect?>(null) }
     var delayEffect by remember { mutableStateOf<AudioEffect?>(null) }
@@ -125,7 +129,7 @@ fun EffectsScreen() {
                     reverbEffect = null
                     engine = null
                     isPlaying = false
-                    streamState = StreamState.STOPPED
+                    outputLevel = 0f
                 } else {
                     try {
                         val sampleRate = 48000
@@ -186,7 +190,6 @@ fun EffectsScreen() {
                         stream = newStream
                         newStream.start()
                         isPlaying = true
-                        streamState = newStream.state
                     } catch (e: Exception) {
                         streamState = StreamState.UNINITIALIZED
                         isPlaying = false
@@ -200,6 +203,26 @@ fun EffectsScreen() {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text("State: $streamState", fontSize = 14.sp)
+
+        if (isPlaying) {
+            Text("Output Level: ${(outputLevel * 100).toInt()}%", fontSize = 14.sp)
+        }
+
+        val currentStream = stream
+        if (currentStream != null) {
+            LaunchedEffect(currentStream) {
+                currentStream.stateFlow.collect { newState ->
+                    streamState = newState
+                }
+            }
+            if (isPlaying) {
+                LaunchedEffect(Unit) {
+                    currentStream.levelFlow(intervalMs = 50L).collect { level ->
+                        outputLevel = level
+                    }
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -249,7 +272,7 @@ fun EffectsScreen() {
                 label = "Feedback",
                 value = delayFeedback,
                 valueRange = 0f..0.95f,
-                valueFormat = { "%.2f".format(it) },
+                valueFormat = { ((it * 100).toInt() / 100f).toString() },
                 onValueChange = { value ->
                     delayFeedback = value
                     delayEffect?.setParameter(DelayParams.FEEDBACK, value)
@@ -259,7 +282,7 @@ fun EffectsScreen() {
                 label = "Mix",
                 value = delayMix,
                 valueRange = 0f..1f,
-                valueFormat = { "%.2f".format(it) },
+                valueFormat = { ((it * 100).toInt() / 100f).toString() },
                 onValueChange = { value ->
                     delayMix = value
                     delayEffect?.setParameter(DelayParams.WET_DRY_MIX, value)
@@ -282,7 +305,7 @@ fun EffectsScreen() {
                 label = "Room Size",
                 value = reverbRoomSize,
                 valueRange = 0f..1f,
-                valueFormat = { "%.2f".format(it) },
+                valueFormat = { ((it * 100).toInt() / 100f).toString() },
                 onValueChange = { value ->
                     reverbRoomSize = value
                     reverbEffect?.setParameter(ReverbParams.ROOM_SIZE, value)
@@ -292,7 +315,7 @@ fun EffectsScreen() {
                 label = "Damping",
                 value = reverbDamping,
                 valueRange = 0f..1f,
-                valueFormat = { "%.2f".format(it) },
+                valueFormat = { ((it * 100).toInt() / 100f).toString() },
                 onValueChange = { value ->
                     reverbDamping = value
                     reverbEffect?.setParameter(ReverbParams.DAMPING, value)
@@ -302,7 +325,7 @@ fun EffectsScreen() {
                 label = "Mix",
                 value = reverbMix,
                 valueRange = 0f..1f,
-                valueFormat = { "%.2f".format(it) },
+                valueFormat = { ((it * 100).toInt() / 100f).toString() },
                 onValueChange = { value ->
                     reverbMix = value
                     reverbEffect?.setParameter(ReverbParams.WET_DRY_MIX, value)

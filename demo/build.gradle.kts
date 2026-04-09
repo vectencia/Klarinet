@@ -21,6 +21,7 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
+            export(project(":klarinet"))
         }
     }
 
@@ -38,7 +39,7 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
-            implementation(project(":klarinet"))
+            api(project(":klarinet"))
             implementation(project(":klarinet-coroutines"))
         }
         commonTest.dependencies {
