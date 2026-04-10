@@ -7,6 +7,8 @@ plugins {
     alias(libs.plugins.composeCompiler)
 }
 
+val useDebugDependencies: String by project
+
 kotlin {
     androidTarget {
         compilerOptions {
@@ -21,7 +23,11 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
-            export(project(":klarinet"))
+            if (useDebugDependencies.toBoolean()) {
+                export(project(":klarinet"))
+            } else {
+                export(libs.klarinet)
+            }
         }
     }
 
@@ -39,8 +45,13 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
-            api(project(":klarinet"))
-            implementation(project(":klarinet-coroutines"))
+            if (useDebugDependencies.toBoolean()) {
+                api(project(":klarinet"))
+                implementation(project(":klarinet-coroutines"))
+            } else {
+                api(libs.klarinet)
+                implementation(libs.klarinet.coroutines)
+            }
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
