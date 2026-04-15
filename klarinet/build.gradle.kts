@@ -22,6 +22,8 @@ kotlin {
         macosX64(),
         tvosArm64(),
         tvosSimulatorArm64(),
+        watchosArm64(),
+        watchosSimulatorArm64(),
     )
 
     appleTargets.forEach { target ->
@@ -49,6 +51,16 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
+
+        // Intermediate source set for Apple platforms with ExtAudioFile support.
+        // watchOS K/N bindings lack ExtAudioFile APIs, so it gets limited impls.
+        val appleNonWatchMain by creating {
+            dependsOn(appleMain.get())
+        }
+        iosMain.get().dependsOn(appleNonWatchMain)
+        macosMain.get().dependsOn(appleNonWatchMain)
+        tvosMain.get().dependsOn(appleNonWatchMain)
+
         val androidInstrumentedTest by getting {
             dependencies {
                 implementation(libs.kotlin.test)

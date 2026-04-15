@@ -54,12 +54,30 @@ Decode MP3/AAC/WAV files, apply effects (noise gate + compressor + EQ is a class
 
 ## Supported Platforms
 
-| Platform | Backend | Min Version |
+| Platform | Targets | Backend | Audio Streaming | File I/O (WAV) | File I/O (AAC/M4A) | Min Version |
+|---|---|---|---|---|---|---|
+| Android | arm64-v8a, armeabi-v7a, x86_64 | Google Oboe (AAudio / OpenSL ES) | ✅ | ✅ | ✅ | API 24 |
+| iOS / iPadOS | arm64, simulatorArm64, x64 | AVAudioEngine | ✅ | ✅ | ✅ | iOS 15+ |
+| macOS | arm64, x64 | AVAudioEngine | ✅ | ✅ | ✅ | macOS 12+ |
+| tvOS | arm64, simulatorArm64 | AVAudioEngine | ✅ | ✅ | ✅ | tvOS 15+ |
+| watchOS | arm64, simulatorArm64 | AVAudioEngine | ✅ | ✅ | ❌ | watchOS 8+ |
+
+### watchOS Limitations
+
+watchOS support covers real-time audio streaming and WAV file writing. The following limitations apply due to the Kotlin/Native watchOS bindings not exposing the ExtAudioFile APIs:
+
+| Feature | Status | Notes |
 |---|---|---|
-| Android | Google Oboe (AAudio / OpenSL ES) | API 24 |
-| iOS / iPadOS | AVAudioEngine | iOS 15+ |
-| macOS | AVAudioEngine | macOS 12+ |
-| tvOS | AVAudioEngine | tvOS 15+ |
+| Audio playback (`AudioStream` output) | ✅ Supported | AVAudioEngine, same API as iOS/tvOS |
+| Audio recording (`AudioStream` input) | ✅ Supported | Requires mic permission; hardware mic available on Series 3+ |
+| Audio session management | ✅ Supported | Full AVAudioSession integration |
+| WAV file writing (`AudioFileWriter`) | ✅ Supported | PCM encoding via posix I/O |
+| AAC/M4A file writing | ❌ Not available | Throws `UnsupportedFormatException` |
+| File reading (`AudioFileReader`) | ❌ Not available | Throws `UnsupportedFormatException` for all formats |
+| Audio effects chain | ✅ Supported | Kotlin-side effect processing |
+| Swift interop (`AudioStreamCallbackImpl`) | ✅ Supported | Same callback bridge as iOS |
+
+These limitations are a Kotlin/Native toolchain constraint, not a watchOS platform restriction. The underlying Apple APIs (ExtAudioFile) exist on watchOS but are not yet exposed in the K/N bindings.
 
 ## Installation
 
@@ -305,7 +323,7 @@ Klarinet is a single Kotlin Multiplatform module using `expect`/`actual` declara
 
 - **`commonMain`** --- Public API: `AudioEngine`, `AudioStream`, `AudioStreamConfig`, `AudioStreamCallback`, `AudioEffect`, `AudioEffectChain`, data classes, enums
 - **`androidMain`** --- Android implementation via Google Oboe (C++17/JNI). Audio effects process directly in the native Oboe callback --- zero JNI crossing for DSP.
-- **`appleMain`** --- Apple implementation via AVAudioEngine. Shared across iOS, macOS, and tvOS.
+- **`appleMain`** --- Apple implementation via AVAudioEngine. Shared across iOS, macOS, tvOS, and watchOS.
 - **`cpp/dsp`** --- Shared C++ DSP library compiled for all platforms. Contains all 16 effects, DSP primitives (Biquad, LFO, EnvelopeFollower, CircularBuffer), lock-free effect chain, and SPSC ring buffer.
 
 ## Modules

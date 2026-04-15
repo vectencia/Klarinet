@@ -5,6 +5,7 @@ package com.vectencia.klarinet
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.FloatVar
+import kotlinx.cinterop.convert
 import kotlinx.cinterop.get
 import kotlinx.cinterop.pointed
 import kotlinx.cinterop.reinterpret
@@ -113,7 +114,7 @@ actual class AudioStream internal constructor(
                     val abl = outputData.pointed
                     val bufferData = abl.mBuffers.pointed.mData
                     if (bufferData != null) {
-                        memset(bufferData, 0, (totalSamples * 4).toULong())
+                        memset(bufferData, 0, (totalSamples * 4).convert())
                     }
                 }
             }
