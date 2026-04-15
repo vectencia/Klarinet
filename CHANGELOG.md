@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.2] - 2026-04-15
+
+### Added
+
+- **klarinet**: `AudioAnalyzer` for real-time audio analysis (RMS, peak, spectral centroid, dominant frequency)
+- **klarinet**: `AudioAnalysisResult` data class with computed audio metrics
+- **klarinet**: `AudioMath` utility with dB conversion, RMS, peak, and spectral helpers
+- **klarinet**: `Fft` — pure-Kotlin radix-2 FFT implementation for spectral analysis
+- **klarinet**: `ChunkedAudioFileWriter` for writing audio in fixed-size chunks with automatic file rotation
+- **klarinet-coroutines**: `AnalyzingCallback` — wraps `AudioStreamCallback` to emit `AudioAnalysisResult` as a `SharedFlow`
+- **demo**: Flag to swap between module and released Maven Central artifacts
+- CI publish workflow for Maven Central via GitHub Actions
+
+### Tests
+
+- Unit tests for `AudioAnalyzer`, `AudioMath`, `Fft`, `ChunkedAudioFileWriter`, and `AnalyzingCallback`
+
 ## [0.0.1] - 2026-04-09
 
 ### Added
