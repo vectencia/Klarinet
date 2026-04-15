@@ -38,6 +38,7 @@ object AudioMath {
     }
 
     fun hannWindow(size: Int): FloatArray {
+        if (size <= 1) return FloatArray(size) { 1f }
         return FloatArray(size) { i ->
             (0.5 * (1.0 - cos(2.0 * PI * i / (size - 1)))).toFloat()
         }

@@ -25,7 +25,11 @@ data class AudioAnalysisResult(
 
     override fun hashCode(): Int {
         var result = rmsLevel.hashCode()
+        result = 31 * result + rmsDb.hashCode()
+        result = 31 * result + peakLevel.hashCode()
+        result = 31 * result + peakDb.hashCode()
         result = 31 * result + magnitudeSpectrum.contentHashCode()
+        result = 31 * result + frequencyResolution.hashCode()
         result = 31 * result + sampleRate
         result = 31 * result + fftSize
         return result

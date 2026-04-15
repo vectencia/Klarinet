@@ -39,6 +39,9 @@ class AnalyzingCallback(
         }
     }
 
+    // Note: allocates FloatArray per callback. This is a deliberate tradeoff —
+    // small allocation (~4KB for 1024 frames) is acceptable for analysis use cases.
+    // For strict real-time requirements, use a pre-allocated ring buffer instead.
     override fun onAudioReady(buffer: FloatArray, numFrames: Int): Int {
         val framesToCopy = minOf(numFrames, analyzer.fftSize)
         val copy = FloatArray(framesToCopy)
