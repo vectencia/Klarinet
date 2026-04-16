@@ -23,3 +23,18 @@ internal expect fun observePlatformRouteChanges(listener: (AudioRouteChangeInfo)
  * On macOS, no-op.
  */
 internal expect fun configurePlatformAudioSessionForInput()
+
+/**
+ * Install an audio tap on the input node's bus 0.
+ * The bus parameter type differs across Apple targets, so this must be per-platform.
+ */
+internal expect fun installPlatformInputTap(
+    engine: platform.AVFAudio.AVAudioEngine,
+    bufferSize: UInt,
+    callback: (platform.AVFAudio.AVAudioPCMBuffer?) -> Unit,
+)
+
+/**
+ * Remove the audio tap from the input node's bus 0.
+ */
+internal expect fun removePlatformInputTap(engine: platform.AVFAudio.AVAudioEngine)

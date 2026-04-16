@@ -52,8 +52,6 @@ internal actual fun setPlatformAudioSessionActive(active: Boolean) {
     }
 }
 
-private var routeChangeObserver: NSObjectProtocol? = null
-
 internal actual fun configurePlatformAudioSessionForInput() {
     val session = AVAudioSession.sharedInstance()
     val errorPtr = nativeHeap.alloc<ObjCObjectVar<NSError?>>()
@@ -67,8 +65,9 @@ internal actual fun configurePlatformAudioSessionForInput() {
     nativeHeap.free(errorPtr)
 }
 
+private var routeChangeObserver: NSObjectProtocol? = null
+
 internal actual fun observePlatformRouteChanges(listener: (AudioRouteChangeInfo) -> Unit) {
-    // Remove any previous observer.
     routeChangeObserver?.let {
         NSNotificationCenter.defaultCenter.removeObserver(it)
     }
