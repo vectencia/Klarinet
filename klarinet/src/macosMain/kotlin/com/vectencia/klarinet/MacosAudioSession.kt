@@ -27,3 +27,17 @@ internal actual fun observePlatformRouteChanges(listener: (AudioRouteChangeInfo)
     // macOS apps can use Core Audio's AudioObjectAddPropertyListener for similar
     // functionality, but that is beyond the scope of the AudioSessionManager API.
 }
+
+internal actual fun installPlatformInputTap(
+    engine: platform.AVFAudio.AVAudioEngine,
+    bufferSize: UInt,
+    callback: (platform.AVFAudio.AVAudioPCMBuffer?) -> Unit,
+) {
+    engine.inputNode.installTapOnBus(0u, bufferSize = bufferSize, format = null) { buffer, _ ->
+        callback(buffer)
+    }
+}
+
+internal actual fun removePlatformInputTap(engine: platform.AVFAudio.AVAudioEngine) {
+    engine.inputNode.removeTapOnBus(0u)
+}

@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0] - 2026-04-16
+
+### Added
+
+- **watchOS**: Full audio streaming support via AVAudioEngine (watchosArm64, watchosSimulatorArm64)
+- **watchOS**: `WatchosAudioSession` with full AVAudioSession integration
+- **watchOS**: `AudioFileWriter` WAV support via posix I/O
+- **watchOS**: `AudioStreamCallbackImpl` for Swift interop
+- **JVM Desktop**: Full audio streaming support via miniaudio (macOS, Linux, Windows)
+- **JVM Desktop**: `AudioFileReader` with WAV and MP3 decoding via miniaudio
+- **JVM Desktop**: `AudioFileWriter` with WAV encoding via miniaudio
+- **JVM Desktop**: `NativeLibLoader` for automatic OS/arch detection and native library extraction from JAR
+- **Linux Native**: Audio streaming support via miniaudio cinterop (linuxX64, linuxArm64)
+- **Linux Native**: File I/O (WAV read/write, MP3 read) via miniaudio cinterop
+- **Windows Native**: Audio streaming support via miniaudio cinterop (mingwX64)
+- **Windows Native**: File I/O (WAV read/write, MP3 read) via miniaudio cinterop
+- **klarinet**: Thin C wrapper (`klarinet_native.h/c`) over miniaudio for K/N cinterop across Linux and Windows
+- **klarinet**: `appleNonWatchMain` intermediate source set for platforms with ExtAudioFile APIs
+- **klarinet-coroutines**: JVM target support
+- **demo**: Compose Multiplatform Desktop target (macOS, Linux, Windows)
+- **demo-native**: Native console demo apps for Linux and Windows (sine wave tone generator)
+- **iosApp**: tvOS native SwiftUI demo (tone generator with frequency selection)
+- **iosApp**: watchOS native SwiftUI demo (tone generator adapted for small screen)
+- POM `url` and `scm` metadata for klibs.io indexing
+
+### Changed
+
+- `AudioStream.apple.kt`: `memset` size parameter uses `convert()` for portable `size_t` handling across all Apple targets
+- Renamed `linuxTargets` to `nativeDesktopTargets` in build config to include mingwX64
+
+### Platform Support
+
+| Platform | Targets | Backend |
+|---|---|---|
+| Android | arm64-v8a, armeabi-v7a, x86_64 | Google Oboe |
+| iOS / iPadOS | arm64, simulatorArm64, x64 | AVAudioEngine |
+| macOS | arm64, x64 | AVAudioEngine |
+| tvOS | arm64, simulatorArm64 | AVAudioEngine |
+| watchOS | arm64, simulatorArm64 | AVAudioEngine |
+| JVM Desktop | macOS, Linux, Windows | miniaudio |
+| Linux Native | x64, arm64 | miniaudio |
+| Windows Native | x64 | miniaudio |
+
 ## [0.0.2] - 2026-04-15
 
 ### Added

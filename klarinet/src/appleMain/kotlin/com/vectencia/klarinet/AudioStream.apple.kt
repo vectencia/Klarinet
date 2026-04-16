@@ -13,7 +13,6 @@ import platform.AVFAudio.AVAudioEngine
 import platform.AVFAudio.AVAudioFormat
 import platform.AVFAudio.AVAudioSourceNode
 import platform.CoreAudioTypes.AudioBufferList
-import platform.posix.memset
 
 actual class AudioStream internal constructor(
     actual val config: AudioStreamConfig,
@@ -113,7 +112,8 @@ actual class AudioStream internal constructor(
                     val abl = outputData.pointed
                     val bufferData = abl.mBuffers.pointed.mData
                     if (bufferData != null) {
-                        memset(bufferData, 0, (totalSamples * 4).toULong())
+                        val floatPtr: CPointer<FloatVar> = bufferData.reinterpret()
+                        for (i in 0 until totalSamples) { floatPtr[i] = 0f }
                     }
                 }
             }
@@ -136,16 +136,11 @@ actual class AudioStream internal constructor(
         // Pass null format to use the input node's native hardware format.
         // Passing a custom format with a different sample rate causes a crash:
         // "format.sampleRate == inputHWFormat.sampleRate"
-        inputNode.installTapOnBus(
-            bus = 0u,
-            bufferSize = bufferSize,
-            format = null,
-        ) { buffer, _ ->
-            if (buffer == null || callback == null) return@installTapOnBus
-            val pcmBuffer = buffer
-            val floatChannelData = pcmBuffer.floatChannelData
-                ?: return@installTapOnBus
-            val frameLength = pcmBuffer.frameLength.toInt()
+        installPlatformInputTap(avEngine, bufferSize) { buffer ->
+            if (buffer == null || callback == null) return@installPlatformInputTap
+            val floatChannelData = buffer.floatChannelData
+                ?: return@installPlatformInputTap
+            val frameLength = buffer.frameLength.toInt()
             val channels = config.channelCount
             val totalSamples = frameLength * channels
             val audioData = FloatArray(totalSamples)
@@ -213,7 +208,7 @@ actual class AudioStream internal constructor(
                 _state = StreamState.STOPPING
 
                 if (config.direction == StreamDirection.INPUT) {
-                    avEngine.inputNode.removeTapOnBus(0u)
+                    removePlatformInputTap(avEngine)
                 }
                 avEngine.stop()
 
