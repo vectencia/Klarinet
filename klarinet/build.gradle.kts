@@ -14,6 +14,25 @@ kotlin {
         publishLibraryVariants("release")
     }
 
+    jvm()
+
+    val nativeDesktopTargets = listOf(
+        linuxX64(),
+        linuxArm64(),
+        mingwX64(),
+    )
+
+    nativeDesktopTargets.forEach { target ->
+        target.compilations.getByName("main") {
+            cinterops {
+                val klarinet_native by creating {
+                    defFile(project.file("src/nativeInterop/cinterop/klarinet_native.def"))
+                    includeDirs(project.file("src/nativeInterop/cinterop"))
+                }
+            }
+        }
+    }
+
     val appleTargets = listOf(
         iosArm64(),
         iosSimulatorArm64(),
@@ -69,6 +88,11 @@ kotlin {
                 implementation(libs.androidx.espresso.core)
             }
         }
+
+        jvmTest.dependencies {
+            implementation(libs.kotlin.test)
+            implementation(libs.kotlin.testJunit)
+        }
     }
 }
 
@@ -109,5 +133,17 @@ mavenPublishing {
     pom {
         name.set("Klarinet")
         description.set("Low-latency audio I/O SDK for Kotlin Multiplatform")
+        url.set("https://github.com/vectencia/Klarinet")
+        licenses {
+            license {
+                name.set("Apache License, Version 2.0")
+                url.set("https://www.apache.org/licenses/LICENSE-2.0")
+            }
+        }
+        scm {
+            url.set("https://github.com/vectencia/Klarinet")
+            connection.set("scm:git:https://github.com/vectencia/Klarinet.git")
+            developerConnection.set("scm:git:ssh://git@github.com/vectencia/Klarinet.git")
+        }
     }
 }
