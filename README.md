@@ -15,9 +15,9 @@
 
 ---
 
-**Klarinet** is an open-source Kotlin Multiplatform audio library that provides a unified, idiomatic API for low-latency audio playback, recording, file I/O, and real-time effects processing across Android and Apple platforms.
+**Klarinet** is an open-source Kotlin Multiplatform audio library that provides a unified, idiomatic API for low-latency audio playback, recording, file I/O, and real-time effects processing across **8 platforms and 15 targets**.
 
-Write your audio code once in Kotlin. Klarinet delegates to the best native backend on each platform — Google Oboe on Android, AVAudioEngine on Apple — while preserving low-latency characteristics and real-time safety.
+Write your audio code once in Kotlin. Klarinet delegates to the best native backend on each platform — Google Oboe on Android, AVAudioEngine on Apple, miniaudio on JVM/Linux/Windows — while preserving low-latency characteristics and real-time safety.
 
 ## Use Cases
 
@@ -44,8 +44,8 @@ Decode MP3/AAC/WAV files, apply effects (noise gate + compressor + EQ is a class
 
 ## Highlights
 
-- **One API, every platform** --- Common Kotlin API with native performance on Android and Apple
-- **Low-latency by default** --- Google Oboe (AAudio/OpenSL ES) on Android, AVAudioEngine on Apple
+- **One API, every platform** --- Common Kotlin API with native performance across Android, Apple, JVM Desktop, Linux, and Windows
+- **Low-latency by default** --- Google Oboe on Android, AVAudioEngine on Apple, miniaudio on JVM/Linux/Windows
 - **16 built-in audio effects** --- Gain, EQ, Compressor, Reverb, Delay, Chorus, and more --- powered by a shared C++ DSP core
 - **Hot-swappable effect chains** --- Add, remove, and reorder effects while audio is streaming
 - **File I/O** --- Decode and encode WAV, MP3, AAC, M4A with metadata reading
@@ -54,12 +54,55 @@ Decode MP3/AAC/WAV files, apply effects (noise gate + compressor + EQ is a class
 
 ## Supported Platforms
 
-| Platform | Backend | Min Version |
+| Platform | Targets | Backend | Audio Streaming | File I/O (WAV) | File I/O (AAC/M4A) | Min Version |
+|---|---|---|---|---|---|---|
+| Android | arm64-v8a, armeabi-v7a, x86_64 | Google Oboe (AAudio / OpenSL ES) | ✅ | ✅ | ✅ | API 24 |
+| iOS / iPadOS | arm64, simulatorArm64, x64 | AVAudioEngine | ✅ | ✅ | ✅ | iOS 15+ |
+| macOS | arm64, x64 | AVAudioEngine | ✅ | ✅ | ✅ | macOS 12+ |
+| tvOS | arm64, simulatorArm64 | AVAudioEngine | ✅ | ✅ | ✅ | tvOS 15+ |
+| watchOS | arm64, simulatorArm64 | AVAudioEngine | ✅ | ✅ | ❌ | watchOS 8+ |
+| JVM Desktop | macOS, Linux, Windows | miniaudio (WASAPI / Core Audio / ALSA) | ✅ | ✅ | ❌ | JDK 11+ |
+| Linux Native | x64, arm64 | miniaudio (ALSA / PulseAudio / JACK) | ✅ | ✅ | ❌ | — |
+| Windows Native | x64 | miniaudio (WASAPI / DirectSound) | ✅ | ✅ | ❌ | — |
+
+### watchOS Limitations
+
+watchOS support covers real-time audio streaming and WAV file writing. The following limitations apply due to the Kotlin/Native watchOS bindings not exposing the ExtAudioFile APIs:
+
+| Feature | Status | Notes |
 |---|---|---|
-| Android | Google Oboe (AAudio / OpenSL ES) | API 24 |
-| iOS / iPadOS | AVAudioEngine | iOS 15+ |
-| macOS | AVAudioEngine | macOS 12+ |
-| tvOS | AVAudioEngine | tvOS 15+ |
+| Audio playback (`AudioStream` output) | ✅ Supported | AVAudioEngine, same API as iOS/tvOS |
+| Audio recording (`AudioStream` input) | ✅ Supported | Requires mic permission; hardware mic available on Series 3+ |
+| Audio session management | ✅ Supported | Full AVAudioSession integration |
+| WAV file writing (`AudioFileWriter`) | ✅ Supported | PCM encoding via posix I/O |
+| AAC/M4A file writing | ❌ Not available | Throws `UnsupportedFormatException` |
+| File reading (`AudioFileReader`) | ❌ Not available | Throws `UnsupportedFormatException` for all formats |
+| Audio effects chain | ✅ Supported | Kotlin-side effect processing |
+| Swift interop (`AudioStreamCallbackImpl`) | ✅ Supported | Same callback bridge as iOS |
+
+These limitations are a Kotlin/Native toolchain constraint, not a watchOS platform restriction. The underlying Apple APIs (ExtAudioFile) exist on watchOS but are not yet exposed in the K/N bindings.
+
+### JVM Desktop Limitations
+
+JVM desktop support uses miniaudio for low-latency audio I/O across macOS, Linux, and Windows.
+
+| Feature | Status | Notes |
+|---|---|---|
+| Audio playback (`AudioStream` output) | ✅ Supported | miniaudio callback-driven, low latency |
+| Audio recording (`AudioStream` input) | ✅ Supported | miniaudio capture device |
+| Audio session management | N/A | No audio session concept on desktop |
+| WAV file read/write | ✅ Supported | via miniaudio decoder/encoder |
+| MP3 file reading | ✅ Supported | via miniaudio (dr_mp3) |
+| AAC/M4A file read/write | ❌ Not available | Throws `UnsupportedFormatException` |
+| Push-mode write/read | ❌ Not available | Use callback mode via `AudioStreamCallback` |
+| Audio effects | ✅ Supported | Kotlin-side effect processing |
+
+### Unsupported Platforms
+
+| Platform | Reason |
+|---|---|
+| JS / Browser | Web Audio API is async-first and fundamentally incompatible with Klarinet's synchronous callback model. Browser audio apps should use Web Audio API directly. |
+| Wasm / WasmJS | Same limitations as JS — browser sandbox restricts native audio access. |
 
 ## Installation
 
@@ -74,10 +117,10 @@ repositories {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("com.vectencia.klarinet:klarinet:0.0.2")
+            implementation("com.vectencia.klarinet:klarinet:0.1.0")
 
             // Optional: Coroutines extensions
-            implementation("com.vectencia.klarinet:klarinet-coroutines:0.0.2")
+            implementation("com.vectencia.klarinet:klarinet-coroutines:0.1.0")
         }
     }
 }
@@ -293,19 +336,24 @@ graph TD
     B --> C["C++ DSP Core<br/>(Effects, Filters, Reverb)"]
     B --> D["Google Oboe<br/>(AAudio / OpenSL ES)"]
     B --> E["AVAudioEngine<br/>(Core Audio)"]
+    B --> F["miniaudio<br/>(WASAPI / Core Audio / ALSA)"]
     
     style A fill:#7F52FF,color:#fff
     style B fill:#1a1a2e,color:#0ff
     style C fill:#16213e,color:#0ff
     style D fill:#0d7377,color:#fff
     style E fill:#0d7377,color:#fff
+    style F fill:#0d7377,color:#fff
 ```
 
 Klarinet is a single Kotlin Multiplatform module using `expect`/`actual` declarations:
 
 - **`commonMain`** --- Public API: `AudioEngine`, `AudioStream`, `AudioStreamConfig`, `AudioStreamCallback`, `AudioEffect`, `AudioEffectChain`, data classes, enums
 - **`androidMain`** --- Android implementation via Google Oboe (C++17/JNI). Audio effects process directly in the native Oboe callback --- zero JNI crossing for DSP.
-- **`appleMain`** --- Apple implementation via AVAudioEngine. Shared across iOS, macOS, and tvOS.
+- **`appleMain`** --- Apple implementation via AVAudioEngine. Shared across iOS, macOS, tvOS, and watchOS.
+- **`jvmMain`** --- JVM desktop implementation via miniaudio. Covers macOS, Linux, and Windows from a single target with platform-specific native libraries bundled in the JAR.
+- **`linuxX64Main` / `linuxArm64Main`** --- Linux native implementation via miniaudio (cinterop).
+- **`mingwX64Main`** --- Windows native implementation via miniaudio (cinterop).
 - **`cpp/dsp`** --- Shared C++ DSP library compiled for all platforms. Contains all 16 effects, DSP primitives (Biquad, LFO, EnvelopeFollower, CircularBuffer), lock-free effect chain, and SPSC ring buffer.
 
 ## Modules
@@ -314,22 +362,30 @@ Klarinet is a single Kotlin Multiplatform module using `expect`/`actual` declara
 |---|---|---|
 | `klarinet` | `com.vectencia.klarinet:klarinet` | Core SDK: audio I/O, effects, file I/O |
 | `klarinet-coroutines` | `com.vectencia.klarinet:klarinet-coroutines` | Optional Flow & suspending extensions |
-| `demo` | --- | Compose Multiplatform demo app |
-| `iosApp` | --- | Native SwiftUI demo app |
+| `demo` | --- | Compose Multiplatform demo app (Android, iOS, Desktop) |
+| `demo-native` | --- | Native console demo apps (Linux, Windows) |
+| `iosApp` | --- | Native SwiftUI demo app (iOS, tvOS, watchOS) |
 
-## Demo App
+## Demo Apps
 
-The project includes two demo applications showcasing all SDK features:
+The project includes demo applications for every supported platform:
 
-### Compose Multiplatform Demo (Android + iOS)
+### Compose Multiplatform Demo (Android + iOS + Desktop)
 
-5 screens: Tone Generator, Mic Meter, Latency Benchmark, File Player, Effects Chain
+5 screens: Tone Generator, Mic Meter, Latency Benchmark, File Player, Effects Chain. Runs on Android, iOS, and JVM Desktop (macOS, Linux, Windows) from shared Compose UI code.
 
-### Native SwiftUI Demo (iOS)
+```bash
+# Run desktop demo
+./gradlew demo:run
+```
 
-5 matching screens built with pure SwiftUI and MVVM architecture, demonstrating how to use Klarinet directly from Swift without Compose.
+### Native SwiftUI Demo (iOS + tvOS + watchOS)
 
-The iOS app provides a landing screen where you can choose between the Compose Multiplatform demo and the native SwiftUI demo.
+Native SwiftUI tone generator demo for each Apple platform. The iOS app includes 5 full screens with MVVM architecture; tvOS and watchOS have simplified UIs adapted for their form factors.
+
+### Native Console Demo (Linux + Windows)
+
+Minimal command-line demos that play a 440 Hz sine wave for 3 seconds, proving low-latency audio works on each native target.
 
 ## API Reference
 
@@ -394,8 +450,15 @@ KlarinetException
 # Demo app (Android)
 ./gradlew :demo:assembleDebug
 
+# Demo app (Desktop)
+./gradlew :demo:run
+
 # iOS app (via Xcode)
 open iosApp/iosApp.xcodeproj
+
+# Native console demos
+./gradlew :demo-native:linkReleaseExecutableLinuxX64
+./gradlew :demo-native:linkReleaseExecutableMingwX64
 ```
 
 ### Test
