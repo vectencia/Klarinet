@@ -54,15 +54,9 @@ kotlin {
 
     applyDefaultHierarchyTemplate()
 
-    // Suppress beta warning for expect/actual classes (KT-61573).
-    targets.all {
-        compilations.all {
-            compileTaskProvider.configure {
-                compilerOptions {
-                    freeCompilerArgs.add("-Xexpect-actual-classes")
-                }
-            }
-        }
+    // Expect/actual classes are still opt-in (KT-61573).
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
     }
 
     sourceSets {

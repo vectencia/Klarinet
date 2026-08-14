@@ -1,6 +1,15 @@
 package com.vectencia.klarinet
 
-internal expect class AtomicFloat(initialValue: Float) {
-    fun get(): Float
-    fun set(value: Float)
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
+
+@OptIn(ExperimentalAtomicApi::class)
+internal class AtomicFloat(initialValue: Float) {
+    private val bits = AtomicInt(initialValue.toRawBits())
+
+    fun get(): Float = Float.fromBits(bits.load())
+
+    fun set(value: Float) {
+        bits.store(value.toRawBits())
+    }
 }

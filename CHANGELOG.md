@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Kotlin `2.3.20` → `2.4.10`
+- Compose Multiplatform `1.10.3` → `1.11.1`
+- Android Gradle Plugin `8.13.2` → `9.1.0` (maximum version fully supported by Kotlin 2.4.10)
+- Gradle `8.14.4` → `9.5.0`
+- kotlinx-coroutines `1.10.2` → `1.11.0`
+- JetBrains AndroidX Lifecycle `2.10.0` → `2.11.0`
+- vanniktech maven-publish `0.36.0` → `0.37.0`
+- `AtomicFloat` is now a common implementation on `kotlin.concurrent.atomics` instead of per-platform expect/actual wrappers
+- Removed unused `androidx.appcompat` and `androidx.core:core-ktx` catalog entries
+- Fixed `klarienet` typo in the version catalog
+
+### Build
+
+- Opted out of AGP 9 built-in Kotlin and the new Android DSL. Klarinet still needs `com.android.library` + `externalNativeBuild` for Oboe/CMake, which the Android KMP library plugin does not support.
+
 ## [0.1.0] - 2026-04-16
 
 ### Added
