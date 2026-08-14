@@ -7,7 +7,7 @@ klarinet:
 	./gradlew :klarinet:build
 
 demo:
-	./gradlew :demo:assembleDebug
+	./gradlew :demo-android:assembleDebug
 
 test: test-klarinet
 
@@ -15,7 +15,7 @@ test-klarinet:
 	./gradlew :klarinet:allTests
 
 test-android:
-	./gradlew :klarinet:connectedDebugAndroidTest
+	./gradlew :klarinet:connectedAndroidDeviceTest
 
 test-ios:
 	./gradlew :klarinet:iosSimulatorArm64Test

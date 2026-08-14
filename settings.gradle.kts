@@ -27,7 +27,9 @@ dependencyResolutionManagement {
     }
 }
 
+include(":klarinet-android")
 include(":klarinet")
 include(":klarinet-coroutines")
 include(":demo")
+include(":demo-android")
 include(":demo-native")

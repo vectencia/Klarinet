@@ -32,7 +32,7 @@ jobs:
         run: ./gradlew :klarinet:allTests
 
       - name: Build klarinet Android
-        run: ./gradlew :klarinet:assembleDebug
+        run: ./gradlew :klarinet-android:assembleDebug :klarinet:compileAndroidMain
 
       - name: Build klarinet (iOS)
         run: ./gradlew :klarinet:compileKotlinIosSimulatorArm64
@@ -41,7 +41,7 @@ jobs:
         run: ./gradlew :klarinet:compileKotlinMacosArm64
 
       - name: Build demo app
-        run: ./gradlew :demo:assembleDebug
+        run: ./gradlew :demo-android:assembleDebug
 
       - name: Run C++ DSP tests
         run: |
@@ -79,5 +79,5 @@ jobs:
         with:
           api-level: 30
           arch: x86_64
-          script: ./gradlew :klarinet:connectedDebugAndroidTest
+          script: ./gradlew :klarinet:connectedAndroidDeviceTest
         continue-on-error: true

@@ -4,6 +4,10 @@ project("klarinet-android" LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(NOT DEFINED KLARINET_DSP_DIR)
+    set(KLARINET_DSP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../klarinet/src/cpp/dsp")
+endif()
+
 include(FetchContent)
 FetchContent_Declare(
     oboe
@@ -12,8 +16,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(oboe)
 
-# Add DSP library
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../cpp/dsp ${CMAKE_CURRENT_BINARY_DIR}/klarinet-dsp)
+add_subdirectory(${KLARINET_DSP_DIR} ${CMAKE_CURRENT_BINARY_DIR}/klarinet-dsp)
 
 add_library(klarinet-jni SHARED
     klarinet_jni.cpp
@@ -22,7 +25,7 @@ add_library(klarinet-jni SHARED
 )
 
 target_include_directories(klarinet-jni PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../cpp/dsp
+    ${KLARINET_DSP_DIR}
 )
 
 target_link_libraries(klarinet-jni

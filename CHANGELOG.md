@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Kotlin `2.3.20` → `2.4.10`
 - Compose Multiplatform `1.10.3` → `1.11.1`
 - Android Gradle Plugin `8.13.2` → `9.1.0` (maximum version fully supported by Kotlin 2.4.10)
+- Android `compileSdk` `36` → `37` (required by AndroidX Lifecycle 2.11.0)
 - Gradle `8.14.4` → `9.5.0`
 - kotlinx-coroutines `1.10.2` → `1.11.0`
 - JetBrains AndroidX Lifecycle `2.10.0` → `2.11.0`
@@ -22,7 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Build
 
-- Opted out of AGP 9 built-in Kotlin and the new Android DSL. Klarinet still needs `com.android.library` + `externalNativeBuild` for Oboe/CMake, which the Android KMP library plugin does not support.
+- Extracted the Android Oboe/C++ JNI backend into `:klarinet-android` (`com.android.library`) so native CMake can stay on a regular Android library
+- Migrated `:klarinet` and `:klarinet-coroutines` to `com.android.kotlin.multiplatform.library`
+- Split the demo into `:demo` (shared Compose Multiplatform UI) and `:demo-android` (application entry point)
+- Removed AGP 9 `android.builtInKotlin` / `android.newDsl` opt-outs
 
 ## [0.1.0] - 2026-04-16
 

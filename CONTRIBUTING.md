@@ -30,10 +30,11 @@ Build individual modules:
 
 ```bash
 ./gradlew :klarinet:build
-./gradlew :klarinet:assembleDebug
+./gradlew :klarinet-android:assembleDebug
+./gradlew :klarinet:compileAndroidMain
 ./gradlew :klarinet:compileKotlinIosSimulatorArm64
 ./gradlew :klarinet:compileKotlinMacosArm64
-./gradlew :demo:assembleDebug
+./gradlew :demo-android:assembleDebug
 ```
 
 ## Test Commands
@@ -47,7 +48,7 @@ Run all common tests:
 Run Android instrumented tests (requires emulator or device):
 
 ```bash
-./gradlew :klarinet:connectedDebugAndroidTest
+./gradlew :klarinet:connectedAndroidDeviceTest
 ```
 
 Run iOS simulator tests (macOS only):
@@ -82,8 +83,11 @@ The project includes a `Makefile` for common commands:
 
 | Module | Description |
 |---|---|
-| `klarinet` | KMP audio SDK: common API + Android and Apple backends |
-| `demo` | Demo application |
+| `klarinet` | KMP audio SDK: common API + platform backends |
+| `klarinet-android` | Android Oboe/C++ JNI backend (`com.android.library`) |
+| `klarinet-coroutines` | Optional Flow and suspending extensions |
+| `demo` | Shared Compose Multiplatform demo UI |
+| `demo-android` | Android application entry point |
 
 ## Pull Request Guidelines
 

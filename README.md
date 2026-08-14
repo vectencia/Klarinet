@@ -361,8 +361,10 @@ Klarinet is a single Kotlin Multiplatform module using `expect`/`actual` declara
 | Module | Artifact | Description |
 |---|---|---|
 | `klarinet` | `com.vectencia.klarinet:klarinet` | Core SDK: audio I/O, effects, file I/O |
+| `klarinet-android` | `com.vectencia.klarinet:klarinet-android` | Android Oboe/C++ JNI backend |
 | `klarinet-coroutines` | `com.vectencia.klarinet:klarinet-coroutines` | Optional Flow & suspending extensions |
-| `demo` | --- | Compose Multiplatform demo app (Android, iOS, Desktop) |
+| `demo` | --- | Shared Compose Multiplatform demo UI (Android, iOS, Desktop) |
+| `demo-android` | --- | Android application entry point |
 | `demo-native` | --- | Native console demo apps (Linux, Windows) |
 | `iosApp` | --- | Native SwiftUI demo app (iOS, tvOS, watchOS) |
 
@@ -448,7 +450,7 @@ KlarinetException
 ./gradlew :klarinet:build
 
 # Demo app (Android)
-./gradlew :demo:assembleDebug
+./gradlew :demo-android:assembleDebug
 
 # Demo app (Desktop)
 ./gradlew :demo:run
