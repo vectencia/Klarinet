@@ -85,6 +85,7 @@ actual class AudioStream internal constructor(
             if (cb != null && stream._state == StreamState.STARTED) {
                 val buffer = FloatArray(totalSamples)
                 cb.onAudioReady(buffer, numFrames)
+                stream.effectChain?.process(buffer, numFrames, cfg.channelCount)
 
                 var peak = 0f
                 for (i in buffer.indices) {
@@ -154,6 +155,7 @@ actual class AudioStream internal constructor(
                 }
             }
 
+            effectChain?.process(audioData, frameLength, channels)
             callback.onAudioReady(audioData, frameLength)
 
             var peakLevel = 0f
@@ -269,6 +271,11 @@ actual class AudioStream internal constructor(
     }
 
     actual var effectChain: AudioEffectChain? = null
+        set(value) {
+            requireActive(_state != StreamState.CLOSED, "AudioStream")
+            value?.prepare(config.sampleRate, config.channelCount)
+            field = value
+        }
 
     actual val peakLevel: Float get() = peakLevelAtomic.get()
 

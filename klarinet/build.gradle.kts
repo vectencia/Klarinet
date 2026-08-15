@@ -1,11 +1,61 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
+fun dspCmakeArguments(targetName: String): List<String> = when (targetName) {
+    "macosArm64" -> listOf("-DCMAKE_OSX_ARCHITECTURES=arm64")
+    "macosX64" -> listOf("-DCMAKE_OSX_ARCHITECTURES=x86_64")
+    "iosSimulatorArm64" -> listOf(
+        "-DCMAKE_SYSTEM_NAME=iOS",
+        "-DCMAKE_OSX_SYSROOT=iphonesimulator",
+        "-DCMAKE_OSX_ARCHITECTURES=arm64",
+        "-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0",
+    )
+    "iosArm64" -> listOf(
+        "-DCMAKE_SYSTEM_NAME=iOS",
+        "-DCMAKE_OSX_SYSROOT=iphoneos",
+        "-DCMAKE_OSX_ARCHITECTURES=arm64",
+        "-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0",
+    )
+    "iosX64" -> listOf(
+        "-DCMAKE_SYSTEM_NAME=iOS",
+        "-DCMAKE_OSX_SYSROOT=iphonesimulator",
+        "-DCMAKE_OSX_ARCHITECTURES=x86_64",
+        "-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0",
+    )
+    "tvosSimulatorArm64" -> listOf(
+        "-DCMAKE_SYSTEM_NAME=tvOS",
+        "-DCMAKE_OSX_SYSROOT=appletvsimulator",
+        "-DCMAKE_OSX_ARCHITECTURES=arm64",
+        "-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0",
+    )
+    "tvosArm64" -> listOf(
+        "-DCMAKE_SYSTEM_NAME=tvOS",
+        "-DCMAKE_OSX_SYSROOT=appletvos",
+        "-DCMAKE_OSX_ARCHITECTURES=arm64",
+        "-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0",
+    )
+    "watchosSimulatorArm64" -> listOf(
+        "-DCMAKE_SYSTEM_NAME=watchOS",
+        "-DCMAKE_OSX_SYSROOT=watchsimulator",
+        "-DCMAKE_OSX_ARCHITECTURES=arm64",
+        "-DCMAKE_OSX_DEPLOYMENT_TARGET=8.0",
+    )
+    "watchosArm64" -> listOf(
+        "-DCMAKE_SYSTEM_NAME=watchOS",
+        "-DCMAKE_OSX_SYSROOT=watchos",
+        "-DCMAKE_OSX_ARCHITECTURES=arm64",
+        "-DCMAKE_OSX_DEPLOYMENT_TARGET=8.0",
+    )
+    else -> emptyList()
+}
+
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidKmpLibrary)
     alias(libs.plugins.vanniktechPublish)
     alias(libs.plugins.dokka)
 }
+
+val dspSourceDir = layout.projectDirectory.dir("src/cpp/dsp")
 
 kotlin {
     android {
@@ -61,6 +111,50 @@ kotlin {
             baseName = "Klarinet"
             isStatic = true
         }
+        target.compilations.getByName("main") {
+            cinterops {
+                val klarinet_dsp by creating {
+                    defFile(project.file("src/nativeInterop/cinterop/klarinet_dsp.def"))
+                    includeDirs(project.file("src/cpp/dsp"))
+                }
+            }
+        }
+        val dspOut = layout.buildDirectory.dir("dsp-${target.name}")
+        val configureDsp = tasks.register<Exec>("configureDsp${target.name.replaceFirstChar { it.uppercase() }}") {
+            workingDir = dspSourceDir.asFile
+            inputs.dir(dspSourceDir)
+            outputs.dir(dspOut)
+            commandLine(
+                buildList {
+                    add("cmake")
+                    add("-S")
+                    add(dspSourceDir.asFile.absolutePath)
+                    add("-B")
+                    add(dspOut.get().asFile.absolutePath)
+                    add("-DKLARINET_DSP_BUILD_TESTS=OFF")
+                    addAll(dspCmakeArguments(target.name))
+                },
+            )
+        }
+        val compileDsp = tasks.register<Exec>("compileDsp${target.name.replaceFirstChar { it.uppercase() }}") {
+            dependsOn(configureDsp)
+            inputs.dir(dspSourceDir)
+            outputs.dir(dspOut)
+            commandLine("cmake", "--build", dspOut.get().asFile.absolutePath)
+        }
+        target.binaries.all {
+            linkerOpts(
+                "-L${dspOut.get().asFile.absolutePath}",
+                "-lklarinet-dsp",
+                "-lc++",
+            )
+        }
+        tasks.matching { task ->
+            val n = task.name.lowercase()
+            n.contains("link") && n.contains(target.name.lowercase())
+        }.configureEach {
+            dependsOn(compileDsp)
+        }
     }
 
     applyDefaultHierarchyTemplate()
@@ -114,7 +208,6 @@ dokka {
     moduleName.set("Klarinet")
 }
 
-val dspSourceDir = layout.projectDirectory.dir("src/cpp/dsp")
 val dspBuildDir = layout.buildDirectory.dir("dsp-tests")
 
 val dspSources = fileTree(dspSourceDir) {

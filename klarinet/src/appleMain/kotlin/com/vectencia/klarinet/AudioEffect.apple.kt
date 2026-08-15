@@ -1,36 +1,49 @@
+@file:OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)
+
 package com.vectencia.klarinet
+
+import klarinet_dsp.KlarinetEffectHandle
+import klarinet_dsp.klarinet_create_effect
+import klarinet_dsp.klarinet_effect_destroy
+import klarinet_dsp.klarinet_effect_get_parameter
+import klarinet_dsp.klarinet_effect_is_enabled
+import klarinet_dsp.klarinet_effect_set_enabled
+import klarinet_dsp.klarinet_effect_set_parameter
+import kotlinx.cinterop.COpaquePointer
 
 actual class AudioEffect internal constructor(
     actual val type: AudioEffectType,
 ) : AutoCloseable {
-    private val parameters = mutableMapOf<Int, Float>()
-    private var _isEnabled = true
-    private var released = false
+    internal var handle: COpaquePointer? = klarinet_create_effect(type.ordinal)
+        ?: throw StreamCreationException("Failed to create audio effect")
 
     actual var isEnabled: Boolean
         get() {
-            requireActive(!released, "AudioEffect")
-            return _isEnabled
+            val h = handle ?: throw ResourceReleasedException("AudioEffect has been released")
+            return klarinet_effect_is_enabled(h) != 0
         }
         set(value) {
-            requireActive(!released, "AudioEffect")
-            _isEnabled = value
+            val h = handle ?: throw ResourceReleasedException("AudioEffect has been released")
+            klarinet_effect_set_enabled(h, if (value) 1 else 0)
         }
 
     actual fun setParameter(paramId: Int, value: Float) {
-        requireActive(!released, "AudioEffect")
-        parameters[paramId] = value
+        val h = handle ?: throw ResourceReleasedException("AudioEffect has been released")
+        klarinet_effect_set_parameter(h, paramId, value)
     }
 
     actual fun getParameter(paramId: Int): Float {
-        requireActive(!released, "AudioEffect")
-        return parameters[paramId] ?: 0f
+        val h = handle ?: throw ResourceReleasedException("AudioEffect has been released")
+        return klarinet_effect_get_parameter(h, paramId)
     }
 
     actual fun release() {
-        released = true
-        parameters.clear()
+        handle?.let { klarinet_effect_destroy(it) }
+        handle = null
     }
 
     actual override fun close() = release()
 }
+
+internal val AudioEffect.nativeHandle: KlarinetEffectHandle
+    get() = handle ?: throw ResourceReleasedException("AudioEffect has been released")

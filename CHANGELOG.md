@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - JVM desktop effects now run the shared C++ DSP core on the miniaudio callback instead of a Kotlin parameter map
 - Native desktop (Linux / Windows) effects call the same `klarinet_dsp` C API instead of a Kotlin parameter map
+- Apple `getAvailableDevices()` lists real Core Audio / AVAudioSession ports and `deviceId` selects them
+- Apple effects run the shared C++ DSP core on the AVAudioEngine render/tap path
 
 ## [0.2.0] - 2026-08-15
 
