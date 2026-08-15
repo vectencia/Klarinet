@@ -24,7 +24,6 @@ kotlin {
     iosSimulatorArm64()
     iosX64()
     macosArm64()
-    macosX64()
     tvosArm64()
     tvosSimulatorArm64()
 

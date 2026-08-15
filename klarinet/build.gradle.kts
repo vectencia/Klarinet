@@ -3,7 +3,6 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 fun dspCmakeArguments(targetName: String): List<String> = when (targetName) {
     "macosArm64" -> listOf("-DCMAKE_OSX_ARCHITECTURES=arm64")
-    "macosX64" -> listOf("-DCMAKE_OSX_ARCHITECTURES=x86_64")
     "iosSimulatorArm64" -> listOf(
         "-DCMAKE_SYSTEM_NAME=iOS",
         "-DCMAKE_OSX_SYSROOT=iphonesimulator",
@@ -100,7 +99,6 @@ kotlin {
         iosSimulatorArm64(),
         iosX64(),
         macosArm64(),
-        macosX64(),
         tvosArm64(),
         tvosSimulatorArm64(),
         watchosArm64(),

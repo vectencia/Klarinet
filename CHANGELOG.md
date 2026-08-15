@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Apple `getAvailableDevices()` lists real Core Audio / AVAudioSession ports and `deviceId` selects them
 - Apple effects run the shared C++ DSP core on the AVAudioEngine render/tap path
 - Kotlin `onAudioReady` runs on a worker thread on Apple, JVM, and native desktop; the audio callback only does FIFO + C++ DSP
+- Dropped the Kotlin/Native `macosX64` target; Intel Macs keep using the JVM desktop artifact
 
 ## [0.2.0] - 2026-08-15
 

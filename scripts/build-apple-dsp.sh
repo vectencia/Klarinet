@@ -11,7 +11,6 @@
 #   iosSimulatorArm64   -> arm64,  iPhoneSimulator SDK
 #   iosX64              -> x86_64, iPhoneSimulator SDK
 #   macosArm64          -> arm64,  MacOSX SDK
-#   macosX64            -> x86_64, MacOSX SDK
 #   tvosArm64           -> arm64,  AppleTVOS SDK
 #   tvosSimulatorArm64  -> arm64,  AppleTVSimulator SDK
 
@@ -33,7 +32,6 @@ TARGETS=(
     "iosSimulatorArm64|iphonesimulator|arm64|CMAKE_OSX_DEPLOYMENT_TARGET|13.0"
     "iosX64|iphonesimulator|x86_64|CMAKE_OSX_DEPLOYMENT_TARGET|13.0"
     "macosArm64|macosx|arm64|CMAKE_OSX_DEPLOYMENT_TARGET|11.0"
-    "macosX64|macosx|x86_64|CMAKE_OSX_DEPLOYMENT_TARGET|11.0"
     "tvosArm64|appletvos|arm64|CMAKE_OSX_DEPLOYMENT_TARGET|13.0"
     "tvosSimulatorArm64|appletvsimulator|arm64|CMAKE_OSX_DEPLOYMENT_TARGET|13.0"
 )
