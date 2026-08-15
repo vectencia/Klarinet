@@ -39,10 +39,11 @@ android {
 }
 
 mavenPublishing {
+    coordinates(artifactId = "klarinet-jni")
     publishToMavenCentral()
     signAllPublications()
     pom {
-        name.set("Klarinet Android Native")
+        name.set("Klarinet Android JNI")
         description.set("Oboe/C++ JNI backend for Klarinet on Android")
         url.set("https://github.com/vectencia/Klarinet")
         licenses {

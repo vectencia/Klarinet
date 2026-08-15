@@ -370,7 +370,7 @@ Klarinet is a single Kotlin Multiplatform module using `expect`/`actual` declara
 | Module | Artifact | Description |
 |---|---|---|
 | `klarinet` | `com.vectencia.klarinet:klarinet` | Core SDK: audio I/O, effects, file I/O |
-| `klarinet-android` | `com.vectencia.klarinet:klarinet-android` | Android Oboe/C++ JNI backend |
+| `klarinet-android` | `com.vectencia.klarinet:klarinet-jni` | Android Oboe/C++ JNI backend (pulled in by the KMP Android target) |
 | `klarinet-coroutines` | `com.vectencia.klarinet:klarinet-coroutines` | Optional Flow & suspending extensions |
 | `demo` | --- | Shared Compose Multiplatform demo UI (Android, iOS, Desktop) |
 | `demo-android` | --- | Android application entry point |
