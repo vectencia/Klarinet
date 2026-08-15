@@ -2,34 +2,33 @@ package com.vectencia.klarinet
 
 actual class AudioEffect internal constructor(
     actual val type: AudioEffectType,
+    internal var effectHandle: Long,
 ) : AutoCloseable {
-    private val parameters = mutableMapOf<Int, Float>()
-    private var _isEnabled = true
-    private var released = false
-
     actual var isEnabled: Boolean
         get() {
-            requireActive(!released, "AudioEffect")
-            return _isEnabled
+            requireActive(effectHandle != 0L, "AudioEffect")
+            return JniBridge.nativeIsEffectEnabled(effectHandle)
         }
         set(value) {
-            requireActive(!released, "AudioEffect")
-            _isEnabled = value
+            requireActive(effectHandle != 0L, "AudioEffect")
+            JniBridge.nativeSetEffectEnabled(effectHandle, value)
         }
 
     actual fun setParameter(paramId: Int, value: Float) {
-        requireActive(!released, "AudioEffect")
-        parameters[paramId] = value
+        requireActive(effectHandle != 0L, "AudioEffect")
+        JniBridge.nativeSetEffectParameter(effectHandle, paramId, value)
     }
 
     actual fun getParameter(paramId: Int): Float {
-        requireActive(!released, "AudioEffect")
-        return parameters[paramId] ?: 0f
+        requireActive(effectHandle != 0L, "AudioEffect")
+        return JniBridge.nativeGetEffectParameter(effectHandle, paramId)
     }
 
     actual fun release() {
-        released = true
-        parameters.clear()
+        if (effectHandle != 0L) {
+            JniBridge.nativeDestroyEffect(effectHandle)
+            effectHandle = 0L
+        }
     }
 
     actual override fun close() = release()

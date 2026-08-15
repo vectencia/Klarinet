@@ -1,7 +1,10 @@
 #include <jni.h>
+#include <stdatomic.h>
+#include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
 #include "miniaudio.h"
+#include "klarinet_dsp.h"
 
 /* ------------------------------------------------------------------ */
 /* Callback bridging                                                   */
@@ -13,7 +16,12 @@ typedef struct {
     jmethodID   onAudioReadyMethod;
     ma_device   device;
     ma_uint32   channelCount;
+    _Atomic(KlarinetEffectChainHandle) effectChain;
 } KlarinetDevice;
+
+static KlarinetEffectChainHandle device_chain(KlarinetDevice* kd) {
+    return atomic_load(&kd->effectChain);
+}
 
 static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
     KlarinetDevice* kd = (KlarinetDevice*)pDevice->pUserData;
@@ -31,15 +39,27 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
     jfloatArray jbuffer = (*env)->NewFloatArray(env, (jsize)totalSamples);
     if (jbuffer == NULL) goto detach;
 
-    if (pDevice->type == ma_device_type_capture) {
-        (*env)->SetFloatArrayRegion(env, jbuffer, 0, (jsize)totalSamples, (const jfloat*)pInput);
+    KlarinetEffectChainHandle chain = device_chain(kd);
+
+    if (pDevice->type == ma_device_type_capture && pInput != NULL) {
+        if (chain != NULL && totalSamples <= 8192) {
+            float work[8192];
+            memcpy(work, pInput, totalSamples * sizeof(float));
+            klarinet_chain_process(chain, work, (int)frameCount, (int)kd->channelCount);
+            (*env)->SetFloatArrayRegion(env, jbuffer, 0, (jsize)totalSamples, work);
+        } else {
+            (*env)->SetFloatArrayRegion(env, jbuffer, 0, (jsize)totalSamples, (const jfloat*)pInput);
+        }
     }
 
     (*env)->CallIntMethod(env, kd->callbackObj, kd->onAudioReadyMethod,
                           jbuffer, (jint)frameCount);
 
-    if (pDevice->type == ma_device_type_playback) {
+    if (pDevice->type == ma_device_type_playback && pOutput != NULL) {
         (*env)->GetFloatArrayRegion(env, jbuffer, 0, (jsize)totalSamples, (jfloat*)pOutput);
+        if (chain != NULL) {
+            klarinet_chain_process(chain, (float*)pOutput, (int)frameCount, (int)kd->channelCount);
+        }
     }
 
     (*env)->DeleteLocalRef(env, jbuffer);
@@ -106,6 +126,7 @@ Java_com_vectencia_klarinet_JniBridge_nativeDeviceInit(
     if (kd == NULL) return 0;
 
     kd->channelCount = (ma_uint32)channelCount;
+    atomic_init(&kd->effectChain, NULL);
 
     ma_device_config config;
     if (direction == 0) {
@@ -346,4 +367,159 @@ JNIEXPORT void JNICALL
 Java_com_vectencia_klarinet_JniBridge_nativeEncoderUninit(JNIEnv* env, jobject thiz, jlong encoderPtr) {
     ma_encoder* enc = (ma_encoder*)(intptr_t)encoderPtr;
     if (enc != NULL) { ma_encoder_uninit(enc); free(enc); }
+}
+
+/* ------------------------------------------------------------------ */
+/* Effects / chains                                                    */
+/* ------------------------------------------------------------------ */
+
+JNIEXPORT jlong JNICALL
+Java_com_vectencia_klarinet_JniBridge_nativeCreateEffect(JNIEnv* env, jobject thiz, jint effectType) {
+    (void)env; (void)thiz;
+    return (jlong)(intptr_t)klarinet_create_effect((int)effectType);
+}
+
+JNIEXPORT void JNICALL
+Java_com_vectencia_klarinet_JniBridge_nativeDestroyEffect(JNIEnv* env, jobject thiz, jlong effectHandle) {
+    (void)env; (void)thiz;
+    klarinet_effect_destroy((KlarinetEffectHandle)(intptr_t)effectHandle);
+}
+
+JNIEXPORT void JNICALL
+Java_com_vectencia_klarinet_JniBridge_nativeSetEffectParameter(
+    JNIEnv* env, jobject thiz, jlong effectHandle, jint paramId, jfloat value
+) {
+    (void)env; (void)thiz;
+    klarinet_effect_set_parameter((KlarinetEffectHandle)(intptr_t)effectHandle, (int)paramId, value);
+}
+
+JNIEXPORT jfloat JNICALL
+Java_com_vectencia_klarinet_JniBridge_nativeGetEffectParameter(
+    JNIEnv* env, jobject thiz, jlong effectHandle, jint paramId
+) {
+    (void)env; (void)thiz;
+    return klarinet_effect_get_parameter((KlarinetEffectHandle)(intptr_t)effectHandle, (int)paramId);
+}
+
+JNIEXPORT void JNICALL
+Java_com_vectencia_klarinet_JniBridge_nativeSetEffectEnabled(
+    JNIEnv* env, jobject thiz, jlong effectHandle, jboolean enabled
+) {
+    (void)env; (void)thiz;
+    klarinet_effect_set_enabled((KlarinetEffectHandle)(intptr_t)effectHandle, enabled ? 1 : 0);
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_vectencia_klarinet_JniBridge_nativeIsEffectEnabled(JNIEnv* env, jobject thiz, jlong effectHandle) {
+    (void)env; (void)thiz;
+    return klarinet_effect_is_enabled((KlarinetEffectHandle)(intptr_t)effectHandle) ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT void JNICALL
+Java_com_vectencia_klarinet_JniBridge_nativeEffectPrepare(
+    JNIEnv* env, jobject thiz, jlong effectHandle, jint sampleRate, jint channelCount
+) {
+    (void)env; (void)thiz;
+    klarinet_effect_prepare(
+        (KlarinetEffectHandle)(intptr_t)effectHandle, (int)sampleRate, (int)channelCount);
+}
+
+JNIEXPORT jlong JNICALL
+Java_com_vectencia_klarinet_JniBridge_nativeCreateEffectChain(JNIEnv* env, jobject thiz) {
+    (void)env; (void)thiz;
+    return (jlong)(intptr_t)klarinet_chain_create();
+}
+
+JNIEXPORT void JNICALL
+Java_com_vectencia_klarinet_JniBridge_nativeDestroyEffectChain(JNIEnv* env, jobject thiz, jlong chainHandle) {
+    (void)env; (void)thiz;
+    klarinet_chain_destroy((KlarinetEffectChainHandle)(intptr_t)chainHandle);
+}
+
+JNIEXPORT void JNICALL
+Java_com_vectencia_klarinet_JniBridge_nativeChainAddEffect(
+    JNIEnv* env, jobject thiz, jlong chainHandle, jlong effectHandle
+) {
+    (void)env; (void)thiz;
+    klarinet_chain_add(
+        (KlarinetEffectChainHandle)(intptr_t)chainHandle,
+        (KlarinetEffectHandle)(intptr_t)effectHandle);
+}
+
+JNIEXPORT void JNICALL
+Java_com_vectencia_klarinet_JniBridge_nativeChainRemoveEffect(
+    JNIEnv* env, jobject thiz, jlong chainHandle, jlong effectHandle
+) {
+    (void)env; (void)thiz;
+    klarinet_chain_remove(
+        (KlarinetEffectChainHandle)(intptr_t)chainHandle,
+        (KlarinetEffectHandle)(intptr_t)effectHandle);
+}
+
+JNIEXPORT void JNICALL
+Java_com_vectencia_klarinet_JniBridge_nativeChainClear(JNIEnv* env, jobject thiz, jlong chainHandle) {
+    (void)env; (void)thiz;
+    klarinet_chain_clear((KlarinetEffectChainHandle)(intptr_t)chainHandle);
+}
+
+JNIEXPORT void JNICALL
+Java_com_vectencia_klarinet_JniBridge_nativeChainPrepare(
+    JNIEnv* env, jobject thiz, jlong chainHandle, jint sampleRate, jint channelCount
+) {
+    (void)env; (void)thiz;
+    klarinet_chain_prepare(
+        (KlarinetEffectChainHandle)(intptr_t)chainHandle, (int)sampleRate, (int)channelCount);
+}
+
+JNIEXPORT jint JNICALL
+Java_com_vectencia_klarinet_JniBridge_nativeChainGetEffectCount(JNIEnv* env, jobject thiz, jlong chainHandle) {
+    (void)env; (void)thiz;
+    return (jint)klarinet_chain_get_effect_count((KlarinetEffectChainHandle)(intptr_t)chainHandle);
+}
+
+JNIEXPORT void JNICALL
+Java_com_vectencia_klarinet_JniBridge_nativeChainEnqueueParam(
+    JNIEnv* env, jobject thiz, jlong chainHandle, jlong effectHandle, jint paramId, jfloat value
+) {
+    (void)env; (void)thiz;
+    klarinet_chain_enqueue_param(
+        (KlarinetEffectChainHandle)(intptr_t)chainHandle,
+        (KlarinetEffectHandle)(intptr_t)effectHandle,
+        (int)paramId,
+        value);
+}
+
+JNIEXPORT void JNICALL
+Java_com_vectencia_klarinet_JniBridge_nativeChainProcess(
+    JNIEnv* env, jobject thiz, jlong chainHandle, jfloatArray data, jint numFrames, jint channelCount
+) {
+    if (data == NULL) return;
+    jfloat* samples = (*env)->GetFloatArrayElements(env, data, NULL);
+    if (samples == NULL) return;
+    klarinet_chain_process(
+        (KlarinetEffectChainHandle)(intptr_t)chainHandle,
+        samples,
+        (int)numFrames,
+        (int)channelCount);
+    (*env)->ReleaseFloatArrayElements(env, data, samples, 0);
+}
+
+JNIEXPORT void JNICALL
+Java_com_vectencia_klarinet_JniBridge_nativeSetDeviceEffectChain(
+    JNIEnv* env, jobject thiz, jlong devicePtr, jlong chainHandle
+) {
+    (void)env; (void)thiz;
+    KlarinetDevice* kd = (KlarinetDevice*)(intptr_t)devicePtr;
+    if (kd != NULL) {
+        atomic_store(&kd->effectChain, (KlarinetEffectChainHandle)(intptr_t)chainHandle);
+    }
+}
+
+JNIEXPORT void JNICALL
+Java_com_vectencia_klarinet_JniBridge_nativeClearDeviceEffectChain(JNIEnv* env, jobject thiz, jlong devicePtr) {
+    (void)env; (void)thiz;
+    KlarinetDevice* kd = (KlarinetDevice*)(intptr_t)devicePtr;
+    if (kd != NULL) {
+        atomic_store(&kd->effectChain, NULL);
+    }
 }

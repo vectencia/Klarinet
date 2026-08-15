@@ -61,6 +61,20 @@ actual class AudioStream internal constructor(actual val config: AudioStreamConf
     }
 
     actual var effectChain: AudioEffectChain? = null
+        set(value) {
+            requireActive(devicePtr != 0L, "AudioStream")
+            if (value != null) {
+                JniBridge.nativeChainPrepare(
+                    value.chainHandle,
+                    config.sampleRate,
+                    config.channelCount,
+                )
+                JniBridge.nativeSetDeviceEffectChain(devicePtr, value.chainHandle)
+            } else {
+                JniBridge.nativeClearDeviceEffectChain(devicePtr)
+            }
+            field = value
+        }
     actual val peakLevel: Float get() = peakLevelAtomic.get()
     internal actual val peakLevelAtomic = AtomicFloat(0f)
 }

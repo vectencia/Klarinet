@@ -37,4 +37,24 @@ internal object JniBridge {
     @JvmStatic external fun nativeEncoderInitFile(path: String, format: Int, channels: Int, sampleRate: Int): Long
     @JvmStatic external fun nativeEncoderWriteFrames(encoderPtr: Long, data: FloatArray, frameCount: Int): Boolean
     @JvmStatic external fun nativeEncoderUninit(encoderPtr: Long)
+
+    @JvmStatic external fun nativeCreateEffect(effectType: Int): Long
+    @JvmStatic external fun nativeDestroyEffect(effectHandle: Long)
+    @JvmStatic external fun nativeSetEffectParameter(effectHandle: Long, paramId: Int, value: Float)
+    @JvmStatic external fun nativeGetEffectParameter(effectHandle: Long, paramId: Int): Float
+    @JvmStatic external fun nativeSetEffectEnabled(effectHandle: Long, enabled: Boolean)
+    @JvmStatic external fun nativeIsEffectEnabled(effectHandle: Long): Boolean
+    @JvmStatic external fun nativeEffectPrepare(effectHandle: Long, sampleRate: Int, channelCount: Int)
+
+    @JvmStatic external fun nativeCreateEffectChain(): Long
+    @JvmStatic external fun nativeDestroyEffectChain(chainHandle: Long)
+    @JvmStatic external fun nativeChainAddEffect(chainHandle: Long, effectHandle: Long)
+    @JvmStatic external fun nativeChainRemoveEffect(chainHandle: Long, effectHandle: Long)
+    @JvmStatic external fun nativeChainClear(chainHandle: Long)
+    @JvmStatic external fun nativeChainPrepare(chainHandle: Long, sampleRate: Int, channelCount: Int)
+    @JvmStatic external fun nativeChainGetEffectCount(chainHandle: Long): Int
+    @JvmStatic external fun nativeChainEnqueueParam(chainHandle: Long, effectHandle: Long, paramId: Int, value: Float)
+    @JvmStatic external fun nativeChainProcess(chainHandle: Long, data: FloatArray, numFrames: Int, channelCount: Int)
+    @JvmStatic external fun nativeSetDeviceEffectChain(devicePtr: Long, chainHandle: Long)
+    @JvmStatic external fun nativeClearDeviceEffectChain(devicePtr: Long)
 }
