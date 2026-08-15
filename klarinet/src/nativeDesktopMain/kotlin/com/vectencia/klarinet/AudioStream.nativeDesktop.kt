@@ -64,6 +64,15 @@ actual class AudioStream internal constructor(actual val config: AudioStreamConf
     actual fun read(data: FloatArray, numFrames: Int, timeoutNanos: Long): Int = -1
 
     actual var effectChain: AudioEffectChain? = null
+        set(value) {
+            requireActive(devicePtr != null, "AudioStream")
+            value?.prepare(config.sampleRate, config.channelCount)
+            field = value
+        }
+
+    internal fun processEffects(buffer: FloatArray, numFrames: Int, channelCount: Int) {
+        effectChain?.process(buffer, numFrames, channelCount)
+    }
     actual val peakLevel: Float get() = peakLevelAtomic.get()
     internal actual val peakLevelAtomic = AtomicFloat(0f)
 }

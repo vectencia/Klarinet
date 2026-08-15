@@ -36,6 +36,10 @@ kotlin {
                     defFile(project.file("src/nativeInterop/cinterop/klarinet_native.def"))
                     includeDirs(project.file("src/nativeInterop/cinterop"))
                 }
+                val klarinet_dsp by creating {
+                    defFile(project.file("src/nativeInterop/cinterop/klarinet_dsp.def"))
+                    includeDirs(project.file("src/cpp/dsp"))
+                }
             }
         }
     }
