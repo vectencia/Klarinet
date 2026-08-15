@@ -469,10 +469,7 @@ open iosApp/iosApp.xcodeproj
 ./gradlew :klarinet:allTests
 
 # C++ DSP tests
-cd klarinet/src/cpp/dsp
-cmake -B build -DKLARINET_DSP_BUILD_TESTS=ON
-cmake --build build
-cd build && ctest --output-on-failure
+./gradlew :klarinet:dspTests
 
 # Coroutines module tests
 ./gradlew :klarinet-coroutines:allTests
@@ -485,8 +482,9 @@ cd build && ctest --output-on-failure
 | `make build` | Build all modules |
 | `make klarinet` | Build the library only |
 | `make demo` | Build the demo app (Android) |
-| `make test` | Run common tests |
-| `make test-all` | Run all tests across platforms |
+| `make test` | Run Kotlin tests |
+| `make test-dsp` | Run C++ DSP tests |
+| `make test-all` | Run Kotlin, C++ DSP, and iOS simulator tests |
 | `make clean` | Clean build artifacts |
 | `make publish` | Publish to Maven Central |
 

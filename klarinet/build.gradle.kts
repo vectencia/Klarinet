@@ -105,6 +105,40 @@ kotlin {
     }
 }
 
+val dspSourceDir = layout.projectDirectory.dir("src/cpp/dsp")
+val dspBuildDir = layout.buildDirectory.dir("dsp-tests")
+
+val dspSources = fileTree(dspSourceDir) {
+    exclude("build/**")
+}
+
+val configureDspTests by tasks.registering(Exec::class) {
+    workingDir = dspSourceDir.asFile
+    inputs.files(dspSources)
+    outputs.dir(dspBuildDir)
+    commandLine(
+        "cmake",
+        "-S", dspSourceDir.asFile.absolutePath,
+        "-B", dspBuildDir.get().asFile.absolutePath,
+        "-DKLARINET_DSP_BUILD_TESTS=ON",
+    )
+}
+
+val compileDspTests by tasks.registering(Exec::class) {
+    dependsOn(configureDspTests)
+    inputs.files(dspSources)
+    outputs.dir(dspBuildDir)
+    commandLine("cmake", "--build", dspBuildDir.get().asFile.absolutePath)
+}
+
+tasks.register<Exec>("dspTests") {
+    group = "verification"
+    description = "Build and run the C++ DSP unit tests"
+    dependsOn(compileDspTests)
+    workingDir = dspBuildDir.get().asFile
+    commandLine("ctest", "--output-on-failure")
+}
+
 mavenPublishing {
     publishToMavenCentral()
     signAllPublications()

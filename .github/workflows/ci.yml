@@ -44,11 +44,7 @@ jobs:
         run: ./gradlew :demo-android:assembleDebug
 
       - name: Run C++ DSP tests
-        run: |
-          cd klarinet/src/cpp/dsp
-          cmake -B build -DKLARINET_DSP_BUILD_TESTS=ON
-          cmake --build build
-          cd build && ctest --output-on-failure
+        run: ./gradlew :klarinet:dspTests
 
       - name: Run Darwin tests (iOS Simulator)
         run: ./gradlew :klarinet:iosSimulatorArm64Test
