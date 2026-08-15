@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.22.1)
 set(TEST_SOURCES
     test_primitives.cpp
     test_ring_buffer.cpp
+    test_audio_fifo.cpp
     test_gain.cpp
     test_pan.cpp
     test_compressor.cpp

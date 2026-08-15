@@ -9,18 +9,20 @@ package com.vectencia.klarinet
  *
  * ## Threading
  *
- * [onAudioReady] is called on a **high-priority, real-time audio thread**.
- * Implementations must be real-time safe:
+ * **Android:** [onAudioReady] runs on a dedicated worker thread. The Oboe
+ * callback never enters the JVM; samples move through a lock-free FIFO.
+ * Native effect processing stays on the audio thread. The worker is not
+ * real-time, so allocations are safe, but slow work still adds latency
+ * or underruns.
+ *
+ * **Apple, JVM, and native desktop:** [onAudioReady] is called on a
+ * high-priority audio thread. Implementations must be real-time safe:
  *
  * - **Do not** allocate memory (no `listOf`, `arrayOf`, string concatenation, etc.).
  * - **Do not** acquire locks, mutexes, or synchronized blocks.
  * - **Do not** perform file or network I/O.
  * - **Do not** call any function that may block or take an unpredictable amount of time.
  * - **Do not** call logging functions (e.g., `println`, `Log.d`).
- *
- * On Android, each [onAudioReady] invocation crosses a JNI boundary, so keep
- * work minimal to avoid adding latency. On Apple platforms, the same real-time
- * constraints apply via the Core Audio render callback.
  *
  * The other callbacks ([onStreamStateChanged], [onStreamError],
  * [onStreamUnderrun]) may be called on any thread and do not have real-time
@@ -58,10 +60,9 @@ interface AudioStreamCallback {
      * For **input** streams, [buffer] already contains [numFrames] frames of
      * captured audio data for the application to consume.
      *
-     * **Warning -- real-time thread**: This is called on a high-priority audio
-     * thread. Do not allocate memory, acquire locks, perform I/O, or call any
-     * blocking function. On Android, each invocation crosses the JNI boundary
-     * -- minimize work to avoid added latency.
+     * **Warning -- real-time thread** (Apple, JVM, native desktop): called on
+     * a high-priority audio thread. Do not allocate, lock, or do I/O.
+     * **Android:** called on a worker thread; the Oboe thread never enters JNI.
      *
      * @param buffer The audio buffer to read from (input) or write to (output).
      *   The array length is at least `numFrames * channelCount`.

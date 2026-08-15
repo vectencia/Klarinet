@@ -62,6 +62,11 @@ jlong KlarinetEngine::openStream(
         return 0;
     }
 
+    klarinetCallback->prepare(
+        stream->getFramesPerBurst(),
+        stream->getChannelCount(),
+        stream->getDirection());
+
     jlong handle = reinterpret_cast<jlong>(stream.get());
 
     std::lock_guard<std::mutex> lock(mutex_);

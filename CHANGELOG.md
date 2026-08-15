@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed AGP 9 `android.builtInKotlin` / `android.newDsl` opt-outs
 - Shared Linux and Windows native actuals in `nativeDesktopMain` instead of three copied source trees
 - JVM tests for WAV encode/decode and live output-callback `peakLevel`; `./gradlew :klarinet:dspTests` runs the C++ DSP suite
+- Android Oboe callback no longer enters the JVM: Kotlin `onAudioReady` runs on a worker thread behind a lock-free sample FIFO
 
 ## [0.1.0] - 2026-04-16
 

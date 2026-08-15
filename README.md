@@ -349,7 +349,7 @@ graph TD
 Klarinet is a single Kotlin Multiplatform module using `expect`/`actual` declarations:
 
 - **`commonMain`** --- Public API: `AudioEngine`, `AudioStream`, `AudioStreamConfig`, `AudioStreamCallback`, `AudioEffect`, `AudioEffectChain`, data classes, enums
-- **`androidMain`** --- Android implementation via Google Oboe (C++17/JNI). Audio effects process directly in the native Oboe callback --- zero JNI crossing for DSP.
+- **`androidMain`** --- Android implementation via Google Oboe (C++17/JNI). The Oboe callback never enters the JVM: Kotlin `onAudioReady` runs on a worker thread and samples cross a lock-free FIFO. Effects still process on the audio thread.
 - **`appleMain`** --- Apple implementation via AVAudioEngine. Shared across iOS, macOS, tvOS, and watchOS.
 - **`jvmMain`** --- JVM desktop implementation via miniaudio. Covers macOS, Linux, and Windows from a single target with platform-specific native libraries bundled in the JAR.
 - **`nativeDesktopMain`** --- Shared Linux (`linuxX64`, `linuxArm64`) and Windows (`mingwX64`) native implementation via miniaudio (cinterop).

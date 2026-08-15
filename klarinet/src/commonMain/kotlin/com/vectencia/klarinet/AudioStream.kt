@@ -63,8 +63,10 @@ expect class AudioStream : AutoCloseable {
      *
      * Transitions the stream from [StreamState.OPEN] or [StreamState.PAUSED]
      * to [StreamState.STARTED]. Once started, the
-     * [AudioStreamCallback.onAudioReady] callback will begin firing on the
-     * audio thread (if a callback was provided at creation time).
+     * [AudioStreamCallback.onAudioReady] callback will begin firing
+     * (if a callback was provided at creation time). On Android that
+     * callback runs on a worker thread; on other platforms it runs on
+     * the audio thread.
      *
      * This method is safe to call from any thread.
      *
