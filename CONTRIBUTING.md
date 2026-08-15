@@ -34,8 +34,11 @@ Build individual modules:
 ./gradlew :klarinet:compileAndroidMain
 ./gradlew :klarinet:compileKotlinIosSimulatorArm64
 ./gradlew :klarinet:compileKotlinMacosArm64
+./gradlew :klarinet:buildJvmNatives
 ./gradlew :demo-android:assembleDebug
 ```
+
+`buildJvmNatives` rebuilds the packaged JVM miniaudio libraries. Host macOS binaries use CMake + Clang. Linux and Windows binaries require [Zig](https://ziglang.org/) on `PATH`.
 
 ## Test Commands
 

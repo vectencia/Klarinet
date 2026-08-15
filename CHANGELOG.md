@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- JVM desktop JAR now ships `libklarinet_jvm` for macOS (arm64/x64), Linux (x64/arm64), and Windows (x64)
+- `./gradlew :klarinet:buildJvmNatives` cross-compiles those libraries (Zig for Linux/Windows)
+
+### Build
+
+- Removed the extra Android `singleVariant("release")` block; vanniktech already publishes that variant
+
 ### Changed
 
 - JVM desktop effects now run the shared C++ DSP core on the miniaudio callback instead of a Kotlin parameter map

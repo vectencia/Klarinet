@@ -95,7 +95,7 @@ JVM desktop support uses miniaudio for low-latency audio I/O across macOS, Linux
 | MP3 file reading | ✅ Supported | via miniaudio (dr_mp3) |
 | AAC/M4A file read/write | ❌ Not available | Throws `UnsupportedFormatException` |
 | Push-mode write/read | ❌ Not available | Use callback mode via `AudioStreamCallback` |
-| Audio effects | ✅ Supported | Kotlin-side effect processing |
+| Audio effects | ✅ Supported | Shared C++ DSP core on the miniaudio callback |
 
 ### Unsupported Platforms
 
