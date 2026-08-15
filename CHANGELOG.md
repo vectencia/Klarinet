@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Migrated `:klarinet` and `:klarinet-coroutines` to `com.android.kotlin.multiplatform.library`
 - Split the demo into `:demo` (shared Compose Multiplatform UI) and `:demo-android` (application entry point)
 - Removed AGP 9 `android.builtInKotlin` / `android.newDsl` opt-outs
+- Shared Linux and Windows native actuals in `nativeDesktopMain` instead of three copied source trees
 
 ## [0.1.0] - 2026-04-16
 

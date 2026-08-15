@@ -14,8 +14,8 @@ actual class AudioFileWriter actual constructor(
         AudioFileFormat.WAV -> klarinet_encoder_init_file(filePath, 0, channelCount, sampleRate)
             ?: throw AudioFileException("Failed to create WAV file: $filePath")
         AudioFileFormat.MP3 -> throw UnsupportedFormatException("MP3 encoding is not supported")
-        AudioFileFormat.AAC -> throw UnsupportedFormatException("AAC encoding is not available on Linux")
-        AudioFileFormat.M4A -> throw UnsupportedFormatException("M4A encoding is not available on Linux")
+        AudioFileFormat.AAC -> throw UnsupportedFormatException("AAC encoding is not available on this platform")
+        AudioFileFormat.M4A -> throw UnsupportedFormatException("M4A encoding is not available on this platform")
     }
 
     actual fun writeFrames(data: FloatArray, numFrames: Int) {

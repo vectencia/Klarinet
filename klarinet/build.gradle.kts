@@ -84,6 +84,13 @@ kotlin {
         macosMain.get().dependsOn(appleNonWatchMain)
         tvosMain.get().dependsOn(appleNonWatchMain)
 
+        // Shared miniaudio/cinterop actuals for Linux and Windows native.
+        val nativeDesktopMain by creating {
+            dependsOn(nativeMain.get())
+        }
+        linuxMain.get().dependsOn(nativeDesktopMain)
+        mingwMain.get().dependsOn(nativeDesktopMain)
+
         getByName("androidDeviceTest").dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.kotlin.testJunit)

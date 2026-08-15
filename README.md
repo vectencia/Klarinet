@@ -352,8 +352,7 @@ Klarinet is a single Kotlin Multiplatform module using `expect`/`actual` declara
 - **`androidMain`** --- Android implementation via Google Oboe (C++17/JNI). Audio effects process directly in the native Oboe callback --- zero JNI crossing for DSP.
 - **`appleMain`** --- Apple implementation via AVAudioEngine. Shared across iOS, macOS, tvOS, and watchOS.
 - **`jvmMain`** --- JVM desktop implementation via miniaudio. Covers macOS, Linux, and Windows from a single target with platform-specific native libraries bundled in the JAR.
-- **`linuxX64Main` / `linuxArm64Main`** --- Linux native implementation via miniaudio (cinterop).
-- **`mingwX64Main`** --- Windows native implementation via miniaudio (cinterop).
+- **`nativeDesktopMain`** --- Shared Linux (`linuxX64`, `linuxArm64`) and Windows (`mingwX64`) native implementation via miniaudio (cinterop).
 - **`cpp/dsp`** --- Shared C++ DSP library compiled for all platforms. Contains all 16 effects, DSP primitives (Biquad, LFO, EnvelopeFollower, CircularBuffer), lock-free effect chain, and SPSC ring buffer.
 
 ## Modules

@@ -21,8 +21,8 @@ actual class AudioFileReader actual constructor(filePath: String) {
         val format = when (extension) {
             "wav" -> AudioFileFormat.WAV
             "mp3" -> AudioFileFormat.MP3
-            "aac" -> throw UnsupportedFormatException("AAC decoding is not available on Windows")
-            "m4a" -> throw UnsupportedFormatException("M4A decoding is not available on Windows")
+            "aac" -> throw UnsupportedFormatException("AAC decoding is not available on this platform")
+            "m4a" -> throw UnsupportedFormatException("M4A decoding is not available on this platform")
             else -> throw AudioFileException("Unsupported file extension: $extension")
         }
 
