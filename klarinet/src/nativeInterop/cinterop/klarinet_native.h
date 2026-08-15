@@ -40,6 +40,7 @@ int    klarinet_device_stop(KlarinetDevice* dev);
 void   klarinet_device_uninit(KlarinetDevice* dev);
 int    klarinet_device_get_state(KlarinetDevice* dev);
 double klarinet_device_get_latency_ms(KlarinetDevice* dev);
+void   klarinet_device_set_chain(KlarinetDevice* dev, void* chain);
 
 /* ---- Device enumeration ---- */
 int         klarinet_get_playback_device_count(KlarinetContext* ctx);

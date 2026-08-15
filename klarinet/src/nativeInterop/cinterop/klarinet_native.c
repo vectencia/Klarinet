@@ -1,6 +1,8 @@
 #define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio.h"
 #include "klarinet_native.h"
+#include "klarinet_dsp.h"
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -17,6 +19,9 @@ struct KlarinetDevice {
     KlarinetDataCallback   callback;
     void*                  userData;
     int                    channelCount;
+    int                    isCapture;
+    _Atomic(KlarinetEffectChainHandle) chain;
+    KlarinetOffloadHandle  offload;
 };
 
 struct KlarinetDecoder {
@@ -31,17 +36,39 @@ struct KlarinetEncoder {
 /* miniaudio data callback bridge                                      */
 /* ------------------------------------------------------------------ */
 
+static int native_user_audio(void* userData, float* buffer, int numFrames, int channelCount) {
+    KlarinetDevice* kd = (KlarinetDevice*)userData;
+    if (kd == NULL || kd->callback == NULL) return 0;
+    kd->callback(kd->userData, buffer, numFrames, channelCount, kd->isCapture);
+    return numFrames;
+}
+
 static void ma_data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
     KlarinetDevice* kd = (KlarinetDevice*)pDevice->pUserData;
-    if (kd == NULL || kd->callback == NULL) return;
+    if (kd == NULL) return;
 
-    if (pDevice->type == ma_device_type_playback) {
-        kd->callback(kd->userData, (float*)pOutput, (int)frameCount, kd->channelCount, 0);
-    } else if (pDevice->type == ma_device_type_capture) {
-        /* Copy input to a mutable buffer for the callback */
-        int totalSamples = (int)frameCount * kd->channelCount;
-        float* buf = (float*)pInput; /* miniaudio guarantees f32 format, safe to cast away const for read */
-        kd->callback(kd->userData, buf, (int)frameCount, kd->channelCount, 1);
+    KlarinetEffectChainHandle chain = atomic_load(&kd->chain);
+    if (pDevice->type == ma_device_type_playback && pOutput != NULL) {
+        if (kd->offload != NULL) {
+            klarinet_offload_process(kd->offload, (float*)pOutput, (int)frameCount);
+        } else {
+            memset(pOutput, 0, (size_t)frameCount * (size_t)kd->channelCount * sizeof(float));
+        }
+        if (chain != NULL) {
+            klarinet_chain_process(chain, (float*)pOutput, (int)frameCount, kd->channelCount);
+        }
+    } else if (pDevice->type == ma_device_type_capture && pInput != NULL) {
+        const int totalSamples = (int)frameCount * kd->channelCount;
+        float work[8192];
+        float* samples = (float*)pInput;
+        if (chain != NULL && totalSamples <= 8192) {
+            memcpy(work, pInput, (size_t)totalSamples * sizeof(float));
+            klarinet_chain_process(chain, work, (int)frameCount, kd->channelCount);
+            samples = work;
+        }
+        if (kd->offload != NULL) {
+            klarinet_offload_process(kd->offload, samples, (int)frameCount);
+        }
     }
 }
 
@@ -87,6 +114,8 @@ KlarinetDevice* klarinet_device_init(
     kd->callback     = cb;
     kd->userData      = userData;
     kd->channelCount  = channelCount;
+    kd->isCapture     = direction == 0 ? 0 : 1;
+    atomic_init(&kd->chain, NULL);
 
     ma_device_config config;
     if (direction == 0) {
@@ -132,11 +161,15 @@ KlarinetDevice* klarinet_device_init(
     }
 
     if (cb != NULL) {
+        int burst = bufferCapacityInFrames > 0 ? bufferCapacityInFrames : 256;
+        kd->offload = klarinet_offload_create(
+            burst, channelCount, kd->isCapture, native_user_audio, kd);
         config.dataCallback = ma_data_callback;
         config.pUserData    = kd;
     }
 
     if (ma_device_init(&ctx->ctx, &config, &kd->device) != MA_SUCCESS) {
+        if (kd->offload != NULL) klarinet_offload_destroy(kd->offload);
         free(kd);
         return NULL;
     }
@@ -157,7 +190,13 @@ int klarinet_device_stop(KlarinetDevice* dev) {
 void klarinet_device_uninit(KlarinetDevice* dev) {
     if (dev == NULL) return;
     ma_device_uninit(&dev->device);
+    if (dev->offload != NULL) klarinet_offload_destroy(dev->offload);
     free(dev);
+}
+
+void klarinet_device_set_chain(KlarinetDevice* dev, void* chain) {
+    if (dev == NULL) return;
+    atomic_store(&dev->chain, (KlarinetEffectChainHandle)chain);
 }
 
 int klarinet_device_get_state(KlarinetDevice* dev) {

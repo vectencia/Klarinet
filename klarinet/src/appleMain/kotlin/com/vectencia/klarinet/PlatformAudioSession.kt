@@ -38,3 +38,17 @@ internal expect fun installPlatformInputTap(
  * Remove the audio tap from the input node's bus 0.
  */
 internal expect fun removePlatformInputTap(engine: platform.AVFAudio.AVAudioEngine)
+
+/**
+ * Snapshot of Core Audio / AVAudioSession devices.
+ * [AudioDeviceInfo.id] is the platform device id used by [AudioStreamConfig.deviceId].
+ */
+internal expect fun listPlatformAudioDevices(): List<AudioDeviceInfo>
+
+/**
+ * Route [config.deviceId] to the platform device, if one was requested.
+ */
+internal expect fun applyPlatformAudioDevice(
+    engine: platform.AVFAudio.AVAudioEngine,
+    config: AudioStreamConfig,
+)

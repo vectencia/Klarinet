@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_library(klarinet-dsp STATIC
     AudioEffect.cpp
+    AudioCallbackOffload.cpp
     EffectChain.cpp
     EffectFactory.cpp
     klarinet_dsp.cpp
@@ -32,6 +33,9 @@ add_library(klarinet-dsp STATIC
 )
 
 target_include_directories(klarinet-dsp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+target_link_libraries(klarinet-dsp PUBLIC Threads::Threads)
 
 option(KLARINET_DSP_BUILD_TESTS "Build DSP unit tests" OFF)
 if(KLARINET_DSP_BUILD_TESTS)

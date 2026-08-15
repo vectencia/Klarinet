@@ -64,6 +64,12 @@ actual class AudioStream internal constructor(actual val config: AudioStreamConf
     actual fun read(data: FloatArray, numFrames: Int, timeoutNanos: Long): Int = -1
 
     actual var effectChain: AudioEffectChain? = null
+        set(value) {
+            val dev = devicePtr ?: throw ResourceReleasedException("AudioStream has been released")
+            value?.prepare(config.sampleRate, config.channelCount)
+            klarinet_device_set_chain(dev, value?.handle)
+            field = value
+        }
     actual val peakLevel: Float get() = peakLevelAtomic.get()
     internal actual val peakLevelAtomic = AtomicFloat(0f)
 }

@@ -1,41 +1,68 @@
+@file:OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)
+
 package com.vectencia.klarinet
 
+import klarinet_dsp.klarinet_chain_add
+import klarinet_dsp.klarinet_chain_clear
+import klarinet_dsp.klarinet_chain_create
+import klarinet_dsp.klarinet_chain_destroy
+import klarinet_dsp.klarinet_chain_enqueue_param
+import klarinet_dsp.klarinet_chain_get_effect_count
+import klarinet_dsp.klarinet_chain_prepare
+import klarinet_dsp.klarinet_chain_process
+import klarinet_dsp.klarinet_chain_remove
+import kotlinx.cinterop.COpaquePointer
+import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.usePinned
+
 actual class AudioEffectChain internal constructor() : AutoCloseable {
-    private val effects = mutableListOf<AudioEffect>()
-    private var released = false
+    internal var handle: COpaquePointer? = klarinet_chain_create()
+        ?: throw StreamCreationException("Failed to create effect chain")
 
     actual fun add(effect: AudioEffect) {
-        requireActive(!released, "AudioEffectChain")
-        effects.add(effect)
+        val h = handle ?: throw ResourceReleasedException("AudioEffectChain has been released")
+        klarinet_chain_add(h, effect.nativeHandle)
     }
 
     actual fun remove(effect: AudioEffect) {
-        requireActive(!released, "AudioEffectChain")
-        effects.remove(effect)
+        val h = handle ?: throw ResourceReleasedException("AudioEffectChain has been released")
+        klarinet_chain_remove(h, effect.nativeHandle)
     }
 
     actual fun applyBatch(changes: List<ParameterChange>) {
-        requireActive(!released, "AudioEffectChain")
+        val h = handle ?: throw ResourceReleasedException("AudioEffectChain has been released")
         for (change in changes) {
-            change.effect.setParameter(change.paramId, change.value)
+            klarinet_chain_enqueue_param(h, change.effect.nativeHandle, change.paramId, change.value)
         }
     }
 
     actual fun clear() {
-        requireActive(!released, "AudioEffectChain")
-        effects.clear()
+        val h = handle ?: throw ResourceReleasedException("AudioEffectChain has been released")
+        klarinet_chain_clear(h)
     }
 
     actual val effectCount: Int
         get() {
-            requireActive(!released, "AudioEffectChain")
-            return effects.size
+            val h = handle ?: throw ResourceReleasedException("AudioEffectChain has been released")
+            return klarinet_chain_get_effect_count(h)
         }
 
     actual fun release() {
-        released = true
-        effects.clear()
+        handle?.let { klarinet_chain_destroy(it) }
+        handle = null
     }
 
     actual override fun close() = release()
+}
+
+internal fun AudioEffectChain.prepare(sampleRate: Int, channelCount: Int) {
+    val h = handle ?: throw ResourceReleasedException("AudioEffectChain has been released")
+    klarinet_chain_prepare(h, sampleRate, channelCount)
+}
+
+internal fun AudioEffectChain.process(buffer: FloatArray, numFrames: Int, channelCount: Int) {
+    val h = handle ?: return
+    buffer.usePinned { pinned ->
+        klarinet_chain_process(h, pinned.addressOf(0), numFrames, channelCount)
+    }
 }

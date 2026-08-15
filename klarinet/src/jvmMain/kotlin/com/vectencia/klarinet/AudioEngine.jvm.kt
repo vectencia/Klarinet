@@ -94,12 +94,16 @@ actual class AudioEngine private constructor() : AutoCloseable {
 
     actual fun createEffect(type: AudioEffectType): AudioEffect {
         requireActive(contextPtr != 0L, "AudioEngine")
-        return AudioEffect(type)
+        val handle = JniBridge.nativeCreateEffect(type.ordinal)
+        if (handle == 0L) throw StreamCreationException("Failed to create audio effect")
+        return AudioEffect(type, handle)
     }
 
     actual fun createEffectChain(): AudioEffectChain {
         requireActive(contextPtr != 0L, "AudioEngine")
-        return AudioEffectChain()
+        val handle = JniBridge.nativeCreateEffectChain()
+        if (handle == 0L) throw StreamCreationException("Failed to create effect chain")
+        return AudioEffectChain(handle)
     }
 
     actual fun release() {

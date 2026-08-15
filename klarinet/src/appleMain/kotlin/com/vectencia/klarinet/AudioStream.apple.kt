@@ -2,13 +2,21 @@
 
 package com.vectencia.klarinet
 
+import klarinet_dsp.klarinet_chain_process
+import klarinet_dsp.klarinet_offload_create
+import klarinet_dsp.klarinet_offload_destroy
+import klarinet_dsp.klarinet_offload_process
+import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.FloatVar
+import kotlinx.cinterop.StableRef
+import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.get
 import kotlinx.cinterop.pointed
 import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.set
+import kotlinx.cinterop.usePinned
 import platform.AVFAudio.AVAudioEngine
 import platform.AVFAudio.AVAudioFormat
 import platform.AVFAudio.AVAudioSourceNode
@@ -25,6 +33,9 @@ actual class AudioStream internal constructor(
 
     private var _state: StreamState = StreamState.OPEN
     private var sourceNode: AVAudioSourceNode? = null
+    private var offload: COpaquePointer? = null
+    private var offloadUser: StableRef<AppleAudioUser>? = null
+    private val inputScratch = FloatArray(8192)
 
     actual val state: StreamState get() = _state
 
@@ -69,9 +80,9 @@ actual class AudioStream internal constructor(
         val channelCount = config.channelCount.toUInt()
         val format = AVAudioFormat(standardFormatWithSampleRate = sampleRate, channels = channelCount)
 
-        val cb = callback
         val cfg = config
         val stream = this
+        startOffload(isCapture = false)
 
         // Create AVAudioSourceNode with explicit format so AVAudioEngine handles
         // sample rate conversion between the source (e.g., 22050 Hz) and the
@@ -80,42 +91,16 @@ actual class AudioStream internal constructor(
         // play at the wrong speed.
         val node = AVAudioSourceNode(format = format) { _, _, frameCount, outputData: CPointer<AudioBufferList>? ->
             val numFrames = frameCount.toInt()
-            val totalSamples = numFrames * cfg.channelCount
-
-            if (cb != null && stream._state == StreamState.STARTED) {
-                val buffer = FloatArray(totalSamples)
-                cb.onAudioReady(buffer, numFrames)
-
-                var peak = 0f
-                for (i in buffer.indices) {
-                    val abs = if (buffer[i] >= 0f) buffer[i] else -buffer[i]
-                    if (abs > peak) peak = abs
-                }
-                stream.peakLevelAtomic.set(peak)
-
-                // Copy Kotlin FloatArray into Core Audio buffer.
-                // AudioBufferList.mBuffers is the first AudioBuffer (flexible array member).
-                // Access the mData pointer from it.
-                if (outputData != null) {
-                    val abl = outputData.pointed
-                    val bufferData = abl.mBuffers.pointed.mData
-                    if (bufferData != null) {
-                        val floatPtr: CPointer<FloatVar> = bufferData.reinterpret()
-                        for (i in 0 until totalSamples) {
-                            floatPtr[i] = buffer[i]
-                        }
+            val floatPtr = outputFloatPointer(outputData)
+            if (floatPtr != null && stream._state == StreamState.STARTED) {
+                stream.offload?.let { klarinet_offload_process(it, floatPtr, numFrames) }
+                    ?: run {
+                        for (i in 0 until numFrames * cfg.channelCount) floatPtr[i] = 0f
                     }
-                }
-            } else {
-                // Output silence when paused or no callback.
-                if (outputData != null) {
-                    val abl = outputData.pointed
-                    val bufferData = abl.mBuffers.pointed.mData
-                    if (bufferData != null) {
-                        val floatPtr: CPointer<FloatVar> = bufferData.reinterpret()
-                        for (i in 0 until totalSamples) { floatPtr[i] = 0f }
-                    }
-                }
+                stream.processChainOnAudioThread(floatPtr, numFrames)
+                stream.updatePeakFrom(floatPtr, numFrames * cfg.channelCount)
+            } else if (floatPtr != null) {
+                for (i in 0 until numFrames * cfg.channelCount) floatPtr[i] = 0f
             }
             return@AVAudioSourceNode 0
         }
@@ -136,32 +121,29 @@ actual class AudioStream internal constructor(
         // Pass null format to use the input node's native hardware format.
         // Passing a custom format with a different sample rate causes a crash:
         // "format.sampleRate == inputHWFormat.sampleRate"
+        startOffload(isCapture = true)
+        val channels = config.channelCount
         installPlatformInputTap(avEngine, bufferSize) { buffer ->
-            if (buffer == null || callback == null) return@installPlatformInputTap
+            if (buffer == null) return@installPlatformInputTap
             val floatChannelData = buffer.floatChannelData
                 ?: return@installPlatformInputTap
             val frameLength = buffer.frameLength.toInt()
-            val channels = config.channelCount
             val totalSamples = frameLength * channels
-            val audioData = FloatArray(totalSamples)
-
+            if (totalSamples > inputScratch.size) return@installPlatformInputTap
             for (frame in 0 until frameLength) {
                 for (ch in 0 until channels) {
                     val channelPtr = floatChannelData[ch]
                     if (channelPtr != null) {
-                        audioData[frame * channels + ch] = channelPtr[frame]
+                        inputScratch[frame * channels + ch] = channelPtr[frame]
                     }
                 }
             }
-
-            callback.onAudioReady(audioData, frameLength)
-
-            var peakLevel = 0f
-            for (i in audioData.indices) {
-                val abs = if (audioData[i] >= 0f) audioData[i] else -audioData[i]
-                if (abs > peakLevel) peakLevel = abs
+            inputScratch.usePinned { pinned ->
+                val ptr = pinned.addressOf(0)
+                processChainOnAudioThread(ptr, frameLength)
+                offload?.let { klarinet_offload_process(it, ptr, frameLength) }
+                updatePeakFrom(ptr, totalSamples)
             }
-            peakLevelAtomic.set(peakLevel)
         }
     }
 
@@ -233,9 +215,54 @@ actual class AudioStream internal constructor(
 
         sourceNode?.let { avEngine.detachNode(it) }
         sourceNode = null
+        destroyOffload()
 
         _state = StreamState.CLOSED
         callback?.onStreamStateChanged(this, _state)
+    }
+
+    private fun burstFrames(): Int =
+        if (config.bufferCapacityInFrames > 0) config.bufferCapacityInFrames else 256
+
+    private fun startOffload(isCapture: Boolean) {
+        val cb = callback ?: return
+        destroyOffload()
+        val user = StableRef.create(AppleAudioUser(cb, config.channelCount))
+        offloadUser = user
+        offload = klarinet_offload_create(
+            burstFrames(),
+            config.channelCount,
+            if (isCapture) 1 else 0,
+            appleUserAudioCallback,
+            user.asCPointer(),
+        )
+    }
+
+    private fun destroyOffload() {
+        offload?.let { klarinet_offload_destroy(it) }
+        offload = null
+        offloadUser?.dispose()
+        offloadUser = null
+    }
+
+    private fun outputFloatPointer(outputData: CPointer<AudioBufferList>?): CPointer<FloatVar>? {
+        val bufferData = outputData?.pointed?.mBuffers?.pointed?.mData ?: return null
+        return bufferData.reinterpret()
+    }
+
+    private fun processChainOnAudioThread(samples: CPointer<FloatVar>, numFrames: Int) {
+        val handle = effectChain?.handle ?: return
+        klarinet_chain_process(handle, samples, numFrames, config.channelCount)
+    }
+
+    private fun updatePeakFrom(samples: CPointer<FloatVar>, totalSamples: Int) {
+        var peak = 0f
+        for (i in 0 until totalSamples) {
+            val value = samples[i]
+            val abs = if (value >= 0f) value else -value
+            if (abs > peak) peak = abs
+        }
+        peakLevelAtomic.set(peak)
     }
 
     /**
@@ -269,6 +296,11 @@ actual class AudioStream internal constructor(
     }
 
     actual var effectChain: AudioEffectChain? = null
+        set(value) {
+            requireActive(_state != StreamState.CLOSED, "AudioStream")
+            value?.prepare(config.sampleRate, config.channelCount)
+            field = value
+        }
 
     actual val peakLevel: Float get() = peakLevelAtomic.get()
 

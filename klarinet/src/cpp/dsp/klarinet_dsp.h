@@ -220,6 +220,29 @@ void klarinet_chain_enqueue_param(KlarinetEffectChainHandle chain, KlarinetEffec
  */
 void klarinet_chain_destroy(KlarinetEffectChainHandle chain);
 
+/// User audio callback invoked on a worker thread, never the audio thread.
+typedef int (*KlarinetUserAudioCallback)(void* userData, float* buffer, int numFrames, int channelCount);
+
+/// Opaque handle for the lock-free audio-thread offload.
+typedef void* KlarinetOffloadHandle;
+
+/**
+ * Start a worker that calls @p callback. The audio thread must only call
+ * klarinet_offload_process().
+ */
+KlarinetOffloadHandle klarinet_offload_create(
+    int framesPerBurst,
+    int channelCount,
+    int isCapture,
+    KlarinetUserAudioCallback callback,
+    void* userData
+);
+
+void klarinet_offload_destroy(KlarinetOffloadHandle handle);
+
+/** Audio-thread only: move samples through the FIFO. Never calls Kotlin. */
+void klarinet_offload_process(KlarinetOffloadHandle handle, float* audio, int numFrames);
+
 #ifdef __cplusplus
 }
 #endif

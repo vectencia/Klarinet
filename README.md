@@ -15,7 +15,7 @@
 
 ---
 
-**Klarinet** is an open-source Kotlin Multiplatform audio library that provides a unified, idiomatic API for low-latency audio playback, recording, file I/O, and real-time effects processing across **8 platforms and 15 targets**.
+**Klarinet** is an open-source Kotlin Multiplatform audio library that provides a unified, idiomatic API for low-latency audio playback, recording, file I/O, and real-time effects processing across **8 platforms and 14 targets**.
 
 Write your audio code once in Kotlin. Klarinet delegates to the best native backend on each platform — Google Oboe on Android, AVAudioEngine on Apple, miniaudio on JVM/Linux/Windows — while preserving low-latency characteristics and real-time safety.
 
@@ -58,7 +58,7 @@ Decode MP3/AAC/WAV files, apply effects (noise gate + compressor + EQ is a class
 |---|---|---|---|---|---|---|
 | Android | arm64-v8a, armeabi-v7a, x86_64 | Google Oboe (AAudio / OpenSL ES) | ✅ | ✅ | ✅ | API 24 |
 | iOS / iPadOS | arm64, simulatorArm64, x64 | AVAudioEngine | ✅ | ✅ | ✅ | iOS 15+ |
-| macOS | arm64, x64 | AVAudioEngine | ✅ | ✅ | ✅ | macOS 12+ |
+| macOS | arm64 | AVAudioEngine | ✅ | ✅ | ✅ | macOS 12+ |
 | tvOS | arm64, simulatorArm64 | AVAudioEngine | ✅ | ✅ | ✅ | tvOS 15+ |
 | watchOS | arm64, simulatorArm64 | AVAudioEngine | ✅ | ✅ | ❌ | watchOS 8+ |
 | JVM Desktop | macOS, Linux, Windows | miniaudio (WASAPI / Core Audio / ALSA) | ✅ | ✅ | ❌ | JDK 11+ |
@@ -95,7 +95,7 @@ JVM desktop support uses miniaudio for low-latency audio I/O across macOS, Linux
 | MP3 file reading | ✅ Supported | via miniaudio (dr_mp3) |
 | AAC/M4A file read/write | ❌ Not available | Throws `UnsupportedFormatException` |
 | Push-mode write/read | ❌ Not available | Use callback mode via `AudioStreamCallback` |
-| Audio effects | ✅ Supported | Kotlin-side effect processing |
+| Audio effects | ✅ Supported | Shared C++ DSP core on the miniaudio callback |
 
 ### Unsupported Platforms
 
@@ -117,10 +117,10 @@ repositories {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("com.vectencia.klarinet:klarinet:0.2.0")
+            implementation("com.vectencia.klarinet:klarinet:0.3.0")
 
             // Optional: Coroutines extensions
-            implementation("com.vectencia.klarinet:klarinet-coroutines:0.2.0")
+            implementation("com.vectencia.klarinet:klarinet-coroutines:0.3.0")
         }
     }
 }

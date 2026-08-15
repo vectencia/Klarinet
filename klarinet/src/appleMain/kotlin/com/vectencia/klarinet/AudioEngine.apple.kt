@@ -17,6 +17,7 @@ actual class AudioEngine private constructor() : AutoCloseable {
     actual fun openStream(config: AudioStreamConfig, callback: AudioStreamCallback?): AudioStream {
         val engine = avEngine ?: throw ResourceReleasedException("AudioEngine has been released")
         requireRequestedDevice(config)
+        applyPlatformAudioDevice(engine, config)
         val stream = AudioStream(config, engine, callback)
         streams.add(stream)
         return stream
@@ -24,30 +25,7 @@ actual class AudioEngine private constructor() : AutoCloseable {
 
     actual fun getAvailableDevices(): List<AudioDeviceInfo> {
         requireActive(avEngine != null, "AudioEngine")
-        val devices = mutableListOf<AudioDeviceInfo>()
-        avEngine?.let {
-            devices.add(
-                AudioDeviceInfo(
-                    id = 0,
-                    name = "Default Output",
-                    isInput = false,
-                    isOutput = true,
-                    sampleRates = listOf(44100, 48000),
-                    channelCounts = listOf(1, 2),
-                )
-            )
-            devices.add(
-                AudioDeviceInfo(
-                    id = 1,
-                    name = "Default Input",
-                    isInput = true,
-                    isOutput = false,
-                    sampleRates = listOf(44100, 48000),
-                    channelCounts = listOf(1),
-                )
-            )
-        }
-        return devices
+        return listPlatformAudioDevices()
     }
 
     actual fun getDefaultDevice(direction: StreamDirection): AudioDeviceInfo? {
