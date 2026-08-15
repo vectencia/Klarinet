@@ -9,7 +9,14 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(KLARINET_DSP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../cpp/dsp")
 add_subdirectory(${KLARINET_DSP_DIR} ${CMAKE_CURRENT_BINARY_DIR}/klarinet-dsp)
 
-find_package(JNI REQUIRED)
+if(KLARINET_JNI_INCLUDE)
+    set(JNI_INCLUDE_DIRS "${KLARINET_JNI_INCLUDE}")
+    if(KLARINET_JNI_MD_INCLUDE)
+        list(APPEND JNI_INCLUDE_DIRS "${KLARINET_JNI_MD_INCLUDE}")
+    endif()
+else()
+    find_package(JNI REQUIRED)
+endif()
 
 add_library(klarinet_jvm SHARED
     miniaudio.c
@@ -24,6 +31,9 @@ target_include_directories(klarinet_jvm PRIVATE
 
 target_link_libraries(klarinet_jvm PRIVATE klarinet-dsp)
 set_target_properties(klarinet_jvm PROPERTIES LINKER_LANGUAGE CXX)
+if(WIN32)
+    set_target_properties(klarinet_jvm PROPERTIES PREFIX "")
+endif()
 
 if(APPLE)
     find_library(COREAUDIO CoreAudio)

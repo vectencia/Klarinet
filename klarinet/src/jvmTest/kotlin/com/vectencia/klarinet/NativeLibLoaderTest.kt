@@ -1,6 +1,8 @@
 package com.vectencia.klarinet
 
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class NativeLibLoaderTest {
@@ -11,12 +13,21 @@ class NativeLibLoaderTest {
         assertTrue(NativeLibLoader.detectArch() in listOf("arm64", "x64"))
     }
     @Test fun libNameFormattedCorrectly() {
-        val os = NativeLibLoader.detectOs()
-        val name = NativeLibLoader.mapLibName("klarinet_jvm", os)
-        when (os) {
-            "macos" -> assertTrue(name == "libklarinet_jvm.dylib")
-            "linux" -> assertTrue(name == "libklarinet_jvm.so")
-            "windows" -> assertTrue(name == "klarinet_jvm.dll")
+        assertEquals("libklarinet_jvm.dylib", NativeLibLoader.mapLibName("klarinet_jvm", "macos"))
+        assertEquals("libklarinet_jvm.so", NativeLibLoader.mapLibName("klarinet_jvm", "linux"))
+        assertEquals("klarinet_jvm.dll", NativeLibLoader.mapLibName("klarinet_jvm", "windows"))
+    }
+
+    @Test fun packagedNativesExistForDesktopHosts() {
+        val loader = NativeLibLoaderTest::class.java.classLoader
+        listOf(
+            "natives/macos-arm64/libklarinet_jvm.dylib",
+            "natives/macos-x64/libklarinet_jvm.dylib",
+            "natives/linux-x64/libklarinet_jvm.so",
+            "natives/linux-arm64/libklarinet_jvm.so",
+            "natives/windows-x64/klarinet_jvm.dll",
+        ).forEach { path ->
+            assertNotNull(loader.getResource(path), path)
         }
     }
 }
