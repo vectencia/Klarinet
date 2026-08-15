@@ -7,8 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-15
+
+### Added
+
+- `AutoCloseable` on `AudioEngine`, `AudioStream`, `AudioEffect`, and `AudioEffectChain` (`use {}` / `close()`)
+- `ResourceReleasedException` for operations on released engines, streams, effects, and chains
+- `AudioStreamConfig.deviceId` to open a stream on a specific `AudioDeviceInfo`
+
 ### Changed
 
+- `AudioStream.stateFlow` is now a cold `Flow` function instead of a `StateFlow` property, so collectors no longer leak an unstructured polling coroutine
+- Released engines and closed streams throw `ResourceReleasedException` instead of `IllegalStateException` or crashing in JNI
+- Android, JVM, and native desktop backends honor `deviceId` when opening a stream
 - Kotlin `2.3.20` → `2.4.10`
 - Compose Multiplatform `1.10.3` → `1.11.1`
 - Android Gradle Plugin `8.13.2` → `9.1.0` (maximum version fully supported by Kotlin 2.4.10)

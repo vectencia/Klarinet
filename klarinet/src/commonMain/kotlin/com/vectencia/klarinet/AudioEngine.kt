@@ -29,7 +29,7 @@ package com.vectencia.klarinet
  * Always call [release] when the engine is no longer needed to free
  * native resources.
  */
-expect class AudioEngine {
+expect class AudioEngine : AutoCloseable {
 
     companion object {
         /**
@@ -140,12 +140,22 @@ expect class AudioEngine {
     /**
      * Release all native resources held by this engine.
      *
-     * After calling this method, the engine instance must not be used --
-     * any subsequent calls will result in undefined behavior.
+     * After calling this method, the engine instance must not be used.
      *
      * **Important**: Close all streams and release all effects and effect
      * chains created by this engine *before* calling [release]. Failing
      * to do so may leak native resources.
+     *
+     * This method is idempotent. Subsequent calls to other engine methods
+     * throw [ResourceReleasedException].
      */
     fun release()
+
+    /**
+     * Closes this engine. Equivalent to [release].
+     *
+     * Prefer `engine.use { ... }` so the engine is closed even if the
+     * block throws.
+     */
+    override fun close()
 }

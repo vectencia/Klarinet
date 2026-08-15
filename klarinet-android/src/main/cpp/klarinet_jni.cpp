@@ -77,7 +77,7 @@ Java_com_vectencia_klarinet_JniBridge_nativeOpenStream(
     jlong engineHandle,
     jint sampleRate, jint channelCount, jint audioFormat,
     jint bufferCapacityInFrames, jint performanceMode,
-    jint sharingMode, jint direction,
+    jint sharingMode, jint direction, jint deviceId,
     jobject callbackObj) {
 
     auto* engine = reinterpret_cast<KlarinetEngine*>(engineHandle);
@@ -86,7 +86,7 @@ Java_com_vectencia_klarinet_JniBridge_nativeOpenStream(
     jlong streamHandle = engine->openStream(
         env, sampleRate, channelCount, audioFormat,
         bufferCapacityInFrames, performanceMode,
-        sharingMode, direction, callbackObj);
+        sharingMode, direction, deviceId, callbackObj);
 
     if (streamHandle != 0) {
         registerStream(streamHandle, engine);

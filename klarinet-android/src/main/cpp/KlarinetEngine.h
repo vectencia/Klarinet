@@ -32,6 +32,7 @@ public:
      * @param performanceMode Klarinet PerformanceMode ordinal (0=None, 1=LowLatency, 2=PowerSaving)
      * @param sharingMode Klarinet SharingMode ordinal (0=Shared, 1=Exclusive)
      * @param direction Klarinet StreamDirection ordinal (0=Output, 1=Input)
+     * @param deviceId Android AudioDeviceInfo id, or -1 for the default device
      * @param callback Kotlin AudioStreamCallback or nullptr
      * @return Stream handle (pointer cast to long), or 0 on failure
      */
@@ -44,6 +45,7 @@ public:
         jint performanceMode,
         jint sharingMode,
         jint direction,
+        jint deviceId,
         jobject callback);
 
     void startStream(jlong streamHandle);

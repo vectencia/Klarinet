@@ -117,10 +117,10 @@ repositories {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("com.vectencia.klarinet:klarinet:0.1.0")
+            implementation("com.vectencia.klarinet:klarinet:0.2.0")
 
             // Optional: Coroutines extensions
-            implementation("com.vectencia.klarinet:klarinet-coroutines:0.1.0")
+            implementation("com.vectencia.klarinet:klarinet-coroutines:0.2.0")
         }
     }
 }
@@ -175,7 +175,7 @@ stream.start()
 // ... audio is playing ...
 stream.stop()
 stream.close()
-engine.release()
+engine.close()
 ```
 
 ### Recording --- Microphone Input
@@ -306,8 +306,8 @@ The `klarinet-coroutines` module provides Flow-based observation and suspending 
 ```kotlin
 import com.vectencia.klarinet.coroutines.*
 
-// Observe stream state reactively
-stream.stateFlow.collect { state ->
+// Observe stream state reactively (cold Flow; cancel the collector to stop polling)
+stream.stateFlow().collect { state ->
     println("Stream state: $state")
 }
 

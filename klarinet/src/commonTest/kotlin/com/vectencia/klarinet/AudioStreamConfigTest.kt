@@ -16,6 +16,7 @@ class AudioStreamConfigTest {
         assertEquals(PerformanceMode.LOW_LATENCY, config.performanceMode)
         assertEquals(SharingMode.SHARED, config.sharingMode)
         assertEquals(StreamDirection.OUTPUT, config.direction)
+        assertEquals(null, config.deviceId)
     }
 
     @Test
@@ -28,6 +29,7 @@ class AudioStreamConfigTest {
             performanceMode = PerformanceMode.POWER_SAVING,
             sharingMode = SharingMode.EXCLUSIVE,
             direction = StreamDirection.INPUT,
+            deviceId = 7,
         )
         assertEquals(44100, config.sampleRate)
         assertEquals(2, config.channelCount)
@@ -36,6 +38,7 @@ class AudioStreamConfigTest {
         assertEquals(PerformanceMode.POWER_SAVING, config.performanceMode)
         assertEquals(SharingMode.EXCLUSIVE, config.sharingMode)
         assertEquals(StreamDirection.INPUT, config.direction)
+        assertEquals(7, config.deviceId)
     }
 
     @Test
@@ -89,6 +92,12 @@ class AudioStreamConfigTest {
         assertEquals(original.performanceMode, copy.performanceMode)
         assertEquals(original.sharingMode, copy.sharingMode)
         assertEquals(original.direction, copy.direction)
+        assertEquals(original.deviceId, copy.deviceId)
+    }
+
+    @Test
+    fun deviceIdDefaultsToNull() {
+        assertEquals(null, AudioStreamConfig().deviceId)
     }
 
     @Test

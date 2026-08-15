@@ -6,7 +6,7 @@ import cnames.structs.*
 import klarinet_native.*
 import kotlinx.cinterop.*
 
-actual class AudioEngine private constructor() {
+actual class AudioEngine private constructor() : AutoCloseable {
     private var contextPtr: COpaquePointer? = null
     private val streams = mutableListOf<AudioStream>()
 
@@ -21,7 +21,8 @@ actual class AudioEngine private constructor() {
 
     actual fun openStream(config: AudioStreamConfig, callback: AudioStreamCallback?): AudioStream {
         val ctx = contextPtr?.reinterpret<KlarinetContext>()
-            ?: throw StreamCreationException("AudioEngine has been released")
+            ?: throw ResourceReleasedException("AudioEngine has been released")
+        requireRequestedDevice(config)
         val stream = AudioStream(config)
 
         val stableRef = if (callback != null) {
@@ -57,6 +58,7 @@ actual class AudioEngine private constructor() {
         val devicePtr = klarinet_device_init(
             ctx, config.sampleRate, config.channelCount,
             config.bufferCapacityInFrames, config.direction.ordinal,
+            config.nativeDeviceId(),
             cbFunc, stableRef?.asCPointer()
         ) ?: throw StreamCreationException("Failed to open native audio device")
 
@@ -67,7 +69,8 @@ actual class AudioEngine private constructor() {
     }
 
     actual fun getAvailableDevices(): List<AudioDeviceInfo> {
-        val ctx = contextPtr?.reinterpret<KlarinetContext>() ?: return emptyList()
+        val ctx = contextPtr?.reinterpret<KlarinetContext>()
+            ?: throw ResourceReleasedException("AudioEngine has been released")
         val devices = mutableListOf<AudioDeviceInfo>()
         val playbackCount = klarinet_get_playback_device_count(ctx)
         for (i in 0 until playbackCount) {
@@ -90,8 +93,15 @@ actual class AudioEngine private constructor() {
         }}
     }
 
-    actual fun createEffect(type: AudioEffectType): AudioEffect = AudioEffect(type)
-    actual fun createEffectChain(): AudioEffectChain = AudioEffectChain()
+    actual fun createEffect(type: AudioEffectType): AudioEffect {
+        requireActive(contextPtr != null, "AudioEngine")
+        return AudioEffect(type)
+    }
+
+    actual fun createEffectChain(): AudioEffectChain {
+        requireActive(contextPtr != null, "AudioEngine")
+        return AudioEffectChain()
+    }
 
     actual fun release() {
         streams.forEach { it.close() }
@@ -99,6 +109,8 @@ actual class AudioEngine private constructor() {
         contextPtr?.reinterpret<KlarinetContext>()?.let { klarinet_context_uninit(it) }
         contextPtr = null
     }
+
+    actual override fun close() = release()
 }
 
 internal data class AudioCallbackData(

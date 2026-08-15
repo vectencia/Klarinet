@@ -57,6 +57,10 @@ package com.vectencia.klarinet
  *   [AudioStream.write] or [AudioStream.read] should be used, and which
  *   callback path is taken in [AudioStreamCallback.onAudioReady].
  *   Default: [StreamDirection.OUTPUT].
+ * @property deviceId Optional platform device id from [AudioDeviceInfo.id].
+ *   `null` (the default) uses the platform's default device for [direction].
+ *   A value that does not match a currently available device causes
+ *   [DeviceNotFoundException] when the stream is opened.
  */
 data class AudioStreamConfig(
     val sampleRate: Int = 48000,
@@ -66,4 +70,5 @@ data class AudioStreamConfig(
     val performanceMode: PerformanceMode = PerformanceMode.LOW_LATENCY,
     val sharingMode: SharingMode = SharingMode.SHARED,
     val direction: StreamDirection = StreamDirection.OUTPUT,
+    val deviceId: Int? = null,
 )

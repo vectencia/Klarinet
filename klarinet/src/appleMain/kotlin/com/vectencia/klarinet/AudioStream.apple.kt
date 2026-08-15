@@ -18,7 +18,7 @@ actual class AudioStream internal constructor(
     actual val config: AudioStreamConfig,
     private val avEngine: AVAudioEngine,
     private val callback: AudioStreamCallback?,
-) {
+) : AutoCloseable {
 
     /** Internal constructor used by the expect declaration (unused on Apple). */
     internal constructor(config: AudioStreamConfig) : this(config, AVAudioEngine(), null)
@@ -166,6 +166,7 @@ actual class AudioStream internal constructor(
     }
 
     actual fun start() {
+        requireActive(_state != StreamState.CLOSED, "AudioStream")
         when (_state) {
             StreamState.OPEN, StreamState.PAUSED -> {
                 _state = StreamState.STARTING
@@ -190,6 +191,7 @@ actual class AudioStream internal constructor(
     }
 
     actual fun pause() {
+        requireActive(_state != StreamState.CLOSED, "AudioStream")
         when (_state) {
             StreamState.STARTED -> {
                 _state = StreamState.PAUSING
@@ -203,6 +205,7 @@ actual class AudioStream internal constructor(
     }
 
     actual fun stop() {
+        requireActive(_state != StreamState.CLOSED, "AudioStream")
         when (_state) {
             StreamState.STARTED, StreamState.PAUSED -> {
                 _state = StreamState.STOPPING
@@ -220,7 +223,7 @@ actual class AudioStream internal constructor(
         }
     }
 
-    actual fun close() {
+    actual override fun close() {
         if (_state == StreamState.CLOSED) return
         if (_state == StreamState.STARTED || _state == StreamState.PAUSED) {
             try { stop() } catch (_: Exception) { /* best-effort */ }

@@ -1,6 +1,6 @@
 package com.vectencia.klarinet
 
-actual class AudioStream internal constructor(actual val config: AudioStreamConfig) {
+actual class AudioStream internal constructor(actual val config: AudioStreamConfig) : AutoCloseable {
 
     /** Native stream handle, set by [AudioEngine.openStream] after construction. */
     internal var streamHandle: Long = 0L
@@ -22,21 +22,21 @@ actual class AudioStream internal constructor(actual val config: AudioStreamConf
         }
 
     actual fun start() {
-        check(streamHandle != 0L) { "Stream has been closed" }
+        requireActive(streamHandle != 0L, "AudioStream")
         JniBridge.nativeStartStream(streamHandle)
     }
 
     actual fun pause() {
-        check(streamHandle != 0L) { "Stream has been closed" }
+        requireActive(streamHandle != 0L, "AudioStream")
         JniBridge.nativePauseStream(streamHandle)
     }
 
     actual fun stop() {
-        check(streamHandle != 0L) { "Stream has been closed" }
+        requireActive(streamHandle != 0L, "AudioStream")
         JniBridge.nativeStopStream(streamHandle)
     }
 
-    actual fun close() {
+    actual override fun close() {
         if (streamHandle != 0L) {
             JniBridge.nativeCloseStream(streamHandle)
             streamHandle = 0L
@@ -44,18 +44,18 @@ actual class AudioStream internal constructor(actual val config: AudioStreamConf
     }
 
     actual fun write(data: FloatArray, numFrames: Int, timeoutNanos: Long): Int {
-        check(streamHandle != 0L) { "Stream has been closed" }
+        requireActive(streamHandle != 0L, "AudioStream")
         return JniBridge.nativeWriteStream(streamHandle, data, numFrames, timeoutNanos)
     }
 
     actual fun read(data: FloatArray, numFrames: Int, timeoutNanos: Long): Int {
-        check(streamHandle != 0L) { "Stream has been closed" }
+        requireActive(streamHandle != 0L, "AudioStream")
         return JniBridge.nativeReadStream(streamHandle, data, numFrames, timeoutNanos)
     }
 
     actual var effectChain: AudioEffectChain? = null
         set(value) {
-            check(streamHandle != 0L) { "Stream has been closed" }
+            requireActive(streamHandle != 0L, "AudioStream")
             if (value != null) {
                 JniBridge.nativeSetStreamEffectChain(value.engineHandle, streamHandle, value.chainHandle)
             } else {

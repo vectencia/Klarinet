@@ -25,6 +25,7 @@ jlong KlarinetEngine::openStream(
     jint performanceMode,
     jint sharingMode,
     jint direction,
+    jint deviceId,
     jobject callback) {
 
     auto klarinetCallback = std::make_unique<KlarinetCallback>(env, callback);
@@ -48,6 +49,10 @@ jlong KlarinetEngine::openStream(
 
     if (bufferCapacityInFrames > 0) {
         builder.setBufferCapacityInFrames(bufferCapacityInFrames);
+    }
+
+    if (deviceId >= 0) {
+        builder.setDeviceId(deviceId);
     }
 
     std::shared_ptr<oboe::AudioStream> stream;

@@ -1,6 +1,6 @@
 package com.vectencia.klarinet
 
-actual class AudioStream internal constructor(actual val config: AudioStreamConfig) {
+actual class AudioStream internal constructor(actual val config: AudioStreamConfig) : AutoCloseable {
 
     internal var devicePtr: Long = 0L
     private var _state: StreamState = StreamState.OPEN
@@ -18,27 +18,27 @@ actual class AudioStream internal constructor(actual val config: AudioStreamConf
         }
 
     actual fun start() {
-        check(devicePtr != 0L) { "Stream has been closed" }
+        requireActive(devicePtr != 0L, "AudioStream")
         _state = StreamState.STARTING
         JniBridge.nativeDeviceStart(devicePtr)
         _state = StreamState.STARTED
     }
 
     actual fun pause() {
-        check(devicePtr != 0L) { "Stream has been closed" }
+        requireActive(devicePtr != 0L, "AudioStream")
         _state = StreamState.PAUSING
         JniBridge.nativeDeviceStop(devicePtr)
         _state = StreamState.PAUSED
     }
 
     actual fun stop() {
-        check(devicePtr != 0L) { "Stream has been closed" }
+        requireActive(devicePtr != 0L, "AudioStream")
         _state = StreamState.STOPPING
         JniBridge.nativeDeviceStop(devicePtr)
         _state = StreamState.STOPPED
     }
 
-    actual fun close() {
+    actual override fun close() {
         if (devicePtr != 0L) {
             if (_state == StreamState.STARTED || _state == StreamState.PAUSED) {
                 try { JniBridge.nativeDeviceStop(devicePtr) } catch (_: Exception) {}
@@ -51,12 +51,12 @@ actual class AudioStream internal constructor(actual val config: AudioStreamConf
     }
 
     actual fun write(data: FloatArray, numFrames: Int, timeoutNanos: Long): Int {
-        check(devicePtr != 0L) { "Stream has been closed" }
+        requireActive(devicePtr != 0L, "AudioStream")
         return JniBridge.nativeDeviceWriteFloat(devicePtr, data, numFrames, timeoutNanos)
     }
 
     actual fun read(data: FloatArray, numFrames: Int, timeoutNanos: Long): Int {
-        check(devicePtr != 0L) { "Stream has been closed" }
+        requireActive(devicePtr != 0L, "AudioStream")
         return JniBridge.nativeDeviceReadFloat(devicePtr, data, numFrames, timeoutNanos)
     }
 

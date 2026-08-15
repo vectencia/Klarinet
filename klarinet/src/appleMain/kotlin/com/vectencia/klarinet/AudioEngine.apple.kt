@@ -2,7 +2,7 @@ package com.vectencia.klarinet
 
 import platform.AVFAudio.AVAudioEngine
 
-actual class AudioEngine private constructor() {
+actual class AudioEngine private constructor() : AutoCloseable {
     private var avEngine: AVAudioEngine? = null
     private val streams = mutableListOf<AudioStream>()
 
@@ -15,13 +15,15 @@ actual class AudioEngine private constructor() {
     }
 
     actual fun openStream(config: AudioStreamConfig, callback: AudioStreamCallback?): AudioStream {
-        val engine = avEngine ?: throw StreamCreationException("AudioEngine has been released")
+        val engine = avEngine ?: throw ResourceReleasedException("AudioEngine has been released")
+        requireRequestedDevice(config)
         val stream = AudioStream(config, engine, callback)
         streams.add(stream)
         return stream
     }
 
     actual fun getAvailableDevices(): List<AudioDeviceInfo> {
+        requireActive(avEngine != null, "AudioEngine")
         val devices = mutableListOf<AudioDeviceInfo>()
         avEngine?.let {
             devices.add(
@@ -58,12 +60,12 @@ actual class AudioEngine private constructor() {
     }
 
     actual fun createEffect(type: AudioEffectType): AudioEffect {
-        val engine = avEngine ?: throw StreamCreationException("AudioEngine has been released")
+        requireActive(avEngine != null, "AudioEngine")
         return AudioEffect(type)
     }
 
     actual fun createEffectChain(): AudioEffectChain {
-        val engine = avEngine ?: throw StreamCreationException("AudioEngine has been released")
+        requireActive(avEngine != null, "AudioEngine")
         return AudioEffectChain()
     }
 
@@ -73,4 +75,6 @@ actual class AudioEngine private constructor() {
         avEngine?.stop()
         avEngine = null
     }
+
+    actual override fun close() = release()
 }

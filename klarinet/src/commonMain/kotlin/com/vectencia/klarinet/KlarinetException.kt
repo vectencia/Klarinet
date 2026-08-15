@@ -88,3 +88,12 @@ class UnsupportedFormatException(message: String) : KlarinetException(message)
  * @param cause The underlying exception, or `null`.
  */
 class AudioFileException(message: String, cause: Throwable? = null) : KlarinetException(message, cause)
+
+/**
+ * Thrown when an operation is attempted on an engine, stream, effect, or
+ * chain that has already been [AutoCloseable.close]d or released.
+ *
+ * [AutoCloseable.close] / `release()` themselves are idempotent and do
+ * not throw this exception.
+ */
+class ResourceReleasedException(message: String) : KlarinetException(message)

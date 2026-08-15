@@ -14,7 +14,7 @@ internal object JniBridge {
         engineHandle: Long,
         sampleRate: Int, channelCount: Int, audioFormat: Int,
         bufferCapacityInFrames: Int, performanceMode: Int,
-        sharingMode: Int, direction: Int,
+        sharingMode: Int, direction: Int, deviceId: Int,
         callbackObj: AudioStreamCallback?,
     ): Long
 

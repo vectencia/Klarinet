@@ -73,11 +73,33 @@ Java_com_vectencia_klarinet_JniBridge_nativeContextUninit(JNIEnv* env, jobject t
 /* Device (AudioStream)                                                */
 /* ------------------------------------------------------------------ */
 
+static int apply_miniaudio_device_id(ma_context* ctx, ma_device_config* config, int direction, int deviceId) {
+    if (deviceId < 0) return 0;
+
+    ma_device_info* playbackInfos = NULL;
+    ma_uint32 playbackCount = 0;
+    ma_device_info* captureInfos = NULL;
+    ma_uint32 captureCount = 0;
+    if (ma_context_get_devices(ctx, &playbackInfos, &playbackCount, &captureInfos, &captureCount) != MA_SUCCESS) {
+        return -1;
+    }
+
+    if (direction == 0) {
+        if ((ma_uint32)deviceId >= playbackCount) return -1;
+        config->playback.pDeviceID = &playbackInfos[deviceId].id;
+    } else {
+        int captureIndex = deviceId - (int)playbackCount;
+        if (captureIndex < 0 || (ma_uint32)captureIndex >= captureCount) return -1;
+        config->capture.pDeviceID = &captureInfos[captureIndex].id;
+    }
+    return 0;
+}
+
 JNIEXPORT jlong JNICALL
 Java_com_vectencia_klarinet_JniBridge_nativeDeviceInit(
     JNIEnv* env, jobject thiz, jlong contextPtr,
     jint sampleRate, jint channelCount, jint bufferCapacityInFrames,
-    jint direction, jobject callbackObj
+    jint direction, jint deviceId, jobject callbackObj
 ) {
     ma_context* ctx = (ma_context*)(intptr_t)contextPtr;
     KlarinetDevice* kd = (KlarinetDevice*)calloc(1, sizeof(KlarinetDevice));
@@ -101,6 +123,11 @@ Java_com_vectencia_klarinet_JniBridge_nativeDeviceInit(
 
     if (bufferCapacityInFrames > 0) {
         config.periodSizeInFrames = (ma_uint32)bufferCapacityInFrames;
+    }
+
+    if (apply_miniaudio_device_id(ctx, &config, direction, deviceId) != 0) {
+        free(kd);
+        return 0;
     }
 
     if (callbackObj != NULL) {

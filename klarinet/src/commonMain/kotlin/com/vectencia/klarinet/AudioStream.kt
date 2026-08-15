@@ -25,7 +25,7 @@ package com.vectencia.klarinet
  * call from any thread. The [write] and [read] methods should be called
  * from a dedicated audio thread or from within an [AudioStreamCallback].
  */
-expect class AudioStream {
+expect class AudioStream : AutoCloseable {
 
     /**
      * The configuration used to create this stream.
@@ -108,9 +108,12 @@ expect class AudioStream {
      * stream via [AudioEngine.openStream] if needed. It is safe to call
      * [close] on an already-closed stream (it will be a no-op).
      *
+     * Subsequent calls to [start], [pause], [stop], [write], or [read]
+     * throw [ResourceReleasedException].
+     *
      * This method is safe to call from any thread.
      */
-    fun close()
+    override fun close()
 
     /**
      * Write audio data to an output stream.

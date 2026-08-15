@@ -37,7 +37,7 @@ package com.vectencia.klarinet
  * @see AudioEffectChain
  * @see AudioEngine.createEffect
  */
-expect class AudioEffect {
+expect class AudioEffect : AutoCloseable {
 
     /**
      * The type of this effect, which determines its DSP behavior and available parameters.
@@ -85,6 +85,12 @@ expect class AudioEffect {
      *
      * After calling this method, the effect must not be used. Remove the effect
      * from any [AudioEffectChain] before releasing it.
+     *
+     * This method is idempotent. Subsequent calls to other effect methods
+     * throw [ResourceReleasedException].
      */
     fun release()
+
+    /** Closes this effect. Equivalent to [release]. */
+    override fun close()
 }

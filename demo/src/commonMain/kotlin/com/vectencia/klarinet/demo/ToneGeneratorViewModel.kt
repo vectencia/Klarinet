@@ -78,7 +78,7 @@ class ToneGeneratorViewModel : ViewModel() {
             _uiState.update { it.copy(isPlaying = true) }
 
             viewModelScope.launch {
-                newStream.stateFlow.collect { newState ->
+                newStream.stateFlow().collect { newState ->
                     _uiState.update { it.copy(streamState = newState) }
                 }
             }

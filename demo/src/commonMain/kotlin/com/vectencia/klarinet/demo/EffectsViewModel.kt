@@ -177,7 +177,7 @@ class EffectsViewModel : ViewModel() {
 
             viewModelScope.launch {
                 launch {
-                    newStream.stateFlow.collect { newState ->
+                    newStream.stateFlow().collect { newState ->
                         _uiState.update { it.copy(streamState = newState) }
                     }
                 }

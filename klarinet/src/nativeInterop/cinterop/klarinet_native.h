@@ -31,6 +31,7 @@ KlarinetDevice* klarinet_device_init(
     int channelCount,
     int bufferCapacityInFrames,
     int direction,           /* 0 = playback, 1 = capture */
+    int deviceId,            /* -1 = default device */
     KlarinetDataCallback cb,
     void* userData
 );

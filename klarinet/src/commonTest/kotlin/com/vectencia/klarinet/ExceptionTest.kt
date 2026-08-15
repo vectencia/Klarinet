@@ -60,4 +60,11 @@ class ExceptionTest {
         assertIs<KlarinetException>(ex)
         assertEquals("microphone permission denied", ex.message)
     }
+
+    @Test
+    fun resourceReleasedExceptionIsKlarinetException() {
+        val ex = ResourceReleasedException("AudioEngine has been released")
+        assertIs<KlarinetException>(ex)
+        assertEquals("AudioEngine has been released", ex.message)
+    }
 }

@@ -61,6 +61,7 @@ class AudioStreamConfigValidationTest {
             performanceMode,
             sharingMode,
             direction,
+            deviceId,
         ) = config
 
         assertEquals(96000, sampleRate)
@@ -70,6 +71,7 @@ class AudioStreamConfigValidationTest {
         assertEquals(PerformanceMode.POWER_SAVING, performanceMode)
         assertEquals(SharingMode.EXCLUSIVE, sharingMode)
         assertEquals(StreamDirection.INPUT, direction)
+        assertEquals(null, deviceId)
     }
 
     @Test

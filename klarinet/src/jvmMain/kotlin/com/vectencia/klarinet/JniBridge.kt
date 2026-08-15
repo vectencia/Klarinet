@@ -10,7 +10,7 @@ internal object JniBridge {
 
     @JvmStatic external fun nativeDeviceInit(
         contextPtr: Long, sampleRate: Int, channelCount: Int,
-        bufferCapacityInFrames: Int, direction: Int,
+        bufferCapacityInFrames: Int, direction: Int, deviceId: Int,
         callbackObj: AudioStreamCallback?,
     ): Long
     @JvmStatic external fun nativeDeviceStart(devicePtr: Long)

@@ -75,6 +75,7 @@ KlarinetDevice* klarinet_device_init(
     int channelCount,
     int bufferCapacityInFrames,
     int direction,
+    int deviceId,
     KlarinetDataCallback cb,
     void* userData
 ) {
@@ -103,6 +104,31 @@ KlarinetDevice* klarinet_device_init(
 
     if (bufferCapacityInFrames > 0) {
         config.periodSizeInFrames = (ma_uint32)bufferCapacityInFrames;
+    }
+
+    if (deviceId >= 0) {
+        ma_device_info* playbackInfos = NULL;
+        ma_uint32 playbackCount = 0;
+        ma_device_info* captureInfos = NULL;
+        ma_uint32 captureCount = 0;
+        if (ma_context_get_devices(&ctx->ctx, &playbackInfos, &playbackCount, &captureInfos, &captureCount) != MA_SUCCESS) {
+            free(kd);
+            return NULL;
+        }
+        if (direction == 0) {
+            if ((ma_uint32)deviceId >= playbackCount) {
+                free(kd);
+                return NULL;
+            }
+            config.playback.pDeviceID = &playbackInfos[deviceId].id;
+        } else {
+            int captureIndex = deviceId - (int)playbackCount;
+            if (captureIndex < 0 || (ma_uint32)captureIndex >= captureCount) {
+                free(kd);
+                return NULL;
+            }
+            config.capture.pDeviceID = &captureInfos[captureIndex].id;
+        }
     }
 
     if (cb != NULL) {

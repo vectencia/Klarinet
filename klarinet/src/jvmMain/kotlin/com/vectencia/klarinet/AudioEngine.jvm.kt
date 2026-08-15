@@ -1,6 +1,6 @@
 package com.vectencia.klarinet
 
-actual class AudioEngine private constructor() {
+actual class AudioEngine private constructor() : AutoCloseable {
     private var contextPtr: Long = 0L
     private val streams = mutableListOf<AudioStream>()
 
@@ -16,7 +16,8 @@ actual class AudioEngine private constructor() {
     }
 
     actual fun openStream(config: AudioStreamConfig, callback: AudioStreamCallback?): AudioStream {
-        check(contextPtr != 0L) { "AudioEngine has been released" }
+        requireActive(contextPtr != 0L, "AudioEngine")
+        requireRequestedDevice(config)
         val stream = AudioStream(config)
 
         val wrappedCallback = if (callback != null) {
@@ -49,6 +50,7 @@ actual class AudioEngine private constructor() {
             channelCount = config.channelCount,
             bufferCapacityInFrames = config.bufferCapacityInFrames,
             direction = config.direction.ordinal,
+            deviceId = config.nativeDeviceId(),
             callbackObj = wrappedCallback,
         )
         if (devicePtr == 0L) {
@@ -60,7 +62,7 @@ actual class AudioEngine private constructor() {
     }
 
     actual fun getAvailableDevices(): List<AudioDeviceInfo> {
-        check(contextPtr != 0L) { "AudioEngine has been released" }
+        requireActive(contextPtr != 0L, "AudioEngine")
         val devices = mutableListOf<AudioDeviceInfo>()
         val playbackCount = JniBridge.nativeGetPlaybackDeviceCount(contextPtr)
         for (i in 0 until playbackCount) {
@@ -90,8 +92,15 @@ actual class AudioEngine private constructor() {
         }
     }
 
-    actual fun createEffect(type: AudioEffectType): AudioEffect = AudioEffect(type)
-    actual fun createEffectChain(): AudioEffectChain = AudioEffectChain()
+    actual fun createEffect(type: AudioEffectType): AudioEffect {
+        requireActive(contextPtr != 0L, "AudioEngine")
+        return AudioEffect(type)
+    }
+
+    actual fun createEffectChain(): AudioEffectChain {
+        requireActive(contextPtr != 0L, "AudioEngine")
+        return AudioEffectChain()
+    }
 
     actual fun release() {
         streams.forEach { it.close() }
@@ -101,4 +110,6 @@ actual class AudioEngine private constructor() {
             contextPtr = 0L
         }
     }
+
+    actual override fun close() = release()
 }

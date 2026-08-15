@@ -4,16 +4,24 @@ actual class AudioEffect internal constructor(
     actual val type: AudioEffectType,
     internal val engineHandle: Long,
     internal var effectHandle: Long,
-) {
+) : AutoCloseable {
     actual var isEnabled: Boolean
-        get() = JniBridge.nativeIsEffectEnabled(engineHandle, effectHandle)
-        set(value) = JniBridge.nativeSetEffectEnabled(engineHandle, effectHandle, value)
+        get() {
+            requireActive(effectHandle != 0L, "AudioEffect")
+            return JniBridge.nativeIsEffectEnabled(engineHandle, effectHandle)
+        }
+        set(value) {
+            requireActive(effectHandle != 0L, "AudioEffect")
+            JniBridge.nativeSetEffectEnabled(engineHandle, effectHandle, value)
+        }
 
     actual fun setParameter(paramId: Int, value: Float) {
+        requireActive(effectHandle != 0L, "AudioEffect")
         JniBridge.nativeSetEffectParameter(engineHandle, effectHandle, paramId, value)
     }
 
     actual fun getParameter(paramId: Int): Float {
+        requireActive(effectHandle != 0L, "AudioEffect")
         return JniBridge.nativeGetEffectParameter(engineHandle, effectHandle, paramId)
     }
 
@@ -23,4 +31,6 @@ actual class AudioEffect internal constructor(
             effectHandle = 0L
         }
     }
+
+    actual override fun close() = release()
 }

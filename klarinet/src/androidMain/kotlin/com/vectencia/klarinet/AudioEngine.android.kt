@@ -1,6 +1,6 @@
 package com.vectencia.klarinet
 
-actual class AudioEngine private constructor() {
+actual class AudioEngine private constructor() : AutoCloseable {
     private var engineHandle: Long = 0L
     private val streams = mutableListOf<AudioStream>()
 
@@ -16,7 +16,8 @@ actual class AudioEngine private constructor() {
     }
 
     actual fun openStream(config: AudioStreamConfig, callback: AudioStreamCallback?): AudioStream {
-        check(engineHandle != 0L) { "AudioEngine has been released" }
+        requireActive(engineHandle != 0L, "AudioEngine")
+        requireRequestedDevice(config)
         val stream = AudioStream(config)
 
         val wrappedCallback = if (callback != null) {
@@ -55,6 +56,7 @@ actual class AudioEngine private constructor() {
             performanceMode = config.performanceMode.ordinal,
             sharingMode = config.sharingMode.ordinal,
             direction = config.direction.ordinal,
+            deviceId = config.nativeDeviceId(),
             callbackObj = wrappedCallback,
         )
         if (streamHandle == 0L) {
@@ -66,6 +68,7 @@ actual class AudioEngine private constructor() {
     }
 
     actual fun getAvailableDevices(): List<AudioDeviceInfo> {
+        requireActive(engineHandle != 0L, "AudioEngine")
         val count = JniBridge.nativeGetDeviceCount()
         return (0 until count).map { index ->
             val info = JniBridge.nativeGetDeviceInfo(index)
@@ -90,14 +93,14 @@ actual class AudioEngine private constructor() {
     }
 
     actual fun createEffect(type: AudioEffectType): AudioEffect {
-        check(engineHandle != 0L) { "AudioEngine has been released" }
+        requireActive(engineHandle != 0L, "AudioEngine")
         val handle = JniBridge.nativeCreateEffect(engineHandle, type.ordinal)
         if (handle == 0L) throw StreamCreationException("Failed to create audio effect")
         return AudioEffect(type, engineHandle, handle)
     }
 
     actual fun createEffectChain(): AudioEffectChain {
-        check(engineHandle != 0L) { "AudioEngine has been released" }
+        requireActive(engineHandle != 0L, "AudioEngine")
         val handle = JniBridge.nativeCreateEffectChain(engineHandle)
         if (handle == 0L) throw StreamCreationException("Failed to create effect chain")
         return AudioEffectChain(engineHandle, handle)
@@ -111,4 +114,6 @@ actual class AudioEngine private constructor() {
             engineHandle = 0L
         }
     }
+
+    actual override fun close() = release()
 }

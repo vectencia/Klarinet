@@ -45,7 +45,7 @@ package com.vectencia.klarinet
  * @see AudioEngine.createEffectChain
  * @see ParameterChange
  */
-expect class AudioEffectChain {
+expect class AudioEffectChain : AutoCloseable {
 
     /**
      * Appends an effect to the end of this chain.
@@ -99,6 +99,12 @@ expect class AudioEffectChain {
      * from any [AudioStream] (by setting `stream.effectChain = null`) before releasing it.
      * Individual effects in the chain are not released automatically; call
      * [AudioEffect.release] on each separately if needed.
+     *
+     * This method is idempotent. Subsequent calls to other chain methods
+     * throw [ResourceReleasedException].
      */
     fun release()
+
+    /** Closes this chain. Equivalent to [release]. */
+    override fun close()
 }

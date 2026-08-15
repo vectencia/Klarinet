@@ -7,7 +7,7 @@ import klarinet_native.*
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.StableRef
 
-actual class AudioStream internal constructor(actual val config: AudioStreamConfig) {
+actual class AudioStream internal constructor(actual val config: AudioStreamConfig) : AutoCloseable {
 
     internal var devicePtr: CPointer<KlarinetDevice>? = null
     internal var callbackRef: StableRef<AudioCallbackData>? = null
@@ -26,27 +26,27 @@ actual class AudioStream internal constructor(actual val config: AudioStreamConf
         }
 
     actual fun start() {
-        val dev = devicePtr ?: throw StreamOperationException("Stream has been closed")
+        val dev = devicePtr ?: throw ResourceReleasedException("AudioStream has been released")
         _state = StreamState.STARTING
         klarinet_device_start(dev)
         _state = StreamState.STARTED
     }
 
     actual fun pause() {
-        val dev = devicePtr ?: throw StreamOperationException("Stream has been closed")
+        val dev = devicePtr ?: throw ResourceReleasedException("AudioStream has been released")
         _state = StreamState.PAUSING
         klarinet_device_stop(dev)
         _state = StreamState.PAUSED
     }
 
     actual fun stop() {
-        val dev = devicePtr ?: throw StreamOperationException("Stream has been closed")
+        val dev = devicePtr ?: throw ResourceReleasedException("AudioStream has been released")
         _state = StreamState.STOPPING
         klarinet_device_stop(dev)
         _state = StreamState.STOPPED
     }
 
-    actual fun close() {
+    actual override fun close() {
         devicePtr?.let { dev ->
             if (_state == StreamState.STARTED || _state == StreamState.PAUSED) {
                 try { klarinet_device_stop(dev) } catch (_: Exception) {}
