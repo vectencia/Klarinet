@@ -117,10 +117,10 @@ repositories {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("com.vectencia.klarinet:klarinet:0.2.0")
+            implementation("com.vectencia.klarinet:klarinet:0.3.0")
 
             // Optional: Coroutines extensions
-            implementation("com.vectencia.klarinet:klarinet-coroutines:0.2.0")
+            implementation("com.vectencia.klarinet:klarinet-coroutines:0.3.0")
         }
     }
 }

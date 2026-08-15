@@ -7,23 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-15
+
 ### Added
 
 - JVM desktop JAR now ships `libklarinet_jvm` for macOS (arm64/x64), Linux (x64/arm64), and Windows (x64)
 - `./gradlew :klarinet:buildJvmNatives` cross-compiles those libraries (Zig for Linux/Windows)
-
-### Build
-
-- Removed the extra Android `singleVariant("release")` block; vanniktech already publishes that variant
+- Apple `getAvailableDevices()` lists real Core Audio / AVAudioSession ports and `deviceId` selects them
 
 ### Changed
 
 - JVM desktop effects now run the shared C++ DSP core on the miniaudio callback instead of a Kotlin parameter map
 - Native desktop (Linux / Windows) effects call the same `klarinet_dsp` C API instead of a Kotlin parameter map
-- Apple `getAvailableDevices()` lists real Core Audio / AVAudioSession ports and `deviceId` selects them
 - Apple effects run the shared C++ DSP core on the AVAudioEngine render/tap path
 - Kotlin `onAudioReady` runs on a worker thread on Apple, JVM, and native desktop; the audio callback only does FIFO + C++ DSP
 - Dropped the Kotlin/Native `macosX64` target; Intel Macs keep using the JVM desktop artifact
+
+### Build
+
+- Removed the extra Android `singleVariant("release")` block; vanniktech already publishes that variant
 
 ## [0.2.0] - 2026-08-15
 
