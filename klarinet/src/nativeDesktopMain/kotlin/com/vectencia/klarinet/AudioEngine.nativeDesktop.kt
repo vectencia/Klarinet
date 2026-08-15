@@ -38,13 +38,11 @@ actual class AudioEngine private constructor() : AutoCloseable {
 
                 if (isCapture == 1 && buffer != null) {
                     for (i in 0 until totalSamples) { kotlinBuffer[i] = buffer[i] }
-                    data.stream.processEffects(kotlinBuffer, frameCount, channelCount)
                 }
 
                 data.callback.onAudioReady(kotlinBuffer, frameCount)
 
                 if (isCapture == 0 && buffer != null) {
-                    data.stream.processEffects(kotlinBuffer, frameCount, channelCount)
                     for (i in 0 until totalSamples) { buffer[i] = kotlinBuffer[i] }
                 }
 

@@ -148,6 +148,7 @@ kotlin {
                 "-L${dspOut.get().asFile.absolutePath}",
                 "-lklarinet-dsp",
                 "-lc++",
+                "-lpthread",
             )
         }
         tasks.matching { task ->
@@ -399,6 +400,10 @@ tasks.register("buildJvmNatives") {
     group = "build"
     description = "Build packaged JVM natives for macOS, Linux, and Windows"
     dependsOn(buildJvmNativeTasks)
+}
+
+tasks.matching { it.name == "jvmProcessResources" || it.name == "processJvmMainResources" }.configureEach {
+    mustRunAfter(buildJvmNativeTasks)
 }
 
 mavenPublishing {

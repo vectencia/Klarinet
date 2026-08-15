@@ -1,5 +1,5 @@
 headers = klarinet_native.h
 headerFilter = klarinet_native.h
-compilerOpts = -Isrc/nativeInterop/cinterop
+compilerOpts = -Isrc/nativeInterop/cinterop -Isrc/cpp/dsp
 linkerOpts.linux = -lpthread -ldl -lm
 linkerOpts.mingw = -lole32 -lwinmm

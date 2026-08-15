@@ -11,62 +11,83 @@
 /* ------------------------------------------------------------------ */
 
 typedef struct {
+    JavaVM*   jvm;
+    jobject   callbackObj;
+    jmethodID onAudioReadyMethod;
+} JvmUserAudio;
+
+typedef struct {
     JavaVM*     jvm;
     jobject     callbackObj;
     jmethodID   onAudioReadyMethod;
     ma_device   device;
     ma_uint32   channelCount;
     _Atomic(KlarinetEffectChainHandle) effectChain;
+    KlarinetOffloadHandle offload;
+    JvmUserAudio userAudio;
 } KlarinetDevice;
 
 static KlarinetEffectChainHandle device_chain(KlarinetDevice* kd) {
     return atomic_load(&kd->effectChain);
 }
 
-static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
-    KlarinetDevice* kd = (KlarinetDevice*)pDevice->pUserData;
-    if (kd == NULL || kd->callbackObj == NULL) return;
+static int jvm_user_audio(void* userData, float* buffer, int numFrames, int channelCount) {
+    JvmUserAudio* user = (JvmUserAudio*)userData;
+    if (user == NULL || user->jvm == NULL || user->callbackObj == NULL) return 0;
 
     JNIEnv* env = NULL;
-    int attached = 0;
-    if ((*kd->jvm)->GetEnv(kd->jvm, (void**)&env, JNI_VERSION_1_6) == JNI_EDETACHED) {
-        (*kd->jvm)->AttachCurrentThreadAsDaemon(kd->jvm, (void**)&env, NULL);
-        attached = 1;
-    }
-    if (env == NULL) return;
-
-    ma_uint32 totalSamples = frameCount * kd->channelCount;
-    jfloatArray jbuffer = (*env)->NewFloatArray(env, (jsize)totalSamples);
-    if (jbuffer == NULL) goto detach;
-
-    KlarinetEffectChainHandle chain = device_chain(kd);
-
-    if (pDevice->type == ma_device_type_capture && pInput != NULL) {
-        if (chain != NULL && totalSamples <= 8192) {
-            float work[8192];
-            memcpy(work, pInput, totalSamples * sizeof(float));
-            klarinet_chain_process(chain, work, (int)frameCount, (int)kd->channelCount);
-            (*env)->SetFloatArrayRegion(env, jbuffer, 0, (jsize)totalSamples, work);
-        } else {
-            (*env)->SetFloatArrayRegion(env, jbuffer, 0, (jsize)totalSamples, (const jfloat*)pInput);
+    if ((*user->jvm)->GetEnv(user->jvm, (void**)&env, JNI_VERSION_1_6) == JNI_EDETACHED) {
+        if ((*user->jvm)->AttachCurrentThreadAsDaemon(user->jvm, (void**)&env, NULL) != JNI_OK) {
+            return 0;
         }
     }
+    if (env == NULL) return 0;
 
-    (*env)->CallIntMethod(env, kd->callbackObj, kd->onAudioReadyMethod,
-                          jbuffer, (jint)frameCount);
+    const int totalSamples = numFrames * channelCount;
+    jfloatArray jbuffer = (*env)->NewFloatArray(env, (jsize)totalSamples);
+    if (jbuffer == NULL) return 0;
+    (*env)->SetFloatArrayRegion(env, jbuffer, 0, (jsize)totalSamples, buffer);
+    const jint frames = (*env)->CallIntMethod(
+        env, user->callbackObj, user->onAudioReadyMethod, jbuffer, (jint)numFrames);
+    if ((*env)->ExceptionCheck(env)) {
+        (*env)->ExceptionClear(env);
+        (*env)->DeleteLocalRef(env, jbuffer);
+        return 0;
+    }
+    if (frames > 0) {
+        const int outSamples = frames * channelCount;
+        (*env)->GetFloatArrayRegion(env, jbuffer, 0, (jsize)outSamples, buffer);
+    }
+    (*env)->DeleteLocalRef(env, jbuffer);
+    return frames;
+}
 
-    if (pDevice->type == ma_device_type_playback && pOutput != NULL) {
-        (*env)->GetFloatArrayRegion(env, jbuffer, 0, (jsize)totalSamples, (jfloat*)pOutput);
+static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
+    KlarinetDevice* kd = (KlarinetDevice*)pDevice->pUserData;
+    if (kd == NULL) return;
+
+    KlarinetEffectChainHandle chain = device_chain(kd);
+    if (pDevice->type == ma_device_type_capture && pInput != NULL) {
+        const int totalSamples = (int)frameCount * (int)kd->channelCount;
+        float work[8192];
+        float* samples = (float*)pInput;
+        if (chain != NULL && totalSamples <= 8192) {
+            memcpy(work, pInput, (size_t)totalSamples * sizeof(float));
+            klarinet_chain_process(chain, work, (int)frameCount, (int)kd->channelCount);
+            samples = work;
+        }
+        if (kd->offload != NULL) {
+            klarinet_offload_process(kd->offload, samples, (int)frameCount);
+        }
+    } else if (pOutput != NULL) {
+        if (kd->offload != NULL) {
+            klarinet_offload_process(kd->offload, (float*)pOutput, (int)frameCount);
+        } else {
+            memset(pOutput, 0, (size_t)frameCount * kd->channelCount * sizeof(float));
+        }
         if (chain != NULL) {
             klarinet_chain_process(chain, (float*)pOutput, (int)frameCount, (int)kd->channelCount);
         }
-    }
-
-    (*env)->DeleteLocalRef(env, jbuffer);
-
-detach:
-    if (attached) {
-        (*kd->jvm)->DetachCurrentThread(kd->jvm);
     }
 }
 
@@ -157,6 +178,14 @@ Java_com_vectencia_klarinet_JniBridge_nativeDeviceInit(
 
         jclass cbClass = (*env)->GetObjectClass(env, callbackObj);
         kd->onAudioReadyMethod = (*env)->GetMethodID(env, cbClass, "onAudioReady", "([FI)I");
+        (*env)->DeleteLocalRef(env, cbClass);
+
+        kd->userAudio.jvm = kd->jvm;
+        kd->userAudio.callbackObj = kd->callbackObj;
+        kd->userAudio.onAudioReadyMethod = kd->onAudioReadyMethod;
+        int burst = bufferCapacityInFrames > 0 ? bufferCapacityInFrames : 256;
+        kd->offload = klarinet_offload_create(
+            burst, channelCount, direction == 0 ? 0 : 1, jvm_user_audio, &kd->userAudio);
 
         config.dataCallback = data_callback;
         config.pUserData    = kd;
@@ -164,6 +193,7 @@ Java_com_vectencia_klarinet_JniBridge_nativeDeviceInit(
 
     ma_result result = ma_device_init(ctx, &config, &kd->device);
     if (result != MA_SUCCESS) {
+        if (kd->offload != NULL) klarinet_offload_destroy(kd->offload);
         if (kd->callbackObj != NULL) (*env)->DeleteGlobalRef(env, kd->callbackObj);
         free(kd);
         return 0;
@@ -189,6 +219,7 @@ Java_com_vectencia_klarinet_JniBridge_nativeDeviceUninit(JNIEnv* env, jobject th
     KlarinetDevice* kd = (KlarinetDevice*)(intptr_t)devicePtr;
     if (kd != NULL) {
         ma_device_uninit(&kd->device);
+        if (kd->offload != NULL) klarinet_offload_destroy(kd->offload);
         if (kd->callbackObj != NULL) (*env)->DeleteGlobalRef(env, kd->callbackObj);
         free(kd);
     }

@@ -9,20 +9,11 @@ package com.vectencia.klarinet
  *
  * ## Threading
  *
- * **Android:** [onAudioReady] runs on a dedicated worker thread. The Oboe
- * callback never enters the JVM; samples move through a lock-free FIFO.
- * Native effect processing stays on the audio thread. The worker is not
- * real-time, so allocations are safe, but slow work still adds latency
- * or underruns.
- *
- * **Apple, JVM, and native desktop:** [onAudioReady] is called on a
- * high-priority audio thread. Implementations must be real-time safe:
- *
- * - **Do not** allocate memory (no `listOf`, `arrayOf`, string concatenation, etc.).
- * - **Do not** acquire locks, mutexes, or synchronized blocks.
- * - **Do not** perform file or network I/O.
- * - **Do not** call any function that may block or take an unpredictable amount of time.
- * - **Do not** call logging functions (e.g., `println`, `Log.d`).
+ * **All platforms:** [onAudioReady] runs on a dedicated worker thread.
+ * The platform audio callback never enters Kotlin; samples move through a
+ * lock-free FIFO. Native effect processing stays on the audio thread. The
+ * worker is not real-time, so allocations are safe, but slow work still
+ * adds latency or underruns.
  *
  * The other callbacks ([onStreamStateChanged], [onStreamError],
  * [onStreamUnderrun]) may be called on any thread and do not have real-time

@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Native desktop (Linux / Windows) effects call the same `klarinet_dsp` C API instead of a Kotlin parameter map
 - Apple `getAvailableDevices()` lists real Core Audio / AVAudioSession ports and `deviceId` selects them
 - Apple effects run the shared C++ DSP core on the AVAudioEngine render/tap path
+- Kotlin `onAudioReady` runs on a worker thread on Apple, JVM, and native desktop; the audio callback only does FIFO + C++ DSP
 
 ## [0.2.0] - 2026-08-15
 

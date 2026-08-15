@@ -9,6 +9,7 @@ add_library(klarinet_native STATIC
 
 target_include_directories(klarinet_native PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../cpp/dsp
 )
 
 if(APPLE)
