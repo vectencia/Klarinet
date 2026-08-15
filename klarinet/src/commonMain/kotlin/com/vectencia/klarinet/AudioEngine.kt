@@ -25,6 +25,9 @@ package com.vectencia.klarinet
  *
  * - **Android**: Backed by Google Oboe (AAudio / OpenSL ES).
  * - **Apple**: Backed by AVAudioEngine / Core Audio.
+ * - **JS / Browser**: Backed by the Web Audio API. Effects are native Web Audio
+ *   nodes (not the C++ DSP core). File reads require [decodeAudioFile] or an
+ *   [AudioFileWriter] first.
  *
  * Always call [release] when the engine is no longer needed to free
  * native resources.

@@ -66,7 +66,10 @@ expect class AudioStream : AutoCloseable {
      * [AudioStreamCallback.onAudioReady] callback will begin firing
      * (if a callback was provided at creation time). On Android that
      * callback runs on a worker thread; on other platforms it runs on
-     * the audio thread.
+     * the audio thread. On JS, [start] returns immediately in
+     * [StreamState.STARTING]; [StreamState.STARTED] is delivered through
+     * [AudioStreamCallback.onStreamStateChanged] after `AudioContext.resume()`
+     * and, for input streams, `getUserMedia`.
      *
      * This method is safe to call from any thread.
      *

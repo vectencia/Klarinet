@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Kotlin/JS browser target for `klarinet` and `klarinet-coroutines`
+- Web Audio `AudioEngine` / `AudioStream` (`ScriptProcessorNode`, `getUserMedia` for input)
+- Web Audio effect graphs mapped from Klarinet Studio (gain, pan, dynamics, EQ, delay, reverb, modulation)
+- In-memory `AudioFileWriter` (WAV) and `AudioFileReader` after `decodeAudioFile`, `putWavBytes`, or `putAudioFile`
+
+### Changed
+
+- `klarinet-coroutines` file helpers default to a platform IO dispatcher (`Dispatchers.Default` on JS, where `Dispatchers.IO` does not exist)
+
 ## [0.3.0] - 2026-08-15
 
 ### Added

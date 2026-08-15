@@ -73,6 +73,14 @@ kotlin {
 
     jvm()
 
+    js {
+        browser {
+            testTask {
+                enabled = false
+            }
+        }
+    }
+
     val nativeDesktopTargets = listOf(
         linuxX64(),
         linuxArm64(),
