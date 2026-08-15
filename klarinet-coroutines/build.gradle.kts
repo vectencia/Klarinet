@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidKmpLibrary)
     alias(libs.plugins.vanniktechPublish)
+    alias(libs.plugins.dokka)
 }
 
 kotlin {
@@ -39,6 +40,10 @@ kotlin {
             implementation(libs.kotlinx.coroutines.test)
         }
     }
+}
+
+dokka {
+    moduleName.set("Klarinet Coroutines")
 }
 
 mavenPublishing {

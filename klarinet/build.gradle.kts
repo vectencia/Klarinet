@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidKmpLibrary)
     alias(libs.plugins.vanniktechPublish)
+    alias(libs.plugins.dokka)
 }
 
 kotlin {
@@ -103,6 +104,10 @@ kotlin {
             implementation(libs.kotlin.testJunit)
         }
     }
+}
+
+dokka {
+    moduleName.set("Klarinet")
 }
 
 val dspSourceDir = layout.projectDirectory.dir("src/cpp/dsp")

@@ -1,4 +1,4 @@
-.PHONY: build klarinet demo test test-klarinet test-dsp test-android test-ios test-all clean publish
+.PHONY: build klarinet demo sample docs test test-klarinet test-dsp test-android test-ios test-all clean publish
 
 build:
 	./gradlew build
@@ -8,6 +8,12 @@ klarinet:
 
 demo:
 	./gradlew :demo-android:assembleDebug
+
+sample:
+	./gradlew :sample:run
+
+docs:
+	./gradlew :dokkaGenerate
 
 test: test-klarinet
 

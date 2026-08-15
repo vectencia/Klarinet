@@ -139,6 +139,16 @@ let engine = AudioEngine.companion.create()
 
 See the [SwiftUI Demo](#demo-app) for a complete example.
 
+### Tiny sample
+
+A one-file JVM program that plays a 440 Hz sine for one second:
+
+```bash
+./gradlew :sample:run
+```
+
+The source is in `sample/src/main/kotlin/Main.kt`.
+
 ## Quick Start
 
 ### Playback --- Sine Wave Generator
@@ -365,6 +375,7 @@ Klarinet is a single Kotlin Multiplatform module using `expect`/`actual` declara
 | `demo` | --- | Shared Compose Multiplatform demo UI (Android, iOS, Desktop) |
 | `demo-android` | --- | Android application entry point |
 | `demo-native` | --- | Native console demo apps (Linux, Windows) |
+| `sample` | --- | One-file JVM sine-wave sample |
 | `iosApp` | --- | Native SwiftUI demo app (iOS, tvOS, watchOS) |
 
 ## Demo Apps
@@ -473,6 +484,10 @@ open iosApp/iosApp.xcodeproj
 
 # Coroutines module tests
 ./gradlew :klarinet-coroutines:allTests
+
+# API docs (HTML)
+./gradlew :dokkaGenerate
+# output: build/dokka/html/index.html
 ```
 
 ### Makefile Shortcuts
@@ -482,6 +497,8 @@ open iosApp/iosApp.xcodeproj
 | `make build` | Build all modules |
 | `make klarinet` | Build the library only |
 | `make demo` | Build the demo app (Android) |
+| `make sample` | Run the one-file JVM sine-wave sample |
+| `make docs` | Generate Dokka HTML API docs |
 | `make test` | Run Kotlin tests |
 | `make test-dsp` | Run C++ DSP tests |
 | `make test-all` | Run Kotlin, C++ DSP, and iOS simulator tests |

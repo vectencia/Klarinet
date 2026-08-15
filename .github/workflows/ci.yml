@@ -46,6 +46,9 @@ jobs:
       - name: Run C++ DSP tests
         run: ./gradlew :klarinet:dspTests
 
+      - name: Generate API docs
+        run: ./gradlew :dokkaGenerate
+
       - name: Run Darwin tests (iOS Simulator)
         run: ./gradlew :klarinet:iosSimulatorArm64Test
         continue-on-error: true

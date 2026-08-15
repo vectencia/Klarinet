@@ -41,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Shared Linux and Windows native actuals in `nativeDesktopMain` instead of three copied source trees
 - JVM tests for WAV encode/decode and live output-callback `peakLevel`; `./gradlew :klarinet:dspTests` runs the C++ DSP suite
 - Android Oboe callback no longer enters the JVM: Kotlin `onAudioReady` runs on a worker thread behind a lock-free sample FIFO
+- Dokka HTML API docs (`./gradlew :dokkaGenerate`) and a one-file JVM sine-wave sample (`./gradlew :sample:run`)
 
 ## [0.1.0] - 2026-04-16
 
