@@ -39,7 +39,7 @@ compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-previ
 
 # Klarinet
 klarinet = { module = "com.vectencia.klarinet:klarinet", version.ref = "klarinet" }
-klarinet-android = { module = "com.vectencia.klarinet:klarinet-android", version.ref = "klarinet" }
+klarinet-android = { module = "com.vectencia.klarinet:klarinet-jni", version.ref = "klarinet" }
 klarinet-coroutines = { module = "com.vectencia.klarinet:klarinet-coroutines", version.ref = "klarinet" }
 
 [plugins]

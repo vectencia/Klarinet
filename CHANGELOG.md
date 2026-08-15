@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Build
 
 - Extracted the Android Oboe/C++ JNI backend into `:klarinet-android` (`com.android.library`) so native CMake can stay on a regular Android library
+- Publish that JNI module as `com.vectencia.klarinet:klarinet-jni` so it does not collide with the KMP `klarinet-android` target on Maven Central
 - Migrated `:klarinet` and `:klarinet-coroutines` to `com.android.kotlin.multiplatform.library`
 - Split the demo into `:demo` (shared Compose Multiplatform UI) and `:demo-android` (application entry point)
 - Removed AGP 9 `android.builtInKotlin` / `android.newDsl` opt-outs
