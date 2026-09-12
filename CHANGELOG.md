@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `klarinet-coroutines`: `AudioSessionManager.interruptionFlow()` and `routeChangeFlow()`
 - `klarinet-coroutines`: `AudioFileWriter.writeFramesSuspend()`
 
+### Fixed
+
+- `klarinet-coroutines` native tests link `libklarinet-dsp` so Apple test binaries resolve DSP symbols used by SleepTimer
+
 ## [0.4.0] - 2026-09-12
 
 ### Added

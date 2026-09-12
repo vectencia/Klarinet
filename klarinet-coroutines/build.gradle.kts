@@ -28,12 +28,32 @@ kotlin {
         }
     }
 
-    iosArm64()
-    iosSimulatorArm64()
-    iosX64()
-    macosArm64()
-    tvosArm64()
-    tvosSimulatorArm64()
+    val appleTargets = listOf(
+        iosArm64(),
+        iosSimulatorArm64(),
+        iosX64(),
+        macosArm64(),
+        tvosArm64(),
+        tvosSimulatorArm64(),
+    )
+
+    appleTargets.forEach { target ->
+        val dspOut = project(":klarinet").layout.buildDirectory.dir("dsp-${target.name}")
+        target.binaries.all {
+            linkerOpts(
+                "-L${dspOut.get().asFile.absolutePath}",
+                "-lklarinet-dsp",
+                "-lc++",
+                "-lpthread",
+            )
+        }
+        tasks.matching { task ->
+            val n = task.name.lowercase()
+            n.contains("link") && n.contains(target.name.lowercase())
+        }.configureEach {
+            dependsOn(":klarinet:compileDsp${target.name.replaceFirstChar { it.uppercase() }}")
+        }
+    }
 
     applyDefaultHierarchyTemplate()
 
