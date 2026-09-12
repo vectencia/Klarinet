@@ -7,7 +7,7 @@ plugins {
     alias(libs.plugins.composeCompiler)
 }
 
-val useDebugDependencies: String by project
+val useDebugDependencies = (findProperty("useDebugDependencies") as? String).toBoolean()
 
 kotlin {
     android {
@@ -31,7 +31,7 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
-            if (useDebugDependencies.toBoolean()) {
+            if (useDebugDependencies) {
                 export(project(":klarinet"))
             } else {
                 export(libs.klarinet)
@@ -40,7 +40,7 @@ kotlin {
     }
 
     sourceSets {
-        val desktopMain by getting {
+        named("desktopMain") {
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutines.swing)
@@ -55,7 +55,7 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
-            if (useDebugDependencies.toBoolean()) {
+            if (useDebugDependencies) {
                 api(project(":klarinet"))
                 implementation(project(":klarinet-coroutines"))
             } else {

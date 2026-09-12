@@ -11,6 +11,6 @@ plugins {
 }
 
 dependencies {
-    dokka(project(":klarinet"))
-    dokka(project(":klarinet-coroutines"))
+    add("dokka", dependencyFactory.createProjectDependency(":klarinet"))
+    add("dokka", dependencyFactory.createProjectDependency(":klarinet-coroutines"))
 }

@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Android `targetSdk` 37; Kotlin 2.4.20; AGP 9.4.0; Gradle 9.7.1; Compose Multiplatform 1.12.0
 - Gain converts dB to linear in `setParameter` (caller thread); `process()` only lerps atomics
 - `klarinet-coroutines` file helpers default to a platform IO dispatcher (`Dispatchers.Default` on JS, where `Dispatchers.IO` does not exist)
 

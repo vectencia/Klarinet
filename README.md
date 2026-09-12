@@ -10,7 +10,7 @@
   <a href="https://github.com/vectencia/Klarinet/actions/workflows/ci.yml"><img src="https://github.com/vectencia/Klarinet/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://central.sonatype.com/namespace/com.vectencia.klarinet"><img src="https://img.shields.io/maven-central/v/com.vectencia.klarinet/klarinet" alt="Maven Central"></a>
   <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a>
-  <a href="https://kotlinlang.org"><img src="https://img.shields.io/badge/Kotlin-2.4.10-7F52FF.svg?logo=kotlin" alt="Kotlin"></a>
+  <a href="https://kotlinlang.org"><img src="https://img.shields.io/badge/Kotlin-2.4.20-7F52FF.svg?logo=kotlin" alt="Kotlin"></a>
   <a href="https://vectencia.github.io/Klarinet/"><img src="https://img.shields.io/badge/demo-GitHub%20Pages-2088FF.svg?logo=github" alt="GitHub Pages"></a>
 </p>
 

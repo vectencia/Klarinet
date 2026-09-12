@@ -92,11 +92,11 @@ kotlin {
     nativeDesktopTargets.forEach { target ->
         target.compilations.getByName("main") {
             cinterops {
-                val klarinet_native by creating {
+                create("klarinet_native") {
                     defFile(project.file("src/nativeInterop/cinterop/klarinet_native.def"))
                     includeDirs(project.file("src/nativeInterop/cinterop"))
                 }
-                val klarinet_dsp by creating {
+                create("klarinet_dsp") {
                     defFile(project.file("src/nativeInterop/cinterop/klarinet_dsp.def"))
                     includeDirs(project.file("src/cpp/dsp"))
                 }
@@ -122,7 +122,7 @@ kotlin {
         }
         target.compilations.getByName("main") {
             cinterops {
-                val klarinet_dsp by creating {
+                create("klarinet_dsp") {
                     defFile(project.file("src/nativeInterop/cinterop/klarinet_dsp.def"))
                     includeDirs(project.file("src/cpp/dsp"))
                 }
@@ -186,19 +186,19 @@ kotlin {
 
         // Intermediate source set for Apple platforms with ExtAudioFile support.
         // watchOS K/N bindings lack ExtAudioFile APIs, so it gets limited impls.
-        val appleNonWatchMain by creating {
-            dependsOn(appleMain.get())
+        val appleNonWatchMain = create("appleNonWatchMain") {
+            dependsOn(getByName("appleMain"))
         }
-        iosMain.get().dependsOn(appleNonWatchMain)
-        macosMain.get().dependsOn(appleNonWatchMain)
-        tvosMain.get().dependsOn(appleNonWatchMain)
+        getByName("iosMain").dependsOn(appleNonWatchMain)
+        getByName("macosMain").dependsOn(appleNonWatchMain)
+        getByName("tvosMain").dependsOn(appleNonWatchMain)
 
         // Shared miniaudio/cinterop actuals for Linux and Windows native.
-        val nativeDesktopMain by creating {
-            dependsOn(nativeMain.get())
+        val nativeDesktopMain = create("nativeDesktopMain") {
+            dependsOn(getByName("nativeMain"))
         }
-        linuxMain.get().dependsOn(nativeDesktopMain)
-        mingwMain.get().dependsOn(nativeDesktopMain)
+        getByName("linuxMain").dependsOn(nativeDesktopMain)
+        getByName("mingwMain").dependsOn(nativeDesktopMain)
 
         getByName("androidDeviceTest").dependencies {
             implementation(libs.kotlin.test)
@@ -224,7 +224,7 @@ val dspSources = fileTree(dspSourceDir) {
     exclude("build/**")
 }
 
-val configureDspTests by tasks.registering(Exec::class) {
+val configureDspTests = tasks.register<Exec>("configureDspTests") {
     workingDir = dspSourceDir.asFile
     inputs.files(dspSources)
     outputs.dir(dspBuildDir)
@@ -236,7 +236,7 @@ val configureDspTests by tasks.registering(Exec::class) {
     )
 }
 
-val compileDspTests by tasks.registering(Exec::class) {
+val compileDspTests = tasks.register<Exec>("compileDspTests") {
     dependsOn(configureDspTests)
     inputs.files(dspSources)
     outputs.dir(dspBuildDir)
