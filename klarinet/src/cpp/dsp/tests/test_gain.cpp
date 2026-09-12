@@ -176,6 +176,85 @@ static void test_gain_fade_retarget_from_current() {
     printf("PASS\n");
 }
 
+static void test_gain_fade_two_seconds_to_silence() {
+    printf("  Gain: 2s fade to silence, continuous, no spike... ");
+    klarinet::Gain gain;
+    gain.prepare(48000, 1);
+    gain.setParameter(klarinet::GainParams::kFadeMs, 2000.0f);
+    gain.setParameter(klarinet::GainParams::kGainDb, -80.0f);
+
+    const int total = 96000; // 2s at 48kHz
+    const int block = 256;
+    float first = 0.0f;
+    float last = 1.0f;
+    float prev = 1.0f;
+    int processed = 0;
+    while (processed < total) {
+        int n = total - processed;
+        if (n > block) n = block;
+        float buffer[256];
+        for (int i = 0; i < n; ++i) {
+            buffer[i] = 1.0f;
+        }
+        gain.process(buffer, n, 1);
+        if (processed == 0) {
+            first = buffer[0];
+        }
+        for (int i = 0; i < n; ++i) {
+            assert(buffer[i] <= prev + 1e-6f);
+            assert(prev - buffer[i] < 0.001f);
+            prev = buffer[i];
+        }
+        last = buffer[n - 1];
+        processed += n;
+    }
+    assert(first > 0.999f);
+    assert(last < 0.001f);
+    printf("PASS\n");
+}
+
+static void test_gain_fade_two_seconds_from_silence() {
+    printf("  Gain: 2s fade from silence to full, continuous... ");
+    klarinet::Gain gain;
+    gain.prepare(48000, 1);
+    gain.setParameter(klarinet::GainParams::kGainDb, -80.0f);
+    float primed[] = {1.0f};
+    gain.process(primed, 1, 1);
+
+    gain.setParameter(klarinet::GainParams::kFadeMs, 2000.0f);
+    gain.setParameter(klarinet::GainParams::kGainDb, 0.0f);
+
+    const int total = 96000;
+    const int block = 256;
+    float first = 1.0f;
+    float last = 0.0f;
+    float prev = 0.0f;
+    int processed = 0;
+    while (processed < total) {
+        int n = total - processed;
+        if (n > block) n = block;
+        float buffer[256];
+        for (int i = 0; i < n; ++i) {
+            buffer[i] = 1.0f;
+        }
+        gain.process(buffer, n, 1);
+        if (processed == 0) {
+            first = buffer[0];
+            prev = buffer[0];
+        }
+        for (int i = 0; i < n; ++i) {
+            assert(buffer[i] >= prev - 1e-6f);
+            assert(buffer[i] - prev < 0.001f);
+            prev = buffer[i];
+        }
+        last = buffer[n - 1];
+        processed += n;
+    }
+    assert(first < 0.01f);
+    assert(last > 0.99f);
+    printf("PASS\n");
+}
+
 static void test_gain_fade_across_callback_buffers() {
     printf("  Gain: fade completes across multiple process() calls... ");
     klarinet::Gain gain;
@@ -218,6 +297,8 @@ int main() {
     test_gain_fade_from_silence_no_click();
     test_gain_fade_retarget_from_current();
     test_gain_fade_across_callback_buffers();
+    test_gain_fade_two_seconds_to_silence();
+    test_gain_fade_two_seconds_from_silence();
 
     printf("\nAll Gain tests passed!\n");
     return 0;
