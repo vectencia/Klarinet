@@ -6,6 +6,7 @@ import kotlinx.cinterop.*
 import platform.AVFAudio.*
 import platform.Foundation.NSError
 import platform.Foundation.NSNotificationCenter
+import platform.Foundation.NSNumber
 import platform.Foundation.NSOperationQueue
 import platform.darwin.NSObjectProtocol
 
@@ -66,6 +67,20 @@ internal actual fun configurePlatformAudioSessionForInput() {
 }
 
 private var routeChangeObserver: NSObjectProtocol? = null
+private var interruptionObserver: NSObjectProtocol? = null
+
+internal actual fun observePlatformInterruptions(listener: (AudioInterruptionInfo) -> Unit) {
+    interruptionObserver?.let {
+        NSNotificationCenter.defaultCenter.removeObserver(it)
+    }
+    interruptionObserver = NSNotificationCenter.defaultCenter.addObserverForName(
+        name = AVAudioSessionInterruptionNotification,
+        `object` = AVAudioSession.sharedInstance(),
+        queue = NSOperationQueue.mainQueue,
+    ) { notification ->
+        listener(audioInterruptionInfo(notification?.userInfo))
+    }
+}
 
 internal actual fun observePlatformRouteChanges(listener: (AudioRouteChangeInfo) -> Unit) {
     routeChangeObserver?.let {
@@ -106,4 +121,13 @@ internal actual fun installPlatformInputTap(
 
 internal actual fun removePlatformInputTap(engine: platform.AVFAudio.AVAudioEngine) {
     engine.inputNode.removeTapOnBus(0u)
+}
+
+private fun audioInterruptionInfo(userInfo: Map<Any?, *>?): AudioInterruptionInfo {
+    val typeValue = (userInfo?.get(AVAudioSessionInterruptionTypeKey) as? NSNumber)?.unsignedLongValue
+        ?: AVAudioSessionInterruptionTypeBegan
+    val began = typeValue == AVAudioSessionInterruptionTypeBegan
+    val options = (userInfo?.get(AVAudioSessionInterruptionOptionKey) as? NSNumber)?.unsignedLongValue ?: 0uL
+    val shouldResume = (options and AVAudioSessionInterruptionOptionShouldResume) != 0uL
+    return audioInterruptionFromSession(typeBegan = began, optionShouldResume = shouldResume)
 }

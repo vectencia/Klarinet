@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-12
+
+### Added
+
+- `AudioScene` / `AudioSceneJson` / `AudioScenePlayer`: serializable layers + Gain crossfade between scenes
+- `AudioSessionManager.observeInterruptions` for calls / audio-focus loss; Android `bind(context)` + `setActive` requests media audio focus
+- `AudioSessionManager.attach` pauses and resumes streams on interruptions
+- `SleepTimer`: schedule fade-out then `AudioStream.stop`; pause/resume keep remaining time; cancel leaves playback running
+- `SleepTimer` extra streams are stopped after the fade; `pause(pauseStreams = true)` also pauses those streams
+- `GainParams.FADE_MS`: real-time-safe linear amplitude ramp when changing `GAIN_DB` (0 ms stays instant)
+- Web Audio Gain honors `FADE_MS` via `linearRampToValueAtTime` (retarget from the current value)
+- `./gradlew :sample:run --args=fade` plays a 2s 0→full then 2s full→0 listen path
+- Kotlin/JS browser target for `klarinet` and `klarinet-coroutines`
+- Web Audio `AudioEngine` / `AudioStream` (`ScriptProcessorNode`, `getUserMedia` for input)
+- Web Audio effect graphs mapped from Klarinet Studio (gain, pan, dynamics, EQ, delay, reverb, modulation)
+- In-memory `AudioFileWriter` (WAV) and `AudioFileReader` after `decodeAudioFile`, `putWavBytes`, `putAudioFile`, or `decodeAudioBytes`
+- GitHub Pages workflow: web demo at `/` and Dokka API docs at `/api/`
+- `:demo-web` browser demo with tone, mic meter, latency, file play/record, and effects
+
+### Changed
+
+- Android `targetSdk` 37; Kotlin 2.4.20; AGP 9.4.0; Gradle 9.7.1; Compose Multiplatform 1.12.0
+- Gain converts dB to linear in `setParameter` (caller thread); `process()` only lerps atomics
+- `klarinet-coroutines` file helpers default to a platform IO dispatcher (`Dispatchers.Default` on JS, where `Dispatchers.IO` does not exist)
+
 ## [0.3.0] - 2026-08-15
 
 ### Added

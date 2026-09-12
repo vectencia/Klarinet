@@ -2,8 +2,6 @@ package com.vectencia.klarinet.coroutines
 
 import com.vectencia.klarinet.AudioFileReader
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
@@ -33,7 +31,7 @@ import kotlinx.coroutines.withContext
  * @see asFlow
  */
 suspend fun AudioFileReader.readAllSuspend(
-    dispatcher: CoroutineDispatcher = Dispatchers.IO,
+    dispatcher: CoroutineDispatcher = defaultIoDispatcher,
 ): FloatArray = withContext(dispatcher) {
     readAll()
 }
@@ -56,7 +54,7 @@ suspend fun AudioFileReader.readAllSuspend(
  */
 suspend fun AudioFileReader.readFramesSuspend(
     maxFrames: Int,
-    dispatcher: CoroutineDispatcher = Dispatchers.IO,
+    dispatcher: CoroutineDispatcher = defaultIoDispatcher,
 ): FloatArray = withContext(dispatcher) {
     readFrames(maxFrames)
 }
@@ -105,7 +103,7 @@ suspend fun AudioFileReader.readFramesSuspend(
  */
 fun AudioFileReader.asFlow(
     chunkSize: Int = 4096,
-    dispatcher: CoroutineDispatcher = Dispatchers.IO,
+    dispatcher: CoroutineDispatcher = defaultIoDispatcher,
 ): Flow<FloatArray> = flow {
     while (!isAtEnd) {
         val chunk = readFrames(chunkSize)

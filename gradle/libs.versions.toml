@@ -1,8 +1,8 @@
 [versions]
-agp = "9.1.0"
+agp = "9.4.0"
 android-compileSdk = "37"
 android-minSdk = "24"
-android-targetSdk = "36"
+android-targetSdk = "37"
 androidx-activity = "1.13.0"
 androidx-espresso = "3.7.0"
 androidx-lifecycle = "2.11.0"
@@ -15,7 +15,7 @@ coroutines = "1.11.0"
 vanniktechPublish = "0.37.0"
 dokka = "2.2.0"
 
-klarinet = "0.3.0"
+klarinet = "0.4.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }

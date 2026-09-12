@@ -10,14 +10,15 @@
   <a href="https://github.com/vectencia/Klarinet/actions/workflows/ci.yml"><img src="https://github.com/vectencia/Klarinet/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://central.sonatype.com/namespace/com.vectencia.klarinet"><img src="https://img.shields.io/maven-central/v/com.vectencia.klarinet/klarinet" alt="Maven Central"></a>
   <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a>
-  <a href="https://kotlinlang.org"><img src="https://img.shields.io/badge/Kotlin-2.4.10-7F52FF.svg?logo=kotlin" alt="Kotlin"></a>
+  <a href="https://kotlinlang.org"><img src="https://img.shields.io/badge/Kotlin-2.4.20-7F52FF.svg?logo=kotlin" alt="Kotlin"></a>
+  <a href="https://vectencia.github.io/Klarinet/"><img src="https://img.shields.io/badge/demo-GitHub%20Pages-2088FF.svg?logo=github" alt="GitHub Pages"></a>
 </p>
 
 ---
 
-**Klarinet** is an open-source Kotlin Multiplatform audio library that provides a unified, idiomatic API for low-latency audio playback, recording, file I/O, and real-time effects processing across **8 platforms and 14 targets**.
+**Klarinet** is an open-source Kotlin Multiplatform audio library that provides a unified, idiomatic API for low-latency audio playback, recording, file I/O, and real-time effects processing across **9 platforms and 15 targets**.
 
-Write your audio code once in Kotlin. Klarinet delegates to the best native backend on each platform — Google Oboe on Android, AVAudioEngine on Apple, miniaudio on JVM/Linux/Windows — while preserving low-latency characteristics and real-time safety.
+Write your audio code once in Kotlin. Klarinet delegates to the best native backend on each platform — Google Oboe on Android, AVAudioEngine on Apple, miniaudio on JVM/Linux/Windows, and the Web Audio API in the browser — while preserving low-latency characteristics and real-time safety.
 
 ## Use Cases
 
@@ -44,9 +45,9 @@ Decode MP3/AAC/WAV files, apply effects (noise gate + compressor + EQ is a class
 
 ## Highlights
 
-- **One API, every platform** --- Common Kotlin API with native performance across Android, Apple, JVM Desktop, Linux, and Windows
-- **Low-latency by default** --- Google Oboe on Android, AVAudioEngine on Apple, miniaudio on JVM/Linux/Windows
-- **16 built-in audio effects** --- Gain, EQ, Compressor, Reverb, Delay, Chorus, and more --- powered by a shared C++ DSP core
+- **One API, every platform** --- Common Kotlin API with native performance across Android, Apple, JVM Desktop, Linux, Windows, and the browser
+- **Low-latency by default** --- Google Oboe on Android, AVAudioEngine on Apple, miniaudio on JVM/Linux/Windows, Web Audio in the browser
+- **16 built-in audio effects** --- Gain, EQ, Compressor, Reverb, Delay, Chorus, and more --- C++ DSP on native platforms, Web Audio nodes on JS
 - **Hot-swappable effect chains** --- Add, remove, and reorder effects while audio is streaming
 - **File I/O** --- Decode and encode WAV, MP3, AAC, M4A with metadata reading
 - **Coroutines support** --- Optional `klarinet-coroutines` module with Flow-based metering and async I/O
@@ -64,6 +65,7 @@ Decode MP3/AAC/WAV files, apply effects (noise gate + compressor + EQ is a class
 | JVM Desktop | macOS, Linux, Windows | miniaudio (WASAPI / Core Audio / ALSA) | ✅ | ✅ | ❌ | JDK 11+ |
 | Linux Native | x64, arm64 | miniaudio (ALSA / PulseAudio / JACK) | ✅ | ✅ | ❌ | — |
 | Windows Native | x64 | miniaudio (WASAPI / DirectSound) | ✅ | ✅ | ❌ | — |
+| JS / Browser | browser | Web Audio API | ✅ | ✅ | decode only | modern browsers |
 
 ### watchOS Limitations
 
@@ -97,12 +99,36 @@ JVM desktop support uses miniaudio for low-latency audio I/O across macOS, Linux
 | Push-mode write/read | ❌ Not available | Use callback mode via `AudioStreamCallback` |
 | Audio effects | ✅ Supported | Shared C++ DSP core on the miniaudio callback |
 
+### JS / Browser Limitations
+
+Browser support uses the Web Audio API. The public Klarinet API is the same; the backend is not the C++ DSP core.
+
+| Feature | Status | Notes |
+|---|---|---|
+| Audio playback (`AudioStream` output) | ✅ Supported | `ScriptProcessorNode` pulls `onAudioReady` |
+| Audio recording (`AudioStream` input) | ✅ Supported | `getUserMedia` on `start()`; state goes `STARTING` then `STARTED` |
+| Audio session management | N/A | No-op, same as JVM desktop |
+| WAV file write | ✅ Supported | In-memory store (no disk). Re-read with `AudioFileReader` or export with `audioFileWavBytes` |
+| WAV / MP3 / AAC / M4A read | ✅ After decode | Call `decodeAudioFile(url)`, `decodeAudioBytes`, `putWavBytes`, or `putAudioFile` before `AudioFileReader` |
+| Compressed file write | ❌ Not available | Throws `UnsupportedFormatException` |
+| Audio effects | ✅ Supported | Web Audio nodes mapped from Klarinet Studio (not bit-identical to C++ DSP) |
+| Push-mode write/read | ✅ Non-blocking | `timeoutNanos` is ignored; JS cannot block the main thread |
+
+`AudioStream.start()` returns immediately. Observe `onStreamStateChanged` (or `stateFlow()`) for `STARTED`. Output sample rate is the `AudioContext` rate.
+
+```kotlin
+decodeAudioFile("https://example.com/song.mp3").then { reader ->
+    val stream = engine.playFile("https://example.com/song.mp3")
+    stream.start()
+    reader
+}
+```
+
 ### Unsupported Platforms
 
 | Platform | Reason |
 |---|---|
-| JS / Browser | Web Audio API is async-first and fundamentally incompatible with Klarinet's synchronous callback model. Browser audio apps should use Web Audio API directly. |
-| Wasm / WasmJS | Same limitations as JS — browser sandbox restricts native audio access. |
+| Wasm / WasmJS | Not implemented. Use the JS / Browser target. |
 
 ## Installation
 
@@ -117,10 +143,10 @@ repositories {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("com.vectencia.klarinet:klarinet:0.3.0")
+            implementation("com.vectencia.klarinet:klarinet:0.4.0")
 
             // Optional: Coroutines extensions
-            implementation("com.vectencia.klarinet:klarinet-coroutines:0.3.0")
+            implementation("com.vectencia.klarinet:klarinet-coroutines:0.4.0")
         }
     }
 }
@@ -145,6 +171,9 @@ A one-file JVM program that plays a 440 Hz sine for one second:
 
 ```bash
 ./gradlew :sample:run
+./gradlew :sample:run --args=fade   # 2s fade 0→full, hold, 2s full→0
+./gradlew :sample:run --args=sleep  # 1s play, 1s fade, stream stops
+./gradlew :sample:run --args=scene  # 440 Hz → 2s crossfade to 660 Hz
 ```
 
 The source is in `sample/src/main/kotlin/Main.kt`.
@@ -347,6 +376,7 @@ graph TD
     B --> D["Google Oboe<br/>(AAudio / OpenSL ES)"]
     B --> E["AVAudioEngine<br/>(Core Audio)"]
     B --> F["miniaudio<br/>(WASAPI / Core Audio / ALSA)"]
+    B --> G["Web Audio API<br/>(browser)"]
     
     style A fill:#7F52FF,color:#fff
     style B fill:#1a1a2e,color:#0ff
@@ -354,6 +384,7 @@ graph TD
     style D fill:#0d7377,color:#fff
     style E fill:#0d7377,color:#fff
     style F fill:#0d7377,color:#fff
+    style G fill:#0d7377,color:#fff
 ```
 
 Klarinet is a single Kotlin Multiplatform module using `expect`/`actual` declarations:
@@ -363,7 +394,8 @@ Klarinet is a single Kotlin Multiplatform module using `expect`/`actual` declara
 - **`appleMain`** --- Apple implementation via AVAudioEngine. Shared across iOS, macOS, tvOS, and watchOS.
 - **`jvmMain`** --- JVM desktop implementation via miniaudio. Covers macOS, Linux, and Windows from a single target with platform-specific native libraries bundled in the JAR.
 - **`nativeDesktopMain`** --- Shared Linux (`linuxX64`, `linuxArm64`) and Windows (`mingwX64`) native implementation via miniaudio (cinterop).
-- **`cpp/dsp`** --- Shared C++ DSP library compiled for all platforms. Contains all 16 effects, DSP primitives (Biquad, LFO, EnvelopeFollower, CircularBuffer), lock-free effect chain, and SPSC ring buffer.
+- **`jsMain`** --- Browser implementation via the Web Audio API. Effects are Web Audio nodes; file I/O is an in-memory store plus `decodeAudioData`.
+- **`cpp/dsp`** --- Shared C++ DSP library compiled for all native platforms. Contains all 16 effects, DSP primitives (Biquad, LFO, EnvelopeFollower, CircularBuffer), lock-free effect chain, and SPSC ring buffer.
 
 ## Modules
 
@@ -375,12 +407,25 @@ Klarinet is a single Kotlin Multiplatform module using `expect`/`actual` declara
 | `demo` | --- | Shared Compose Multiplatform demo UI (Android, iOS, Desktop) |
 | `demo-android` | --- | Android application entry point |
 | `demo-native` | --- | Native console demo apps (Linux, Windows) |
+| `demo-web` | --- | Browser demo (Kotlin/JS + Web Audio) |
 | `sample` | --- | One-file JVM sine-wave sample |
 | `iosApp` | --- | Native SwiftUI demo app (iOS, tvOS, watchOS) |
 
 ## Demo Apps
 
 The project includes demo applications for every supported platform:
+
+### Web Demo (browser)
+
+The same five screens as the Compose demo, plus local-file decode, URL decode, mic recording, and WAV download. Uses the Klarinet JS target.
+
+Live: [vectencia.github.io/Klarinet](https://vectencia.github.io/Klarinet/) (web demo) and [API docs](https://vectencia.github.io/Klarinet/api/).
+
+```bash
+./gradlew :demo-web:jsBrowserDevelopmentRun
+```
+
+Then open the URL Gradle prints (usually `http://localhost:8080`). GitHub Pages deploys the production webpack build from `main` and `0.4.0` via `.github/workflows/pages.yml`.
 
 ### Compose Multiplatform Demo (Android + iOS + Desktop)
 
@@ -414,7 +459,9 @@ Minimal command-line demos that play a 440 Hz sine wave for 3 seconds, proving l
 | `AudioFileReader` | Decodes audio files (WAV, MP3, AAC, M4A) to PCM. |
 | `AudioFileWriter` | Encodes PCM to audio files (WAV, AAC, M4A). |
 | `AudioDeviceInfo` | Information about an audio input/output device. |
-| `AudioSessionManager` | Audio session configuration (Apple platforms). |
+| `AudioSessionManager` | Session category, Android audio focus, interruption hooks. |
+| `AudioScene` / `AudioSceneJson` | Portable layer mix (ids, levels, effect params) as JSON. |
+| `AudioScenePlayer` | Crossfades scenes with [GainParams.FADE_MS]; host opens each layer stream. |
 | `LatencyInfo` | Input/output latency measurements. |
 
 ### Enums
@@ -479,6 +526,9 @@ open iosApp/iosApp.xcodeproj
 # Kotlin tests (all platforms)
 ./gradlew :klarinet:allTests
 
+# JS browser tests (Chrome Headless)
+./gradlew :klarinet:jsBrowserTest
+
 # C++ DSP tests
 ./gradlew :klarinet:dspTests
 
@@ -504,6 +554,70 @@ open iosApp/iosApp.xcodeproj
 | `make test-all` | Run Kotlin, C++ DSP, and iOS simulator tests |
 | `make clean` | Clean build artifacts |
 | `make publish` | Publish to Maven Central |
+
+## Scene files
+
+Presets are data. Ship your own JSON (assets, files, network). Layer `id` is an opaque key; Klarinet never loads audio files from the scene document.
+
+```json
+{
+  "id": "rain-night",
+  "layers": [
+    { "id": "rain", "gainDb": -6.0, "effects": [{ "type": "REVERB", "params": { "0": 0.5 } }] },
+    { "id": "wind", "gainDb": -12.0 }
+  ]
+}
+```
+
+```kotlin
+val scene = AudioSceneJson.decode(json)
+AudioScenePlayer(engine).use { player ->
+    player.transitionTo(scene, fadeMs = 3000f) { layer ->
+        engine.openStream(config, callbackFor(layer.id))
+    }
+}
+```
+
+Same layer id keeps the stream and retargets gain. Other layers fade out and in so A → B has no hole. Close the player to release streams and chains.
+
+## Background playback
+
+Klarinet does **not** start a foreground service or draw a notification. The host must still satisfy platform background rules. The SDK exposes session category, audio focus, and interruption events so a call does not leave the stream silently dead.
+
+### SDK (this repo)
+
+```kotlin
+val session = AudioSessionManager()
+session.configure(AudioSessionCategory.PLAYBACK, AudioSessionMode.DEFAULT)
+session.attach(stream) // pause on call, start again when shouldResume
+session.observeInterruptions { /* optional UI */ }
+session.setActive(true) // Android: call bind(context) first
+```
+
+- **Apple:** `PLAYBACK` maps to `AVAudioSessionCategoryPlayback`. Interruptions come from `AVAudioSessionInterruptionNotification`.
+- **Android:** `AudioSessionManager.bind(context)` then `setActive(true)` requests `AUDIOFOCUS_GAIN`. Focus loss/gain is reported as interruptions.
+
+### Host leftover
+
+**iOS / tvOS / watchOS** — `Info.plist`:
+
+```xml
+<key>UIBackgroundModes</key>
+<array>
+    <string>audio</string>
+</array>
+```
+
+**Android** — a media playback **foreground service** is still required for screen-off audio (Android 8+). Typical pieces:
+
+- `FOREGROUND_SERVICE` and `FOREGROUND_SERVICE_MEDIA_PLAYBACK` permissions
+- A `Service` with `android:foregroundServiceType="mediaPlayback"`
+- A persistent notification (not provided by Klarinet)
+- Optional `WAKE_LOCK` if you hold a lock besides the service
+
+Without that service, `AudioStream` will be killed when the app is backgrounded even if audio focus was granted.
+
+Device QA (not automated here): start playback, background the app, confirm audio continues; place a call, confirm pause; end the call, confirm resume when `shouldResume` is true.
 
 ## SwiftUI Integration Guide
 

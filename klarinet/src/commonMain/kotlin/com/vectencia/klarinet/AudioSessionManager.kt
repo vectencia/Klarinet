@@ -5,8 +5,8 @@ package com.vectencia.klarinet
  * the system audio infrastructure and other audio apps.
  *
  * On Apple platforms, this wraps `AVAudioSession` and must be configured before
- * opening audio streams. On Android, audio session management is handled by the
- * system, so methods are no-ops.
+ * opening audio streams. On Android, call `bind(context)` then [setActive] to
+ * request audio focus; interruptions are reported via [observeInterruptions].
  *
  * **Example usage:**
  * ```kotlin
@@ -60,4 +60,30 @@ expect class AudioSessionManager {
      *   (e.g., headphones plugged in/out).
      */
     fun observeRouteChanges(listener: (AudioRouteChangeInfo) -> Unit)
+
+    /**
+     * Register a listener for audio interruptions (phone calls, focus loss).
+     *
+     * On Apple this is `AVAudioSessionInterruptionNotification`. On Android
+     * this is audio-focus change after [setActive] (requires `bind(context)`
+     * on Android). JVM, JS, and desktop never fire.
+     *
+     * Attached streams are paused on [AudioInterruptionType.BEGAN] and
+     * restarted on [AudioInterruptionType.ENDED] when [AudioInterruptionInfo.shouldResume]
+     * is true. The listener still runs after that.
+     *
+     * @param listener Callback invoked when an interruption begins or ends.
+     */
+    fun observeInterruptions(listener: (AudioInterruptionInfo) -> Unit)
+
+    /**
+     * Pause and resume this stream automatically on interruptions.
+     * Does not start playback by itself. Does not close the stream.
+     */
+    fun attach(stream: AudioStream)
+
+    /**
+     * Stop auto-handling [stream]. No-op if it was not [attach]ed.
+     */
+    fun detach(stream: AudioStream)
 }

@@ -20,6 +20,14 @@ kotlin {
 
     jvm()
 
+    js {
+        browser {
+            testTask {
+                enabled = false
+            }
+        }
+    }
+
     iosArm64()
     iosSimulatorArm64()
     iosX64()

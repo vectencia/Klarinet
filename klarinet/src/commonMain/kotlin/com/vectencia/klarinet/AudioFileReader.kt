@@ -44,6 +44,8 @@ package com.vectencia.klarinet
  *
  * @constructor Opens the audio file at [filePath] for reading.
  * @param filePath Absolute path to a local file, or an HTTP/HTTPS URL.
+ *   On JS the path must already be in the in-memory store (`decodeAudioFile`,
+ *   `putWavBytes`, `putAudioFile`, or a previous [AudioFileWriter]).
  * @throws AudioFileException if the file cannot be opened or the format
  *   is not recognized.
  * @see AudioFileInfo

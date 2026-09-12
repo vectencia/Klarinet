@@ -23,12 +23,12 @@ kotlin {
     applyDefaultHierarchyTemplate()
 
     sourceSets {
-        val linuxX64Main by getting {
+        named("linuxX64Main") {
             dependencies {
                 implementation(project(":klarinet"))
             }
         }
-        val mingwX64Main by getting {
+        named("mingwX64Main") {
             dependencies {
                 implementation(project(":klarinet"))
             }

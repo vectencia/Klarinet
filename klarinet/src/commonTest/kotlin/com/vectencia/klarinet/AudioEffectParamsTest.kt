@@ -7,6 +7,7 @@ class AudioEffectParamsTest {
     @Test
     fun gainParamIds() {
         assertEquals(0, GainParams.GAIN_DB)
+        assertEquals(1, GainParams.FADE_MS)
     }
 
     @Test

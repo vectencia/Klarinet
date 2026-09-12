@@ -17,6 +17,8 @@ internal expect fun setPlatformAudioSessionActive(active: Boolean)
 
 internal expect fun observePlatformRouteChanges(listener: (AudioRouteChangeInfo) -> Unit)
 
+internal expect fun observePlatformInterruptions(listener: (AudioInterruptionInfo) -> Unit)
+
 /**
  * Configure the audio session for recording input.
  * On iOS/tvOS, sets category to PlayAndRecord so the inputNode is available.

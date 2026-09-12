@@ -25,6 +25,17 @@ data class ParameterChange(
 object GainParams {
     /** Signal level adjustment in decibels. Range: -80.0 to 24.0. Default: 0.0. Unit: dB. */
     const val GAIN_DB = 0
+    /**
+     * Duration of a [GAIN_DB] change in milliseconds.
+     *
+     * `0` (default) applies the new gain immediately. Values greater than `0`
+     * ramp linear amplitude from the currently applied gain to the new target
+     * over that duration. Changing [GAIN_DB] while a ramp is running retargets
+     * from the current applied amplitude so the output stays click-free.
+     *
+     * Set this before [GAIN_DB]. Range: 0.0 and up. Default: 0.0. Unit: ms.
+     */
+    const val FADE_MS = 1
 }
 
 /**
