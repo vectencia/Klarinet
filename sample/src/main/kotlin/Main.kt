@@ -3,15 +3,17 @@ import com.vectencia.klarinet.AudioEngine
 import com.vectencia.klarinet.AudioStreamCallback
 import com.vectencia.klarinet.AudioStreamConfig
 import com.vectencia.klarinet.GainParams
+import com.vectencia.klarinet.SleepTimer
+import com.vectencia.klarinet.SleepTimerState
 import com.vectencia.klarinet.StreamDirection
 import kotlin.math.PI
 import kotlin.math.sin
 
 fun main(args: Array<String>) {
-    if (args.firstOrNull() == "fade") {
-        listenFade()
-    } else {
-        playSine()
+    when (args.firstOrNull()) {
+        "fade" -> listenFade()
+        "sleep" -> listenSleepTimer()
+        else -> playSine()
     }
 }
 
@@ -55,6 +57,36 @@ private fun listenFade() {
             println("  at silence")
 
             stream.stop()
+        }
+        chain.close()
+        gain.close()
+    }
+    println("Done.")
+}
+
+/**
+ * Device listen for Task 2: 1s countdown, 1s fade, then stream stop.
+ *
+ * Run: `./gradlew :sample:run --args=sleep`
+ */
+private fun listenSleepTimer() {
+    println("Klarinet sleep-timer listen: 1s play, 1s fade, then stop (440 Hz)")
+    AudioEngine.create().use { engine ->
+        val sampleRate = 48_000
+        val gain = engine.createEffect(AudioEffectType.GAIN)
+        val chain = engine.createEffectChain()
+        chain.add(gain)
+        openTone(engine, sampleRate).use { stream ->
+            stream.effectChain = chain
+            stream.start()
+            SleepTimer(stream, gain).use { timer ->
+                timer.schedule(durationMs = 1_000, fadeMs = 1_000f)
+                val deadline = System.nanoTime() + 5_000_000_000L
+                while (timer.state != SleepTimerState.COMPLETED && System.nanoTime() < deadline) {
+                    Thread.sleep(50)
+                }
+                println("  timer=${timer.state} stream=${stream.state}")
+            }
         }
         chain.close()
         gain.close()

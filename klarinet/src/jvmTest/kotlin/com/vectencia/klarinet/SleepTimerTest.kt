@@ -2,6 +2,7 @@ package com.vectencia.klarinet
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class SleepTimerTest {
@@ -96,6 +97,98 @@ class SleepTimerTest {
 
             assertEquals(SleepTimerState.IDLE, timer.state)
             assertEquals(StreamState.STARTED, stream.state)
+        }
+    }
+
+    @Test
+    fun requiresGainEffect() {
+        AudioEngine.create().use { engine ->
+            val stream = engine.openStream(AudioStreamConfig())
+            val pan = engine.createEffect(AudioEffectType.PAN)
+            val error = assertFailsWith<IllegalArgumentException> {
+                SleepTimer(stream, pan)
+            }
+            assertTrue(error.message!!.contains("GAIN"))
+            pan.close()
+            stream.close()
+        }
+    }
+
+    @Test
+    fun scheduleReplacesPreviousCountdown() {
+        withTimer { stream, _, _, scheduler, timer ->
+            stream.start()
+            timer.schedule(durationMs = 5_000, fadeMs = 200f)
+            scheduler.advance(100)
+            timer.schedule(durationMs = 400, fadeMs = 100f)
+            assertEquals(SleepTimerState.SCHEDULED, timer.state)
+            assertEquals(400L, timer.remainingMs)
+
+            scheduler.advance(400)
+            assertEquals(SleepTimerState.FADING, timer.state)
+            scheduler.advance(100)
+            assertEquals(SleepTimerState.COMPLETED, timer.state)
+            assertEquals(StreamState.STOPPED, stream.state)
+        }
+    }
+
+    @Test
+    fun realSchedulerExpiryFadesThenStops() {
+        AudioEngine.create().use { engine ->
+            val stream = engine.openStream(AudioStreamConfig())
+            val gain = engine.createEffect(AudioEffectType.GAIN)
+            val chain = engine.createEffectChain()
+            chain.add(gain)
+            stream.effectChain = chain
+            stream.start()
+            try {
+                SleepTimer(stream, gain).use { timer ->
+                    timer.schedule(durationMs = 80, fadeMs = 40f)
+                    val deadline = System.nanoTime() + 2_000_000_000L
+                    while (System.nanoTime() < deadline && timer.state != SleepTimerState.COMPLETED) {
+                        Thread.sleep(10)
+                    }
+                    assertEquals(SleepTimerState.COMPLETED, timer.state)
+                    assertEquals(StreamState.STOPPED, stream.state)
+                    assertEquals(-80f, gain.getParameter(GainParams.GAIN_DB), 0.001f)
+                }
+            } finally {
+                if (stream.state == StreamState.STARTED || stream.state == StreamState.PAUSED) {
+                    stream.stop()
+                }
+                stream.close()
+                chain.close()
+                gain.close()
+            }
+        }
+    }
+
+    @Test
+    fun realSchedulerCancelLeavesPlaybackRunning() {
+        AudioEngine.create().use { engine ->
+            val stream = engine.openStream(AudioStreamConfig())
+            val gain = engine.createEffect(AudioEffectType.GAIN)
+            val chain = engine.createEffectChain()
+            chain.add(gain)
+            stream.effectChain = chain
+            stream.start()
+            try {
+                SleepTimer(stream, gain).use { timer ->
+                    timer.schedule(durationMs = 500, fadeMs = 40f)
+                    Thread.sleep(30)
+                    timer.cancel()
+                    Thread.sleep(200)
+                    assertEquals(SleepTimerState.IDLE, timer.state)
+                    assertEquals(StreamState.STARTED, stream.state)
+                }
+            } finally {
+                if (stream.state == StreamState.STARTED || stream.state == StreamState.PAUSED) {
+                    stream.stop()
+                }
+                stream.close()
+                chain.close()
+                gain.close()
+            }
         }
     }
 

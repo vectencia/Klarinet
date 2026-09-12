@@ -171,6 +171,7 @@ A one-file JVM program that plays a 440 Hz sine for one second:
 ```bash
 ./gradlew :sample:run
 ./gradlew :sample:run --args=fade   # 2s fade 0→full, hold, 2s full→0
+./gradlew :sample:run --args=sleep  # 1s play, 1s fade, stream stops
 ```
 
 The source is in `sample/src/main/kotlin/Main.kt`.
