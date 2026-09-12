@@ -30,6 +30,7 @@ dependencyResolutionManagement {
 include(":klarinet-android")
 include(":klarinet")
 include(":klarinet-coroutines")
+include(":klarinet-consumer-test")
 include(":demo")
 include(":demo-android")
 include(":demo-native")

@@ -15,7 +15,7 @@ coroutines = "1.11.0"
 vanniktechPublish = "0.37.0"
 dokka = "2.2.0"
 
-klarinet = "0.4.1"
+klarinet = "0.4.2"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }

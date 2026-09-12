@@ -1,3 +1,7 @@
 headers = klarinet_dsp.h
 headerFilter = klarinet_dsp.h
 compilerOpts = -Isrc/cpp/dsp
+linkerOpts.osx = -lc++
+linkerOpts.ios = -lc++
+linkerOpts.tvos = -lc++
+linkerOpts.watchos = -lc++

@@ -116,20 +116,10 @@ kotlin {
     )
 
     appleTargets.forEach { target ->
-        target.binaries.framework {
-            baseName = "Klarinet"
-            isStatic = true
-        }
-        target.compilations.getByName("main") {
-            cinterops {
-                create("klarinet_dsp") {
-                    defFile(project.file("src/nativeInterop/cinterop/klarinet_dsp.def"))
-                    includeDirs(project.file("src/cpp/dsp"))
-                }
-            }
-        }
+        val capitalized = target.name.replaceFirstChar { it.uppercase() }
         val dspOut = layout.buildDirectory.dir("dsp-${target.name}")
-        val configureDsp = tasks.register<Exec>("configureDsp${target.name.replaceFirstChar { it.uppercase() }}") {
+        val dspLib = dspOut.map { it.file("libklarinet-dsp.a") }
+        val configureDsp = tasks.register<Exec>("configureDsp$capitalized") {
             workingDir = dspSourceDir.asFile
             inputs.dir(dspSourceDir)
             outputs.dir(dspOut)
@@ -145,23 +135,41 @@ kotlin {
                 },
             )
         }
-        val compileDsp = tasks.register<Exec>("compileDsp${target.name.replaceFirstChar { it.uppercase() }}") {
+        val compileDsp = tasks.register<Exec>("compileDsp$capitalized") {
             dependsOn(configureDsp)
             inputs.dir(dspSourceDir)
-            outputs.dir(dspOut)
+            outputs.file(dspLib)
             commandLine("cmake", "--build", dspOut.get().asFile.absolutePath)
         }
+
+        target.binaries.framework {
+            baseName = "Klarinet"
+            isStatic = true
+        }
+        target.compilations.getByName("main") {
+            cinterops {
+                create("klarinet_dsp") {
+                    defFile(project.file("src/nativeInterop/cinterop/klarinet_dsp.def"))
+                    includeDirs(project.file("src/cpp/dsp"))
+                    // Pack libklarinet-dsp.a into the published cinterop klib so
+                    // Maven consumers resolve _klarinet_* without extra Xcode flags.
+                    extraOpts(
+                        "-libraryPath", dspOut.get().asFile.absolutePath,
+                        "-staticLibrary", "libklarinet-dsp.a",
+                    )
+                }
+            }
+        }
         target.binaries.all {
-            linkerOpts(
-                "-L${dspOut.get().asFile.absolutePath}",
-                "-lklarinet-dsp",
-                "-lc++",
-                "-lpthread",
-            )
+            linkerOpts("-lc++")
         }
         tasks.matching { task ->
             val n = task.name.lowercase()
-            n.contains("link") && n.contains(target.name.lowercase())
+            val t = target.name.lowercase()
+            n.contains(t) && (
+                n.contains("cinteropklarinet_dsp") ||
+                    n.contains("link")
+                )
         }.configureEach {
             dependsOn(compileDsp)
         }
@@ -216,6 +224,72 @@ kotlin {
 
 dokka {
     moduleName.set("Klarinet")
+}
+
+val appleDspTargets = listOf(
+    "iosArm64",
+    "iosSimulatorArm64",
+    "iosX64",
+    "macosArm64",
+    "tvosArm64",
+    "tvosSimulatorArm64",
+    "watchosArm64",
+    "watchosSimulatorArm64",
+)
+
+tasks.register("verifyDspEmbeddedInAppleKlibs") {
+    group = "verification"
+    description = "Assert Apple cinterop klibs embed libklarinet-dsp.a with DSP symbols"
+    val klibDirs = appleDspTargets.associateWith { targetName ->
+        layout.buildDirectory.dir(
+            "classes/kotlin/$targetName/main/cinterop/klarinet-cinterop-klarinet_dsp",
+        )
+    }
+    val symbols = listOf(
+        "_klarinet_chain_create",
+        "_klarinet_create_effect",
+        "_klarinet_offload_create",
+    )
+    appleDspTargets.forEach { targetName ->
+        dependsOn("cinteropKlarinet_dsp${targetName.replaceFirstChar { it.uppercase() }}")
+    }
+    doLast {
+        klibDirs.forEach { (targetName, dirProvider) ->
+            val klibDir = dirProvider.get().asFile
+            check(klibDir.isDirectory) { "Missing cinterop klib for $targetName at $klibDir" }
+            val archives = klibDir.walkTopDown()
+                .filter { it.isFile && it.extension == "a" }
+                .toList()
+            check(archives.isNotEmpty()) {
+                "cinterop klib for $targetName does not embed libklarinet-dsp.a. Contents:\n" +
+                    klibDir.walkTopDown().joinToString("\n")
+            }
+            val archive = archives.first()
+            val nm = ProcessBuilder("nm", archive.absolutePath)
+                .redirectErrorStream(true)
+                .start()
+            val out = nm.inputStream.bufferedReader().readText()
+            check(nm.waitFor() == 0) { "nm failed on $archive\n$out" }
+            symbols.forEach { symbol ->
+                val defined = out.lineSequence().any { line ->
+                    line.contains(symbol) && (
+                        line.contains(" T ") ||
+                            line.startsWith("T ") ||
+                            line.contains("\tT ")
+                        )
+                }
+                check(defined) {
+                    "Embedded DSP for $targetName is missing defined symbol $symbol in $archive"
+                }
+            }
+        }
+    }
+}
+
+tasks.matching { it.name == "check" }.configureEach {
+    if (System.getProperty("os.name").orEmpty().contains("Mac", ignoreCase = true)) {
+        dependsOn("verifyDspEmbeddedInAppleKlibs")
+    }
 }
 
 val dspBuildDir = layout.buildDirectory.dir("dsp-tests")

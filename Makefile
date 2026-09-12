@@ -27,10 +27,10 @@ test-android:
 	./gradlew :klarinet:connectedAndroidDeviceTest
 
 test-ios:
-	./gradlew :klarinet:iosSimulatorArm64Test
+	./gradlew :klarinet:iosSimulatorArm64Test :klarinet:verifyDspEmbeddedInAppleKlibs :klarinet-consumer-test:macosArm64Test
 
 test-all:
-	./gradlew :klarinet:allTests :klarinet:dspTests :klarinet:iosSimulatorArm64Test
+	./gradlew :klarinet:allTests :klarinet:dspTests :klarinet:iosSimulatorArm64Test :klarinet:verifyDspEmbeddedInAppleKlibs :klarinet-consumer-test:macosArm64Test
 
 clean:
 	./gradlew clean

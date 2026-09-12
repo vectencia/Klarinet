@@ -52,9 +52,15 @@ jobs:
       - name: Generate API docs
         run: ./gradlew :dokkaGenerate
 
+      - name: Verify DSP is packed into Apple klibs
+        run: ./gradlew :klarinet:verifyDspEmbeddedInAppleKlibs
+
       - name: Run Darwin tests (iOS Simulator)
         run: ./gradlew :klarinet:iosSimulatorArm64Test
         continue-on-error: true
+
+      - name: Run consumer DSP link tests
+        run: ./gradlew :klarinet-consumer-test:macosArm64Test :klarinet-consumer-test:iosSimulatorArm64Test
 
   android-instrumented-tests:
     runs-on: ubuntu-latest

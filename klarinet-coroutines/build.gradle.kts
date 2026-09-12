@@ -38,20 +38,8 @@ kotlin {
     )
 
     appleTargets.forEach { target ->
-        val dspOut = project(":klarinet").layout.buildDirectory.dir("dsp-${target.name}")
         target.binaries.all {
-            linkerOpts(
-                "-L${dspOut.get().asFile.absolutePath}",
-                "-lklarinet-dsp",
-                "-lc++",
-                "-lpthread",
-            )
-        }
-        tasks.matching { task ->
-            val n = task.name.lowercase()
-            n.contains("link") && n.contains(target.name.lowercase())
-        }.configureEach {
-            dependsOn(":klarinet:compileDsp${target.name.replaceFirstChar { it.uppercase() }}")
+            linkerOpts("-lc++")
         }
     }
 

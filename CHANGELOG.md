@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-09-12
+
+### Fixed
+
+- Apple cinterop klibs now embed `libklarinet-dsp.a`, so KMP consumers resolve `_klarinet_*` DSP symbols without extra Xcode linker flags
+
 ## [0.4.1] - 2026-09-12
 
 ### Added
