@@ -143,10 +143,10 @@ repositories {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("com.vectencia.klarinet:klarinet:0.4.0")
+            implementation("com.vectencia.klarinet:klarinet:0.4.1")
 
             // Optional: Coroutines extensions
-            implementation("com.vectencia.klarinet:klarinet-coroutines:0.4.0")
+            implementation("com.vectencia.klarinet:klarinet-coroutines:0.4.1")
         }
     }
 }
@@ -358,8 +358,16 @@ stream.levelFlow().collect { level ->
 // Wait for a stream state
 stream.awaitState(StreamState.STARTED)
 
+// Sleep timer countdown (polls remainingMs / state)
+timer.remainingMsFlow().collect { msLeft -> /* UI */ }
+timer.awaitState(SleepTimerState.COMPLETED)
+
+// Interruptions (replaces observeInterruptions while collected)
+session.interruptionFlow().collect { info -> /* UI / logging */ }
+
 // Async file I/O (runs on Dispatchers.IO)
 val samples = reader.readAllSuspend()
+writer.writeFramesSuspend(samples, samples.size)
 
 // Stream decoded audio as a Flow
 reader.asFlow(chunkSize = 4096).collect { chunk ->
