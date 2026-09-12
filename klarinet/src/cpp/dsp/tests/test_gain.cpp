@@ -80,6 +80,129 @@ static void test_gain_stereo_both_channels() {
     printf("PASS\n");
 }
 
+static void test_gain_fade_zero_ms_stays_instant() {
+    printf("  Gain: fade 0ms still applies instantly... ");
+    klarinet::Gain gain;
+    gain.prepare(48000, 1);
+    gain.setParameter(klarinet::GainParams::kFadeMs, 0.0f);
+    gain.setParameter(klarinet::GainParams::kGainDb, -20.0f);
+
+    float buffer[] = {1.0f};
+    gain.process(buffer, 1, 1);
+    assert(approxEqual(buffer[0], 0.1f, 0.001f));
+    printf("PASS\n");
+}
+
+static void test_gain_fade_to_silence_no_click() {
+    printf("  Gain: fade to silence is continuous, ends quiet... ");
+    klarinet::Gain gain;
+    gain.prepare(48000, 1);
+    gain.setParameter(klarinet::GainParams::kFadeMs, 10.0f);
+    gain.setParameter(klarinet::GainParams::kGainDb, -80.0f);
+
+    const int n = 480; // 10ms at 48kHz
+    float buffer[n];
+    for (int i = 0; i < n; ++i) {
+        buffer[i] = 1.0f;
+    }
+    gain.process(buffer, n, 1);
+
+    assert(buffer[0] > 0.9f);
+    assert(buffer[n - 1] < 0.001f);
+    for (int i = 1; i < n; ++i) {
+        assert(buffer[i] <= buffer[i - 1] + 1e-6f);
+        assert(buffer[i - 1] - buffer[i] < 0.01f);
+    }
+    printf("PASS\n");
+}
+
+static void test_gain_fade_from_silence_no_click() {
+    printf("  Gain: fade from silence is continuous, ends full... ");
+    klarinet::Gain gain;
+    gain.prepare(48000, 1);
+    gain.setParameter(klarinet::GainParams::kGainDb, -80.0f);
+    float primed[] = {1.0f};
+    gain.process(primed, 1, 1);
+
+    gain.setParameter(klarinet::GainParams::kFadeMs, 10.0f);
+    gain.setParameter(klarinet::GainParams::kGainDb, 0.0f);
+
+    const int n = 480;
+    float buffer[n];
+    for (int i = 0; i < n; ++i) {
+        buffer[i] = 1.0f;
+    }
+    gain.process(buffer, n, 1);
+
+    assert(buffer[0] < 0.01f);
+    assert(buffer[n - 1] > 0.99f);
+    for (int i = 1; i < n; ++i) {
+        assert(buffer[i] >= buffer[i - 1] - 1e-6f);
+        assert(buffer[i] - buffer[i - 1] < 0.01f);
+    }
+    printf("PASS\n");
+}
+
+static void test_gain_fade_retarget_from_current() {
+    printf("  Gain: retarget mid-fade starts from current amplitude... ");
+    klarinet::Gain gain;
+    gain.prepare(48000, 1);
+    gain.setParameter(klarinet::GainParams::kFadeMs, 10.0f);
+    gain.setParameter(klarinet::GainParams::kGainDb, -80.0f);
+
+    const int half = 240;
+    float first[half];
+    for (int i = 0; i < half; ++i) {
+        first[i] = 1.0f;
+    }
+    gain.process(first, half, 1);
+
+    float mid = first[half - 1];
+    assert(mid > 0.4f && mid < 0.6f);
+
+    gain.setParameter(klarinet::GainParams::kGainDb, 0.0f);
+
+    float second[half];
+    for (int i = 0; i < half; ++i) {
+        second[i] = 1.0f;
+    }
+    gain.process(second, half, 1);
+
+    assert(std::fabs(second[0] - mid) < 0.02f);
+    assert(second[half - 1] > second[0]);
+    for (int i = 1; i < half; ++i) {
+        assert(second[i] - second[i - 1] < 0.01f);
+    }
+    printf("PASS\n");
+}
+
+static void test_gain_fade_across_callback_buffers() {
+    printf("  Gain: fade completes across multiple process() calls... ");
+    klarinet::Gain gain;
+    gain.prepare(48000, 1);
+    gain.setParameter(klarinet::GainParams::kFadeMs, 10.0f);
+    gain.setParameter(klarinet::GainParams::kGainDb, -80.0f);
+
+    const int total = 480;
+    const int block = 64;
+    float last = 1.0f;
+    int processed = 0;
+    while (processed < total) {
+        int n = total - processed;
+        if (n > block) n = block;
+        float buffer[64];
+        for (int i = 0; i < n; ++i) {
+            buffer[i] = 1.0f;
+        }
+        gain.process(buffer, n, 1);
+        assert(buffer[0] <= last + 1e-6f);
+        last = buffer[n - 1];
+        processed += n;
+    }
+    assert(last < 0.001f);
+    printf("PASS\n");
+}
+
 // ============================================================================
 // Main
 // ============================================================================
@@ -90,6 +213,11 @@ int main() {
     test_gain_plus_6db();
     test_gain_minus_20db();
     test_gain_stereo_both_channels();
+    test_gain_fade_zero_ms_stays_instant();
+    test_gain_fade_to_silence_no_click();
+    test_gain_fade_from_silence_no_click();
+    test_gain_fade_retarget_from_current();
+    test_gain_fade_across_callback_buffers();
 
     printf("\nAll Gain tests passed!\n");
     return 0;

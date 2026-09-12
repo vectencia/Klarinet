@@ -73,6 +73,33 @@ class AudioEffectProcessTest {
             assertTrue(abs(effect.getParameter(GainParams.GAIN_DB)) < 0.001f)
             effect.setParameter(GainParams.GAIN_DB, 6f)
             assertEquals(6f, effect.getParameter(GainParams.GAIN_DB), 0.001f)
+            effect.setParameter(GainParams.FADE_MS, 10f)
+            assertEquals(10f, effect.getParameter(GainParams.FADE_MS), 0.001f)
+            effect.close()
+        }
+    }
+
+    @Test
+    fun gainFadeToSilenceIsContinuous() {
+        AudioEngine.create().use { engine ->
+            val effect = engine.createEffect(AudioEffectType.GAIN)
+            effect.setParameter(GainParams.FADE_MS, 10f)
+            effect.setParameter(GainParams.GAIN_DB, -80f)
+            val chain = engine.createEffectChain()
+            chain.add(effect)
+            JniBridge.nativeChainPrepare(chain.chainHandle, 48_000, 1)
+
+            val buffer = FloatArray(480) { 1f }
+            JniBridge.nativeChainProcess(chain.chainHandle, buffer, 480, 1)
+
+            assertTrue(buffer[0] > 0.9f)
+            assertTrue(buffer[479] < 0.001f)
+            for (i in 1 until buffer.size) {
+                assertTrue(buffer[i] <= buffer[i - 1] + 1e-6f)
+                assertTrue(buffer[i - 1] - buffer[i] < 0.01f)
+            }
+
+            chain.close()
             effect.close()
         }
     }
