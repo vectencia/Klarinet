@@ -425,7 +425,7 @@ Live: [vectencia.github.io/Klarinet](https://vectencia.github.io/Klarinet/) (web
 ./gradlew :demo-web:jsBrowserDevelopmentRun
 ```
 
-Then open the URL Gradle prints (usually `http://localhost:8080`). GitHub Pages deploys the production webpack build from `main` and `0.4.0` via `.github/workflows/pages.yml`.
+Then open the URL Gradle prints (usually `http://localhost:8080`). GitHub Pages deploys the production webpack build from `main` via `.github/workflows/pages.yml` after an org admin sets **Settings → Pages → Source** to **GitHub Actions**.
 
 ### Compose Multiplatform Demo (Android + iOS + Desktop)
 

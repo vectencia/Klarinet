@@ -26,6 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GitHub Pages workflow: web demo at `/` and Dokka API docs at `/api/`
 - `:demo-web` browser demo with tone, mic meter, latency, file play/record, and effects
 
+### Fixed
+
+- watchOS interruption option parsing compiles on `watchosArm64` (NSNumber `intValue`, no bitwise `and` on the enum)
+- Kotlin/JS Yarn lock refreshed so `:kotlinStoreYarnLock` matches CI
+- GitHub Pages deploy is skipped with a warning until an org admin sets Pages source to GitHub Actions
+
 ### Changed
 
 - Android `targetSdk` 37; Kotlin 2.4.20; AGP 9.4.0; Gradle 9.7.1; Compose Multiplatform 1.12.0
