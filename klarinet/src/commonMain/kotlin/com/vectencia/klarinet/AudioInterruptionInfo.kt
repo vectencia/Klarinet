@@ -17,15 +17,12 @@ enum class AudioInterruptionType {
 /**
  * A call, Siri, another app, or audio-focus loss interrupted playback.
  *
- * The SDK does not pause or resume [AudioStream]s. The host should:
+ * [AudioSessionManager.attach] pauses and resumes streams. A listener is
+ * optional extra (UI, logging):
  *
  * ```kotlin
- * session.observeInterruptions { info ->
- *     when (info.type) {
- *         AudioInterruptionType.BEGAN -> stream.pause()
- *         AudioInterruptionType.ENDED -> if (info.shouldResume) stream.start()
- *     }
- * }
+ * session.attach(stream)
+ * session.observeInterruptions { info -> /* optional */ }
  * ```
  *
  * @property type [AudioInterruptionType.BEGAN] or [AudioInterruptionType.ENDED].

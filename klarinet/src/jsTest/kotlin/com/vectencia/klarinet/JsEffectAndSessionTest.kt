@@ -58,6 +58,12 @@ class JsEffectAndSessionTest {
         session.observeRouteChanges { }
         session.observeInterruptions { }
         session.setActive(false)
+        AudioEngine.create().use { engine ->
+            val stream = engine.openStream(AudioStreamConfig())
+            session.attach(stream)
+            session.detach(stream)
+            stream.close()
+        }
     }
 
     @Test

@@ -62,6 +62,12 @@ class DarwinAudioEngineTest {
         manager.configure(AudioSessionCategory.PLAYBACK, AudioSessionMode.DEFAULT)
         manager.setActive(true)
         manager.observeInterruptions { }
+        AudioEngine.create().use { engine ->
+            val stream = engine.openStream(AudioStreamConfig(sampleRate = 48000, channelCount = 1))
+            manager.attach(stream)
+            manager.detach(stream)
+            stream.close()
+        }
         manager.setActive(false)
     }
 }

@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `AudioSessionManager.observeInterruptions` for calls / audio-focus loss; Android `bind(context)` + `setActive` requests media audio focus
+- `AudioSessionManager.attach` pauses and resumes streams on interruptions
 - `SleepTimer`: schedule fade-out then `AudioStream.stop`; pause/resume keep remaining time; cancel leaves playback running
 - `SleepTimer` extra streams are stopped after the fade; `pause(pauseStreams = true)` also pauses those streams
 - `GainParams.FADE_MS`: real-time-safe linear amplitude ramp when changing `GAIN_DB` (0 ms stays instant)

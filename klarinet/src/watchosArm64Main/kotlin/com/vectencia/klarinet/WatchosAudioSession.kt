@@ -128,10 +128,6 @@ private fun audioInterruptionInfo(userInfo: Map<Any?, *>?): AudioInterruptionInf
         ?: AVAudioSessionInterruptionTypeBegan
     val began = typeValue == AVAudioSessionInterruptionTypeBegan
     val options = (userInfo?.get(AVAudioSessionInterruptionOptionKey) as? NSNumber)?.unsignedLongValue ?: 0uL
-    val shouldResume = !began &&
-        (options and AVAudioSessionInterruptionOptionShouldResume) != 0uL
-    return AudioInterruptionInfo(
-        type = if (began) AudioInterruptionType.BEGAN else AudioInterruptionType.ENDED,
-        shouldResume = shouldResume,
-    )
+    val shouldResume = (options and AVAudioSessionInterruptionOptionShouldResume) != 0uL
+    return audioInterruptionFromSession(typeBegan = began, optionShouldResume = shouldResume)
 }

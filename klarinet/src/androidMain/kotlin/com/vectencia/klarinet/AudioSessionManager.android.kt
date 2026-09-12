@@ -9,23 +9,10 @@ import android.os.Build
 actual class AudioSessionManager {
     private var audioManager: AudioManager? = null
     private var focusRequest: AudioFocusRequest? = null
-    private var interruptionListener: ((AudioInterruptionInfo) -> Unit)? = null
+    private val interruptions = InterruptionController()
 
     private val focusChangeListener = AudioManager.OnAudioFocusChangeListener { change ->
-        when (change) {
-            AudioManager.AUDIOFOCUS_GAIN -> {
-                interruptionListener?.invoke(
-                    AudioInterruptionInfo(AudioInterruptionType.ENDED, shouldResume = true),
-                )
-            }
-            AudioManager.AUDIOFOCUS_LOSS,
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
-                interruptionListener?.invoke(
-                    AudioInterruptionInfo(AudioInterruptionType.BEGAN, shouldResume = false),
-                )
-            }
-        }
+        AudioFocusInterruptions.fromFocusChange(change)?.let { interruptions.dispatch(it) }
     }
 
     /**
@@ -50,8 +37,12 @@ actual class AudioSessionManager {
     actual fun observeRouteChanges(listener: (AudioRouteChangeInfo) -> Unit) { /* no-op: use AudioDeviceCallback in the host */ }
 
     actual fun observeInterruptions(listener: (AudioInterruptionInfo) -> Unit) {
-        interruptionListener = listener
+        interruptions.observe(listener)
     }
+
+    actual fun attach(stream: AudioStream) = interruptions.attach(stream)
+
+    actual fun detach(stream: AudioStream) = interruptions.detach(stream)
 
     private fun requestFocus(manager: AudioManager) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

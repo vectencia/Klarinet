@@ -558,12 +558,8 @@ Klarinet does **not** start a foreground service or draw a notification. The hos
 ```kotlin
 val session = AudioSessionManager()
 session.configure(AudioSessionCategory.PLAYBACK, AudioSessionMode.DEFAULT)
-session.observeInterruptions { info ->
-    when (info.type) {
-        AudioInterruptionType.BEGAN -> stream.pause()
-        AudioInterruptionType.ENDED -> if (info.shouldResume) stream.start()
-    }
-}
+session.attach(stream) // pause on call, start again when shouldResume
+session.observeInterruptions { /* optional UI */ }
 session.setActive(true) // Android: call bind(context) first
 ```
 
