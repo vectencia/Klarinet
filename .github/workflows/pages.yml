@@ -1,0 +1,62 @@
+name: GitHub Pages
+
+on:
+  push:
+    branches: [main, 0.4.0]
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Build web demo and API docs
+        run: ./gradlew :demo-web:jsBrowserDistribution :dokkaGenerate
+
+      - name: Assemble site
+        run: |
+          set -euo pipefail
+          DEMO_DIR="demo-web/build/dist/js/productionExecutable"
+          DOCS_DIR="build/dokka/html"
+          test -f "$DEMO_DIR/index.html"
+          test -f "$DOCS_DIR/index.html"
+          rm -rf public
+          mkdir -p public/api
+          cp -R "$DEMO_DIR"/. public/
+          cp -R "$DOCS_DIR"/. public/api/
+          touch public/.nojekyll
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

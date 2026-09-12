@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Web Audio `AudioEngine` / `AudioStream` (`ScriptProcessorNode`, `getUserMedia` for input)
 - Web Audio effect graphs mapped from Klarinet Studio (gain, pan, dynamics, EQ, delay, reverb, modulation)
 - In-memory `AudioFileWriter` (WAV) and `AudioFileReader` after `decodeAudioFile`, `putWavBytes`, `putAudioFile`, or `decodeAudioBytes`
+- GitHub Pages workflow: web demo at `/` and Dokka API docs at `/api/`
 - `:demo-web` browser demo with tone, mic meter, latency, file play/record, and effects
 
 ### Changed
