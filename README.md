@@ -456,6 +456,8 @@ Minimal command-line demos that play a 440 Hz sine wave for 3 seconds, proving l
 | `AudioFileWriter` | Encodes PCM to audio files (WAV, AAC, M4A). |
 | `AudioDeviceInfo` | Information about an audio input/output device. |
 | `AudioSessionManager` | Session category, Android audio focus, interruption hooks. |
+| `AudioScene` / `AudioSceneJson` | Portable layer mix (ids, levels, effect params) as JSON. |
+| `AudioScenePlayer` | Crossfades scenes with [GainParams.FADE_MS]; host opens each layer stream. |
 | `LatencyInfo` | Input/output latency measurements. |
 
 ### Enums
@@ -548,6 +550,31 @@ open iosApp/iosApp.xcodeproj
 | `make test-all` | Run Kotlin, C++ DSP, and iOS simulator tests |
 | `make clean` | Clean build artifacts |
 | `make publish` | Publish to Maven Central |
+
+## Scene files
+
+Presets are data. Ship your own JSON (assets, files, network). Layer `id` is an opaque key; Klarinet never loads audio files from the scene document.
+
+```json
+{
+  "id": "rain-night",
+  "layers": [
+    { "id": "rain", "gainDb": -6.0, "effects": [{ "type": "REVERB", "params": { "0": 0.5 } }] },
+    { "id": "wind", "gainDb": -12.0 }
+  ]
+}
+```
+
+```kotlin
+val scene = AudioSceneJson.decode(json)
+AudioScenePlayer(engine).use { player ->
+    player.transitionTo(scene, fadeMs = 3000f) { layer ->
+        engine.openStream(config, callbackFor(layer.id))
+    }
+}
+```
+
+Same layer id keeps the stream and retargets gain. Other layers fade out and in so A → B has no hole. Close the player to release streams and chains.
 
 ## Background playback
 

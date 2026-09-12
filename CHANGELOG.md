@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `AudioScene` / `AudioSceneJson` / `AudioScenePlayer`: serializable layers + Gain crossfade between scenes
 - `AudioSessionManager.observeInterruptions` for calls / audio-focus loss; Android `bind(context)` + `setActive` requests media audio focus
 - `AudioSessionManager.attach` pauses and resumes streams on interruptions
 - `SleepTimer`: schedule fade-out then `AudioStream.stop`; pause/resume keep remaining time; cancel leaves playback running
