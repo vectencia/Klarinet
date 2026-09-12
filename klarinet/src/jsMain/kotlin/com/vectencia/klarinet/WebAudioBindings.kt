@@ -54,6 +54,9 @@ internal external interface AudioNode {
 
 internal external interface AudioParam {
     var value: Float
+    fun setValueAtTime(value: Float, startTime: Double): AudioParam
+    fun linearRampToValueAtTime(value: Float, endTime: Double): AudioParam
+    fun cancelScheduledValues(cancelTime: Double): AudioParam
 }
 
 internal external interface GainNode : AudioNode {

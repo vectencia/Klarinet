@@ -50,14 +50,14 @@ namespace GainParams {
  * continuous.
  *
  * @par DSP Algorithm
- * For each sample: `output = input * linearGain`
- * where `linearGain` is either `10^(gainDb / 20)` or a lerp toward that
- * value over `fadeMs` at the prepared sample rate.
+ * For each sample: `output = input * linearGain`.
+ * `setParameter` converts dB to linear on the caller thread.
+ * `process()` only loads atomics and lerps; it does not call `pow`.
  *
  * @par Thread Safety
  * Target parameters are `std::atomic` and may be updated from any thread.
  * Ramp state is touched only from `process()` on the audio thread.
- * `setParameter` does not allocate, lock, or otherwise block.
+ * `setParameter` / `reset` do not allocate, lock, or write ramp fields.
  */
 class Gain : public AudioEffect {
 public:
@@ -70,8 +70,7 @@ public:
     /**
      * @brief Applies the gain to the audio buffer in-place.
      *
-     * Converts the current dB value to a linear multiplier and multiplies
-     * every sample (across all channels and frames) by that multiplier.
+     * Multiplies every sample by the current linear gain.
      * If a fade is active, the multiplier advances one step per frame.
      * If the effect is disabled, the buffer is left untouched.
      *
@@ -111,6 +110,8 @@ public:
 private:
     /// @brief Target gain in decibels. Default: 0.0 dB (unity gain).
     std::atomic<float> gainDb_{0.0f};
+    /// @brief Target linear amplitude. Written by setParameter, read by process().
+    std::atomic<float> targetLinear_{1.0f};
     /// @brief Fade duration in milliseconds. Default: 0 (instant).
     std::atomic<float> fadeMs_{0.0f};
     /// @brief Incremented on kGainDb changes so process() can start a new ramp.

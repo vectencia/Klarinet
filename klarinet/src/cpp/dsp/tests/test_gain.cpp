@@ -80,6 +80,56 @@ static void test_gain_stereo_both_channels() {
     printf("PASS\n");
 }
 
+static void test_gain_reset_snaps_on_next_process() {
+    printf("  Gain: reset snaps to unity on next process()... ");
+    klarinet::Gain gain;
+    gain.prepare(48000, 1);
+    gain.setParameter(klarinet::GainParams::kGainDb, -20.0f);
+    float primed[] = {1.0f};
+    gain.process(primed, 1, 1);
+    assert(approxEqual(primed[0], 0.1f, 0.001f));
+
+    gain.reset();
+    float buffer[] = {1.0f};
+    gain.process(buffer, 1, 1);
+    assert(approxEqual(buffer[0], 1.0f, 0.0001f));
+    assert(approxEqual(gain.getParameter(klarinet::GainParams::kGainDb), 0.0f));
+    printf("PASS\n");
+}
+
+static void test_gain_unknown_param_is_ignored() {
+    printf("  Gain: unknown param id does not change gain... ");
+    klarinet::Gain gain;
+    gain.prepare(48000, 1);
+    gain.setParameter(99, 12.0f);
+    assert(approxEqual(gain.getParameter(klarinet::GainParams::kGainDb), 0.0f));
+    assert(approxEqual(gain.getParameter(99), 0.0f));
+
+    float buffer[] = {1.0f};
+    gain.process(buffer, 1, 1);
+    assert(approxEqual(buffer[0], 1.0f, 0.0001f));
+    printf("PASS\n");
+}
+
+static void test_gain_fade_ms_alone_does_not_ramp() {
+    printf("  Gain: FADE_MS alone does not start a ramp... ");
+    klarinet::Gain gain;
+    gain.prepare(48000, 1);
+    gain.setParameter(klarinet::GainParams::kGainDb, -20.0f);
+    float primed[] = {1.0f};
+    gain.process(primed, 1, 1);
+    assert(approxEqual(primed[0], 0.1f, 0.001f));
+
+    gain.setParameter(klarinet::GainParams::kFadeMs, 2000.0f);
+    assert(approxEqual(gain.getParameter(klarinet::GainParams::kGainDb), -20.0f));
+
+    float buffer[] = {1.0f, 1.0f, 1.0f};
+    gain.process(buffer, 3, 1);
+    assert(approxEqual(buffer[0], 0.1f, 0.001f));
+    assert(approxEqual(buffer[2], 0.1f, 0.001f));
+    printf("PASS\n");
+}
+
 static void test_gain_fade_zero_ms_stays_instant() {
     printf("  Gain: fade 0ms still applies instantly... ");
     klarinet::Gain gain;
@@ -292,6 +342,9 @@ int main() {
     test_gain_plus_6db();
     test_gain_minus_20db();
     test_gain_stereo_both_channels();
+    test_gain_reset_snaps_on_next_process();
+    test_gain_unknown_param_is_ignored();
+    test_gain_fade_ms_alone_does_not_ramp();
     test_gain_fade_zero_ms_stays_instant();
     test_gain_fade_to_silence_no_click();
     test_gain_fade_from_silence_no_click();

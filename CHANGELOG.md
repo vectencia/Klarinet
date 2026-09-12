@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `SleepTimer`: schedule fade-out then `AudioStream.stop`; pause/resume keep remaining time; cancel leaves playback running
 - `GainParams.FADE_MS`: real-time-safe linear amplitude ramp when changing `GAIN_DB` (0 ms stays instant)
+- Web Audio Gain honors `FADE_MS` via `linearRampToValueAtTime` (retarget from the current value)
+- `./gradlew :sample:run --args=fade` plays a 2s 0→full then 2s full→0 listen path
 - Kotlin/JS browser target for `klarinet` and `klarinet-coroutines`
 - Web Audio `AudioEngine` / `AudioStream` (`ScriptProcessorNode`, `getUserMedia` for input)
 - Web Audio effect graphs mapped from Klarinet Studio (gain, pan, dynamics, EQ, delay, reverb, modulation)
@@ -19,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Gain converts dB to linear in `setParameter` (caller thread); `process()` only lerps atomics
 - `klarinet-coroutines` file helpers default to a platform IO dispatcher (`Dispatchers.Default` on JS, where `Dispatchers.IO` does not exist)
 
 ## [0.3.0] - 2026-08-15

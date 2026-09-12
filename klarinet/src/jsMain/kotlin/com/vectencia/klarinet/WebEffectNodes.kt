@@ -10,7 +10,10 @@ internal fun dbToGain(db: Float): Float = 10f.pow(db / 20f)
 internal fun defaultEffectParams(type: AudioEffectType): MutableMap<Int, Float> {
     val params = mutableMapOf<Int, Float>()
     when (type) {
-        AudioEffectType.GAIN -> params[GainParams.GAIN_DB] = 0f
+        AudioEffectType.GAIN -> {
+            params[GainParams.GAIN_DB] = 0f
+            params[GainParams.FADE_MS] = 0f
+        }
         AudioEffectType.PAN -> params[PanParams.PAN] = 0f
         AudioEffectType.MUTE_SOLO -> {
             params[MuteSoloParams.MUTED] = 0f
@@ -135,6 +138,26 @@ internal class WebEffectGraph(
     }
 }
 
+private fun applyLinearGain(ctx: AudioContext, param: AudioParam, target: Float, fadeMs: Float) {
+    val now = ctx.currentTime
+    if (fadeMs <= 0f) {
+        try {
+            param.cancelScheduledValues(now)
+        } catch (_: Throwable) {
+        }
+        param.value = target
+        return
+    }
+    val current = param.value
+    try {
+        param.cancelScheduledValues(now)
+        param.setValueAtTime(current, now)
+        param.linearRampToValueAtTime(target, now + fadeMs / 1000.0)
+    } catch (_: Throwable) {
+        param.value = target
+    }
+}
+
 private fun wireMix(dry: GainNode, wet: GainNode, enabled: Boolean, wetAmount: Float? = null) {
     if (!enabled) {
         dry.gain.value = 1f
@@ -189,9 +212,17 @@ private fun buildGraph(
             val gain = ctx.createGain()
             input.connect(gain)
             gain.connect(wet)
+            var lastGainDb: Float? = null
             val apply: (Map<Int, Float>, Boolean) -> Unit = { params, enabled ->
                 wireMix(dry, wet, enabled)
-                gain.gain.value = dbToGain(params[GainParams.GAIN_DB] ?: 0f)
+                val db = params[GainParams.GAIN_DB] ?: 0f
+                val fadeMs = params[GainParams.FADE_MS] ?: 0f
+                val target = dbToGain(db)
+                val gainChanged = lastGainDb == null || lastGainDb != db
+                lastGainDb = db
+                if (gainChanged) {
+                    applyLinearGain(ctx, gain.gain, target, fadeMs)
+                }
             }
             apply
         }
