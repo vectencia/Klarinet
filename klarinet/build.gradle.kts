@@ -1,6 +1,9 @@
 import java.io.File
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
+private val hostIsMac: Boolean =
+    System.getProperty("os.name").orEmpty().lowercase().contains("mac")
+
 fun dspCmakeArguments(targetName: String): List<String> = when (targetName) {
     "macosArm64" -> listOf("-DCMAKE_OSX_ARCHITECTURES=arm64")
     "iosSimulatorArm64" -> listOf(
@@ -151,27 +154,32 @@ kotlin {
                 create("klarinet_dsp") {
                     defFile(project.file("src/nativeInterop/cinterop/klarinet_dsp.def"))
                     includeDirs(project.file("src/cpp/dsp"))
-                    // Pack libklarinet-dsp.a into the published cinterop klib so
-                    // Maven consumers resolve _klarinet_* without extra Xcode flags.
-                    extraOpts(
-                        "-libraryPath", dspOut.get().asFile.absolutePath,
-                        "-staticLibrary", "libklarinet-dsp.a",
-                    )
+                    // Pack libklarinet-dsp.a on macOS only. Linux/CI Ubuntu (Dokka,
+                    // JS demo) still run Apple cinterop for metadata and cannot
+                    // configure an iOS SDK.
+                    if (hostIsMac) {
+                        extraOpts(
+                            "-libraryPath", dspOut.get().asFile.absolutePath,
+                            "-staticLibrary", "libklarinet-dsp.a",
+                        )
+                    }
                 }
             }
         }
         target.binaries.all {
             linkerOpts("-lc++")
         }
-        tasks.matching { task ->
-            val n = task.name.lowercase()
-            val t = target.name.lowercase()
-            n.contains(t) && (
-                n.contains("cinteropklarinet_dsp") ||
-                    n.contains("link")
-                )
-        }.configureEach {
-            dependsOn(compileDsp)
+        if (hostIsMac) {
+            tasks.matching { task ->
+                val n = task.name.lowercase()
+                val t = target.name.lowercase()
+                n.contains(t) && (
+                    n.contains("cinteropklarinet_dsp") ||
+                        n.contains("link")
+                    )
+            }.configureEach {
+                dependsOn(compileDsp)
+            }
         }
     }
 

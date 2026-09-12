@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Apple DSP CMake/cinterop embedding runs only on macOS, so Linux Dokka and GitHub Pages do not require an iOS SDK
+
 ## [0.4.2] - 2026-09-12
 
 ### Fixed
