@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `SleepTimer`: schedule fade-out then `AudioStream.stop`; pause/resume keep remaining time; cancel leaves playback running
+- `SleepTimer` extra streams are stopped after the fade; `pause(pauseStreams = true)` also pauses those streams
 - `GainParams.FADE_MS`: real-time-safe linear amplitude ramp when changing `GAIN_DB` (0 ms stays instant)
 - Web Audio Gain honors `FADE_MS` via `linearRampToValueAtTime` (retarget from the current value)
 - `./gradlew :sample:run --args=fade` plays a 2s 0→full then 2s full→0 listen path

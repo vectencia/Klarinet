@@ -520,6 +520,9 @@ open iosApp/iosApp.xcodeproj
 # Kotlin tests (all platforms)
 ./gradlew :klarinet:allTests
 
+# JS browser tests (Chrome Headless)
+./gradlew :klarinet:jsBrowserTest
+
 # C++ DSP tests
 ./gradlew :klarinet:dspTests
 

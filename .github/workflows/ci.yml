@@ -26,10 +26,10 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Build klarinet
-        run: ./gradlew :klarinet:build
+        run: ./gradlew :klarinet:build -x jsBrowserTest
 
       - name: Run klarinet tests
-        run: ./gradlew :klarinet:allTests
+        run: ./gradlew :klarinet:allTests -x jsBrowserTest
 
       - name: Build klarinet Android
         run: ./gradlew :klarinet-android:assembleDebug :klarinet:compileAndroidMain

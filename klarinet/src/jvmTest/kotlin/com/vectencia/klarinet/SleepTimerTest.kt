@@ -193,6 +193,115 @@ class SleepTimerTest {
     }
 
     @Test
+    fun extraStreamsStopAfterFade() {
+        AudioEngine.create().use { engine ->
+            val primary = engine.openStream(AudioStreamConfig())
+            val extra = engine.openStream(AudioStreamConfig())
+            val gain = engine.createEffect(AudioEffectType.GAIN)
+            val chain = engine.createEffectChain()
+            chain.add(gain)
+            primary.effectChain = chain
+            val clock = ManualClock()
+            val scheduler = ManualScheduler(clock)
+            primary.start()
+            extra.start()
+            try {
+                SleepTimer(primary, gain, clock::now, scheduler, listOf(extra)).use { timer ->
+                    timer.schedule(durationMs = 200, fadeMs = 50f)
+                    scheduler.advance(200)
+                    assertEquals(SleepTimerState.FADING, timer.state)
+                    assertEquals(StreamState.STARTED, extra.state)
+                    scheduler.advance(50)
+                    assertEquals(SleepTimerState.COMPLETED, timer.state)
+                    assertEquals(StreamState.STOPPED, primary.state)
+                    assertEquals(StreamState.STOPPED, extra.state)
+                }
+            } finally {
+                stopIfNeeded(primary)
+                stopIfNeeded(extra)
+                primary.close()
+                extra.close()
+                chain.close()
+                gain.close()
+            }
+        }
+    }
+
+    @Test
+    fun pauseStreamsThenResumeRestartsPlayback() {
+        withTimer { stream, _, _, scheduler, timer ->
+            stream.start()
+            timer.schedule(durationMs = 1_000, fadeMs = 50f)
+            scheduler.advance(200)
+            timer.pause(pauseStreams = true)
+            assertEquals(SleepTimerState.PAUSED, timer.state)
+            assertEquals(800L, timer.remainingMs)
+            assertEquals(StreamState.PAUSED, stream.state)
+
+            scheduler.advance(5_000)
+            assertEquals(800L, timer.remainingMs)
+            assertEquals(StreamState.PAUSED, stream.state)
+
+            timer.resume()
+            assertEquals(SleepTimerState.SCHEDULED, timer.state)
+            assertEquals(StreamState.STARTED, stream.state)
+            scheduler.advance(800)
+            scheduler.advance(50)
+            assertEquals(SleepTimerState.COMPLETED, timer.state)
+            assertEquals(StreamState.STOPPED, stream.state)
+        }
+    }
+
+    @Test
+    fun pauseStreamsThenCancelRestartsPlayback() {
+        withTimer { stream, _, _, scheduler, timer ->
+            stream.start()
+            timer.schedule(durationMs = 1_000, fadeMs = 50f)
+            timer.pause(pauseStreams = true)
+            assertEquals(StreamState.PAUSED, stream.state)
+            timer.cancel()
+            assertEquals(SleepTimerState.IDLE, timer.state)
+            assertEquals(StreamState.STARTED, stream.state)
+        }
+    }
+
+    @Test
+    fun realSchedulerPauseResumeKeepsRemainingAndStops() {
+        AudioEngine.create().use { engine ->
+            val stream = engine.openStream(AudioStreamConfig())
+            val gain = engine.createEffect(AudioEffectType.GAIN)
+            val chain = engine.createEffectChain()
+            chain.add(gain)
+            stream.effectChain = chain
+            stream.start()
+            try {
+                SleepTimer(stream, gain).use { timer ->
+                    timer.schedule(durationMs = 400, fadeMs = 40f)
+                    Thread.sleep(80)
+                    timer.pause()
+                    val remaining = timer.remainingMs
+                    assertEquals(SleepTimerState.PAUSED, timer.state)
+                    assertEquals(StreamState.STARTED, stream.state)
+                    assertTrue(remaining in 1L..400L)
+                    Thread.sleep(250)
+                    assertEquals(SleepTimerState.PAUSED, timer.state)
+                    assertEquals(remaining, timer.remainingMs)
+                    assertEquals(StreamState.STARTED, stream.state)
+                    timer.resume()
+                    waitUntil(2_000) { timer.state == SleepTimerState.COMPLETED }
+                    assertEquals(SleepTimerState.COMPLETED, timer.state)
+                    assertEquals(StreamState.STOPPED, stream.state)
+                }
+            } finally {
+                stopIfNeeded(stream)
+                stream.close()
+                chain.close()
+                gain.close()
+            }
+        }
+    }
+
+    @Test
     fun closeCancelsAndIsIdempotent() {
         withTimer { stream, _, _, scheduler, timer ->
             stream.start()
@@ -226,15 +335,26 @@ class SleepTimerTest {
                 try {
                     block(stream, gain, clock, scheduler, timer)
                 } finally {
-                    if (stream.state == StreamState.STARTED || stream.state == StreamState.PAUSED) {
-                        stream.stop()
-                    }
+                    stopIfNeeded(stream)
                 }
             }
             stream.close()
             chain.close()
             gain.close()
         }
+    }
+}
+
+private fun stopIfNeeded(stream: AudioStream) {
+    if (stream.state == StreamState.STARTED || stream.state == StreamState.PAUSED) {
+        stream.stop()
+    }
+}
+
+private fun waitUntil(timeoutMs: Long, condition: () -> Boolean) {
+    val deadline = System.nanoTime() + timeoutMs * 1_000_000L
+    while (System.nanoTime() < deadline && !condition()) {
+        Thread.sleep(10)
     }
 }
 
