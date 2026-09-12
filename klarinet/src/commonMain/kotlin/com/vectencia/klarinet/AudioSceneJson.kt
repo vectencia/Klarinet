@@ -55,6 +55,8 @@ object AudioSceneJson {
             return JsonReader(json).parseScene()
         } catch (error: SceneFormatException) {
             throw error
+        } catch (error: IllegalArgumentException) {
+            throw SceneFormatException(error.message ?: "Invalid scene JSON", error)
         } catch (error: Exception) {
             throw SceneFormatException("Invalid scene JSON", error)
         }

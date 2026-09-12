@@ -172,6 +172,7 @@ A one-file JVM program that plays a 440 Hz sine for one second:
 ./gradlew :sample:run
 ./gradlew :sample:run --args=fade   # 2s fade 0→full, hold, 2s full→0
 ./gradlew :sample:run --args=sleep  # 1s play, 1s fade, stream stops
+./gradlew :sample:run --args=scene  # 440 Hz → 2s crossfade to 660 Hz
 ```
 
 The source is in `sample/src/main/kotlin/Main.kt`.

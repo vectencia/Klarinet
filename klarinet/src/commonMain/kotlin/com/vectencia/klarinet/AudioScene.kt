@@ -12,7 +12,12 @@ package com.vectencia.klarinet
 data class AudioScene(
     val id: String,
     val layers: List<SceneLayer> = emptyList(),
-)
+) {
+    init {
+        val duplicates = layers.groupingBy { it.id }.eachCount().filter { it.value > 1 }.keys
+        require(duplicates.isEmpty()) { "Duplicate layer ids: ${duplicates.joinToString()}" }
+    }
+}
 
 /**
  * One layer in an [AudioScene].

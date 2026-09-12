@@ -83,6 +83,23 @@ class AudioSceneJsonTest {
     }
 
     @Test
+    fun decodeRejectsDuplicateLayerIds() {
+        val error = assertFailsWith<SceneFormatException> {
+            AudioSceneJson.decode(
+                """{"id":"x","layers":[{"id":"a"},{"id":"a"}]}""",
+            )
+        }
+        assertTrue(error.message!!.contains("a") || error.message!!.contains("Duplicate"))
+    }
+
+    @Test
+    fun constructorRejectsDuplicateLayerIds() {
+        assertFailsWith<IllegalArgumentException> {
+            AudioScene("x", listOf(SceneLayer("a"), SceneLayer("a")))
+        }
+    }
+
+    @Test
     fun decodeRejectsGarbage() {
         assertFailsWith<SceneFormatException> {
             AudioSceneJson.decode("not json")

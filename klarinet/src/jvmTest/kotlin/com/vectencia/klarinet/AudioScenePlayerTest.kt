@@ -104,6 +104,35 @@ class AudioScenePlayerTest {
     }
 
     @Test
+    fun realSchedulerTransitionReleasesOutgoing() {
+        AudioEngine.create().use { engine ->
+            val opened = mutableListOf<AudioStream>()
+            AudioScenePlayer(engine).use { player ->
+                player.transitionTo(
+                    AudioScene("a", listOf(SceneLayer("a", gainDb = 0f))),
+                    fadeMs = 0f,
+                ) { engine.openStream(AudioStreamConfig()).also { opened += it } }
+                player.transitionTo(
+                    AudioScene("b", listOf(SceneLayer("b", gainDb = 0f))),
+                    fadeMs = 80f,
+                ) { engine.openStream(AudioStreamConfig()).also { opened += it } }
+                assertEquals(StreamState.STARTED, opened[0].state)
+                assertEquals(StreamState.STARTED, opened[1].state)
+                val deadline = System.nanoTime() + 2_000_000_000L
+                while (
+                    System.nanoTime() < deadline &&
+                    opened[0].state != StreamState.STOPPED &&
+                    opened[0].state != StreamState.CLOSED
+                ) {
+                    Thread.sleep(10)
+                }
+                assertTrue(opened[0].state == StreamState.STOPPED || opened[0].state == StreamState.CLOSED)
+                assertEquals(StreamState.STARTED, opened[1].state)
+            }
+        }
+    }
+
+    @Test
     fun graphChangeCrossfadesNewStream() {
         AudioEngine.create().use { engine ->
             val clock = ManualClock()

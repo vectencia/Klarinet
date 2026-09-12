@@ -332,6 +332,47 @@ static void test_gain_fade_across_callback_buffers() {
     printf("PASS\n");
 }
 
+static void test_gain_crossfade_sum_has_no_hole_or_spike() {
+    printf("  Gain: complementary 10ms fades sum to ~unity... ");
+    klarinet::Gain down;
+    down.prepare(48000, 1);
+    down.setParameter(klarinet::GainParams::kFadeMs, 10.0f);
+    down.setParameter(klarinet::GainParams::kGainDb, -80.0f);
+
+    klarinet::Gain up;
+    up.prepare(48000, 1);
+    up.setParameter(klarinet::GainParams::kGainDb, -80.0f);
+    float primed[] = {1.0f};
+    up.process(primed, 1, 1);
+    up.setParameter(klarinet::GainParams::kFadeMs, 10.0f);
+    up.setParameter(klarinet::GainParams::kGainDb, 0.0f);
+
+    const int n = 480;
+    float falling[n];
+    float rising[n];
+    for (int i = 0; i < n; ++i) {
+        falling[i] = 1.0f;
+        rising[i] = 1.0f;
+    }
+    down.process(falling, n, 1);
+    up.process(rising, n, 1);
+
+    float minSum = 10.0f;
+    float maxSum = -10.0f;
+    for (int i = 0; i < n; ++i) {
+        float sum = falling[i] + rising[i];
+        if (sum < minSum) minSum = sum;
+        if (sum > maxSum) maxSum = sum;
+    }
+    assert(falling[0] > 0.9f);
+    assert(rising[0] < 0.01f);
+    assert(falling[n - 1] < 0.001f);
+    assert(rising[n - 1] > 0.99f);
+    assert(minSum > 0.95f);
+    assert(maxSum < 1.05f);
+    printf("PASS\n");
+}
+
 // ============================================================================
 // Main
 // ============================================================================
@@ -352,6 +393,7 @@ int main() {
     test_gain_fade_across_callback_buffers();
     test_gain_fade_two_seconds_to_silence();
     test_gain_fade_two_seconds_from_silence();
+    test_gain_crossfade_sum_has_no_hole_or_spike();
 
     printf("\nAll Gain tests passed!\n");
     return 0;

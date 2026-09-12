@@ -1,8 +1,11 @@
 import com.vectencia.klarinet.AudioEffectType
 import com.vectencia.klarinet.AudioEngine
+import com.vectencia.klarinet.AudioScene
+import com.vectencia.klarinet.AudioScenePlayer
 import com.vectencia.klarinet.AudioStreamCallback
 import com.vectencia.klarinet.AudioStreamConfig
 import com.vectencia.klarinet.GainParams
+import com.vectencia.klarinet.SceneLayer
 import com.vectencia.klarinet.SleepTimer
 import com.vectencia.klarinet.SleepTimerState
 import com.vectencia.klarinet.StreamDirection
@@ -13,6 +16,7 @@ fun main(args: Array<String>) {
     when (args.firstOrNull()) {
         "fade" -> listenFade()
         "sleep" -> listenSleepTimer()
+        "scene" -> listenScene()
         else -> playSine()
     }
 }
@@ -94,7 +98,37 @@ private fun listenSleepTimer() {
     println("Done.")
 }
 
+/**
+ * Device listen for Task 4: 440 Hz scene A, 2s crossfade to 660 Hz scene B.
+ *
+ * Run: `./gradlew :sample:run --args=scene`
+ */
+private fun listenScene() {
+    println("Klarinet scene listen: 1s 440 Hz, 2s crossfade to 660 Hz, 1s hold")
+    AudioEngine.create().use { engine ->
+        val sampleRate = 48_000
+        AudioScenePlayer(engine).use { player ->
+            player.transitionTo(
+                AudioScene("a", listOf(SceneLayer("low"))),
+                fadeMs = 0f,
+            ) { openTone(engine, sampleRate, hz = 440.0) }
+            Thread.sleep(1_000)
+            println("  crossfade")
+            player.transitionTo(
+                AudioScene("b", listOf(SceneLayer("high"))),
+                fadeMs = 2_000f,
+            ) { openTone(engine, sampleRate, hz = 660.0) }
+            Thread.sleep(3_000)
+            println("  at B")
+        }
+    }
+    println("Done.")
+}
+
 private fun openTone(engine: AudioEngine, sampleRate: Int) =
+    openTone(engine, sampleRate, hz = 440.0)
+
+private fun openTone(engine: AudioEngine, sampleRate: Int, hz: Double) =
     engine.openStream(
         config = AudioStreamConfig(
             sampleRate = sampleRate,
@@ -104,7 +138,7 @@ private fun openTone(engine: AudioEngine, sampleRate: Int) =
         callback = object : AudioStreamCallback {
             private var phase = 0.0
             override fun onAudioReady(buffer: FloatArray, numFrames: Int): Int {
-                val increment = 2.0 * PI * 440.0 / sampleRate
+                val increment = 2.0 * PI * hz / sampleRate
                 for (i in 0 until numFrames) {
                     buffer[i] = (sin(phase) * 0.2).toFloat()
                     phase += increment
