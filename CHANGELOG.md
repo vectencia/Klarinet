@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `SleepTimer`: schedule fade-out then `AudioStream.stop`; pause/resume keep remaining time; cancel leaves playback running
 - `GainParams.FADE_MS`: real-time-safe linear amplitude ramp when changing `GAIN_DB` (0 ms stays instant)
 - Kotlin/JS browser target for `klarinet` and `klarinet-coroutines`
 - Web Audio `AudioEngine` / `AudioStream` (`ScriptProcessorNode`, `getUserMedia` for input)
