@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-12
+
 ### Added
 
 - `AudioScene` / `AudioSceneJson` / `AudioScenePlayer`: serializable layers + Gain crossfade between scenes
