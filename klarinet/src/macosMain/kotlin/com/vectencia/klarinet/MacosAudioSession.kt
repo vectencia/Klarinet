@@ -28,6 +28,10 @@ internal actual fun observePlatformRouteChanges(listener: (AudioRouteChangeInfo)
     // functionality, but that is beyond the scope of the AudioSessionManager API.
 }
 
+internal actual fun observePlatformInterruptions(listener: (AudioInterruptionInfo) -> Unit) {
+    // No-op on macOS: AVAudioSession interruptions are not available.
+}
+
 internal actual fun installPlatformInputTap(
     engine: platform.AVFAudio.AVAudioEngine,
     bufferSize: UInt,

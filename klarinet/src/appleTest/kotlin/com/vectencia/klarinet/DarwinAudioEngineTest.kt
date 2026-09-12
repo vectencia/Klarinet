@@ -61,6 +61,7 @@ class DarwinAudioEngineTest {
         val manager = AudioSessionManager()
         manager.configure(AudioSessionCategory.PLAYBACK, AudioSessionMode.DEFAULT)
         manager.setActive(true)
+        manager.observeInterruptions { }
         manager.setActive(false)
     }
 }

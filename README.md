@@ -455,7 +455,7 @@ Minimal command-line demos that play a 440 Hz sine wave for 3 seconds, proving l
 | `AudioFileReader` | Decodes audio files (WAV, MP3, AAC, M4A) to PCM. |
 | `AudioFileWriter` | Encodes PCM to audio files (WAV, AAC, M4A). |
 | `AudioDeviceInfo` | Information about an audio input/output device. |
-| `AudioSessionManager` | Audio session configuration (Apple platforms). |
+| `AudioSessionManager` | Session category, Android audio focus, interruption hooks. |
 | `LatencyInfo` | Input/output latency measurements. |
 
 ### Enums
@@ -548,6 +548,49 @@ open iosApp/iosApp.xcodeproj
 | `make test-all` | Run Kotlin, C++ DSP, and iOS simulator tests |
 | `make clean` | Clean build artifacts |
 | `make publish` | Publish to Maven Central |
+
+## Background playback
+
+Klarinet does **not** start a foreground service or draw a notification. The host must still satisfy platform background rules. The SDK exposes session category, audio focus, and interruption events so a call does not leave the stream silently dead.
+
+### SDK (this repo)
+
+```kotlin
+val session = AudioSessionManager()
+session.configure(AudioSessionCategory.PLAYBACK, AudioSessionMode.DEFAULT)
+session.observeInterruptions { info ->
+    when (info.type) {
+        AudioInterruptionType.BEGAN -> stream.pause()
+        AudioInterruptionType.ENDED -> if (info.shouldResume) stream.start()
+    }
+}
+session.setActive(true) // Android: call bind(context) first
+```
+
+- **Apple:** `PLAYBACK` maps to `AVAudioSessionCategoryPlayback`. Interruptions come from `AVAudioSessionInterruptionNotification`.
+- **Android:** `AudioSessionManager.bind(context)` then `setActive(true)` requests `AUDIOFOCUS_GAIN`. Focus loss/gain is reported as interruptions.
+
+### Host leftover
+
+**iOS / tvOS / watchOS** — `Info.plist`:
+
+```xml
+<key>UIBackgroundModes</key>
+<array>
+    <string>audio</string>
+</array>
+```
+
+**Android** — a media playback **foreground service** is still required for screen-off audio (Android 8+). Typical pieces:
+
+- `FOREGROUND_SERVICE` and `FOREGROUND_SERVICE_MEDIA_PLAYBACK` permissions
+- A `Service` with `android:foregroundServiceType="mediaPlayback"`
+- A persistent notification (not provided by Klarinet)
+- Optional `WAKE_LOCK` if you hold a lock besides the service
+
+Without that service, `AudioStream` will be killed when the app is backgrounded even if audio focus was granted.
+
+Device QA (not automated here): start playback, background the app, confirm audio continues; place a call, confirm pause; end the call, confirm resume when `shouldResume` is true.
 
 ## SwiftUI Integration Guide
 

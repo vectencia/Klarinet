@@ -56,6 +56,7 @@ class JsEffectAndSessionTest {
         session.configure(AudioSessionCategory.PLAY_AND_RECORD, AudioSessionMode.VOICE_CHAT)
         session.setActive(true)
         session.observeRouteChanges { }
+        session.observeInterruptions { }
         session.setActive(false)
     }
 

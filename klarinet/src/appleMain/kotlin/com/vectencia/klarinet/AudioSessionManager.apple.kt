@@ -13,4 +13,8 @@ actual class AudioSessionManager {
     actual fun observeRouteChanges(listener: (AudioRouteChangeInfo) -> Unit) {
         observePlatformRouteChanges(listener)
     }
+
+    actual fun observeInterruptions(listener: (AudioInterruptionInfo) -> Unit) {
+        observePlatformInterruptions(listener)
+    }
 }
