@@ -108,7 +108,7 @@ Browser support uses the Web Audio API. The public Klarinet API is the same; the
 | Audio recording (`AudioStream` input) | ✅ Supported | `getUserMedia` on `start()`; state goes `STARTING` then `STARTED` |
 | Audio session management | N/A | No-op, same as JVM desktop |
 | WAV file write | ✅ Supported | In-memory store (no disk). Re-read with `AudioFileReader` or export with `audioFileWavBytes` |
-| WAV / MP3 / AAC / M4A read | ✅ After decode | Call `decodeAudioFile(url)` (or `putWavBytes` / `putAudioFile`) before `AudioFileReader` |
+| WAV / MP3 / AAC / M4A read | ✅ After decode | Call `decodeAudioFile(url)`, `decodeAudioBytes`, `putWavBytes`, or `putAudioFile` before `AudioFileReader` |
 | Compressed file write | ❌ Not available | Throws `UnsupportedFormatException` |
 | Audio effects | ✅ Supported | Web Audio nodes mapped from Klarinet Studio (not bit-identical to C++ DSP) |
 | Push-mode write/read | ✅ Non-blocking | `timeoutNanos` is ignored; JS cannot block the main thread |
@@ -403,12 +403,23 @@ Klarinet is a single Kotlin Multiplatform module using `expect`/`actual` declara
 | `demo` | --- | Shared Compose Multiplatform demo UI (Android, iOS, Desktop) |
 | `demo-android` | --- | Android application entry point |
 | `demo-native` | --- | Native console demo apps (Linux, Windows) |
+| `demo-web` | --- | Browser demo (Kotlin/JS + Web Audio) |
 | `sample` | --- | One-file JVM sine-wave sample |
 | `iosApp` | --- | Native SwiftUI demo app (iOS, tvOS, watchOS) |
 
 ## Demo Apps
 
 The project includes demo applications for every supported platform:
+
+### Web Demo (browser)
+
+The same five screens as the Compose demo, plus local-file decode, URL decode, mic recording, and WAV download. Uses the Klarinet JS target.
+
+```bash
+./gradlew :demo-web:jsBrowserDevelopmentRun
+```
+
+Then open the URL Gradle prints (usually `http://localhost:8080`).
 
 ### Compose Multiplatform Demo (Android + iOS + Desktop)
 

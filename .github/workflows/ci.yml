@@ -41,7 +41,7 @@ jobs:
         run: ./gradlew :klarinet:compileKotlinMacosArm64
 
       - name: Build klarinet (JS)
-        run: ./gradlew :klarinet:compileKotlinJs :klarinet:compileTestKotlinJs :klarinet-coroutines:compileKotlinJs :klarinet-coroutines:compileTestKotlinJs
+        run: ./gradlew :klarinet:compileKotlinJs :klarinet:compileTestKotlinJs :klarinet-coroutines:compileKotlinJs :klarinet-coroutines:compileTestKotlinJs :demo-web:compileKotlinJs
 
       - name: Build demo app
         run: ./gradlew :demo-android:assembleDebug

@@ -13,7 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Kotlin/JS browser target for `klarinet` and `klarinet-coroutines`
 - Web Audio `AudioEngine` / `AudioStream` (`ScriptProcessorNode`, `getUserMedia` for input)
 - Web Audio effect graphs mapped from Klarinet Studio (gain, pan, dynamics, EQ, delay, reverb, modulation)
-- In-memory `AudioFileWriter` (WAV) and `AudioFileReader` after `decodeAudioFile`, `putWavBytes`, or `putAudioFile`
+- In-memory `AudioFileWriter` (WAV) and `AudioFileReader` after `decodeAudioFile`, `putWavBytes`, `putAudioFile`, or `decodeAudioBytes`
+- `:demo-web` browser demo with tone, mic meter, latency, file play/record, and effects
 
 ### Changed
 

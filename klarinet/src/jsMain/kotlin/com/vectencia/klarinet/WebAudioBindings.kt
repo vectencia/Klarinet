@@ -5,6 +5,7 @@ package com.vectencia.klarinet
 import kotlin.js.ExperimentalWasmJsInterop
 import kotlin.js.JsAny
 import kotlin.js.Promise
+import kotlin.js.unsafeCast
 
 internal fun newAudioContext(): AudioContext {
     return try {
@@ -178,4 +179,23 @@ internal fun jsIndex(value: dynamic, index: Int): dynamic = js("value[index]")
 
 internal fun trySetSinkId(ctx: AudioContext, sinkId: String) {
     js("if (ctx.setSinkId) { ctx.setSinkId(sinkId); }")
+}
+
+internal fun byteArrayToArrayBuffer(bytes: ByteArray): ArrayBuffer {
+    val length = bytes.size
+    val view: dynamic = js("new Uint8Array(length)")
+    for (i in 0 until length) {
+        view[i] = bytes[i]
+    }
+    return view.buffer.unsafeCast<ArrayBuffer>()
+}
+
+internal fun arrayBufferToByteArray(buffer: ArrayBuffer): ByteArray {
+    val view: dynamic = js("new Uint8Array(buffer)")
+    val length = view.length as Int
+    val bytes = ByteArray(length)
+    for (i in 0 until length) {
+        bytes[i] = (view[i] as Int).toByte()
+    }
+    return bytes
 }

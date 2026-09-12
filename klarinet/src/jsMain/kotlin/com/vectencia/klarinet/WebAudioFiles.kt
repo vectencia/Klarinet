@@ -59,37 +59,53 @@ fun audioFileWavBytes(path: String): ByteArray {
 }
 
 /**
+ * Decodes [bytes] with Web Audio `decodeAudioData` and stores the PCM so
+ * [AudioFileReader] can open [path] synchronously.
+ *
+ * Use this for `<input type="file">` picks. WAV bytes can also go through
+ * [putWavBytes] without creating an `AudioContext`.
+ */
+fun decodeAudioBytes(path: String, bytes: ByteArray): Promise<AudioFileReader> {
+    val ctx = newAudioContext()
+    return Promise { resolve, reject ->
+        ctx.decodeAudioData(byteArrayToArrayBuffer(bytes)).then(
+            { audio ->
+                try {
+                    putAudioFile(
+                        path = path,
+                        samples = interleave(audio),
+                        sampleRate = audio.sampleRate.toInt(),
+                        channelCount = audio.numberOfChannels,
+                        format = formatFromPath(path),
+                    )
+                    try {
+                        ctx.close()
+                    } catch (_: Throwable) {
+                    }
+                    resolve(AudioFileReader(path))
+                } catch (error: Throwable) {
+                    reject(error)
+                }
+            },
+            { error -> reject(error) },
+        )
+    }
+}
+
+/**
  * Fetches [url], decodes it with Web Audio `decodeAudioData`, and stores the
  * PCM so [AudioFileReader] can open the same URL synchronously.
  *
  * Works for any format the browser can decode (WAV, MP3, AAC, M4A, …).
  */
 fun decodeAudioFile(url: String): Promise<AudioFileReader> {
-    val ctx = newAudioContext()
     return Promise { resolve, reject ->
         fetch(url).then(
             { response ->
                 response.arrayBuffer().then(
                     { buffer ->
-                        ctx.decodeAudioData(buffer).then(
-                            { audio ->
-                                try {
-                                    putAudioFile(
-                                        path = url,
-                                        samples = interleave(audio),
-                                        sampleRate = audio.sampleRate.toInt(),
-                                        channelCount = audio.numberOfChannels,
-                                        format = formatFromPath(url),
-                                    )
-                                    try {
-                                        ctx.close()
-                                    } catch (_: Throwable) {
-                                    }
-                                    resolve(AudioFileReader(url))
-                                } catch (error: Throwable) {
-                                    reject(error)
-                                }
-                            },
+                        decodeAudioBytes(url, arrayBufferToByteArray(buffer)).then(
+                            { reader -> resolve(reader) },
                             { error -> reject(error) },
                         )
                     },
