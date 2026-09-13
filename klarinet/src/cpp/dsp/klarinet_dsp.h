@@ -223,6 +223,9 @@ void klarinet_chain_destroy(KlarinetEffectChainHandle chain);
 /// User audio callback invoked on a worker thread, never the audio thread.
 typedef int (*KlarinetUserAudioCallback)(void* userData, float* buffer, int numFrames, int channelCount);
 
+/// FIFO underrun (output) or overrun (input). Invoked on the worker thread.
+typedef void (*KlarinetXrunCallback)(void* userData, int count);
+
 /// Opaque handle for the lock-free audio-thread offload.
 typedef void* KlarinetOffloadHandle;
 
@@ -239,6 +242,9 @@ KlarinetOffloadHandle klarinet_offload_create(
 );
 
 void klarinet_offload_destroy(KlarinetOffloadHandle handle);
+
+/** Optional. @p cb runs on the worker thread, never the audio thread. */
+void klarinet_offload_set_xrun_callback(KlarinetOffloadHandle handle, KlarinetXrunCallback cb);
 
 /** Audio-thread only: move samples through the FIFO. Never calls Kotlin. */
 void klarinet_offload_process(KlarinetOffloadHandle handle, float* audio, int numFrames);

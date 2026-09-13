@@ -9,11 +9,16 @@ package com.vectencia.klarinet
  *
  * ## Threading
  *
- * **All platforms:** [onAudioReady] runs on a dedicated worker thread.
- * The platform audio callback never enters Kotlin; samples move through a
- * lock-free FIFO. Native effect processing stays on the audio thread. The
- * worker is not real-time, so allocations are safe, but slow work still
- * adds latency or underruns.
+ * **Android, Apple, JVM, and native desktop:** [onAudioReady] runs on a
+ * dedicated worker thread. The platform audio callback does not invoke
+ * [onAudioReady]; samples move through a lock-free FIFO. Native effect
+ * processing stays on the audio thread. The worker is not real-time, so
+ * allocations are safe, but slow work still adds latency or underruns.
+ *
+ * **JS:** an `AudioWorklet` renders on the audio thread. [onAudioReady]
+ * runs on the browser main thread via the worklet port, not on the render
+ * quantum. Allocations are allowed; blocking the main thread still underruns
+ * the worklet FIFO.
  *
  * The other callbacks ([onStreamStateChanged], [onStreamError],
  * [onStreamUnderrun]) may be called on any thread and do not have real-time
@@ -51,9 +56,10 @@ interface AudioStreamCallback {
      * For **input** streams, [buffer] already contains [numFrames] frames of
      * captured audio data for the application to consume.
      *
-     * **Warning -- real-time thread** (Apple, JVM, native desktop): called on
-     * a high-priority audio thread. Do not allocate, lock, or do I/O.
-     * **Android:** called on a worker thread; the Oboe thread never enters JNI.
+     * **Threading:** on Android, Apple, JVM, and native desktop this is a
+     * worker thread (not the platform audio callback). On JS this is the
+     * browser main thread, not the `AudioWorklet` render quantum. Slow work
+     * still underruns.
      *
      * @param buffer The audio buffer to read from (input) or write to (output).
      *   The array length is at least `numFrames * channelCount`.

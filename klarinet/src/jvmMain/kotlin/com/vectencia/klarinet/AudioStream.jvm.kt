@@ -52,12 +52,18 @@ actual class AudioStream internal constructor(actual val config: AudioStreamConf
 
     actual fun write(data: FloatArray, numFrames: Int, timeoutNanos: Long): Int {
         requireActive(devicePtr != 0L, "AudioStream")
-        return JniBridge.nativeDeviceWriteFloat(devicePtr, data, numFrames, timeoutNanos)
+        throw StreamOperationException(
+            "Push-model write is not supported on JVM. " +
+                "Use AudioStreamCallback.onAudioReady for output streams.",
+        )
     }
 
     actual fun read(data: FloatArray, numFrames: Int, timeoutNanos: Long): Int {
         requireActive(devicePtr != 0L, "AudioStream")
-        return JniBridge.nativeDeviceReadFloat(devicePtr, data, numFrames, timeoutNanos)
+        throw StreamOperationException(
+            "Push-model read is not supported on JVM. " +
+                "Use AudioStreamCallback.onAudioReady for input streams.",
+        )
     }
 
     actual var effectChain: AudioEffectChain? = null

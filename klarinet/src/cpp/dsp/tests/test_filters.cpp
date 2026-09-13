@@ -125,6 +125,14 @@ int main() {
     printf("\n=== ParametricEQ ===\n");
     test_parametric_eq_boost();
 
+    printf("\n=== BandPassFilter ===\n");
+    printf("  bandwidth octaves to Q... ");
+    {
+        const float q = klarinet::bandwidthOctavesToQ(1.0f);
+        assert(std::fabs(q - 1.4142135f) < 0.02f);
+    }
+    printf("PASS\n");
+
     printf("\nAll filter tests passed!\n");
     return 0;
 }

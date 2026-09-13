@@ -10,10 +10,10 @@ import kotlinx.coroutines.flow.callbackFlow
 /**
  * Audio interruptions as a cold [Flow].
  *
- * Collecting registers [AudioSessionManager.observeInterruptions]. The
- * core API keeps a single listener, so this replaces any previous
- * listener (including another collector). Cancelling the collector
- * installs an empty listener.
+ * Collecting registers [AudioSessionManager.observeInterruptions].
+ * Listeners fan out, so this does not replace a host callback or another
+ * collector. Cancelling the collector calls
+ * [AudioSessionManager.clearInterruptions] for this collector only.
  *
  * JVM, JS, and desktop never emit. Android needs `bind(context)` then
  * [AudioSessionManager.setActive]; Apple uses session interruptions.
@@ -26,23 +26,28 @@ import kotlinx.coroutines.flow.callbackFlow
  * ```
  *
  * @see AudioSessionManager.observeInterruptions
+ * @see AudioSessionManager.clearInterruptions
  */
 fun AudioSessionManager.interruptionFlow(): Flow<AudioInterruptionInfo> = callbackFlow {
-    observeInterruptions { info -> trySend(info) }
-    awaitClose { observeInterruptions { } }
+    val listener: (AudioInterruptionInfo) -> Unit = { info -> trySend(info) }
+    observeInterruptions(listener)
+    awaitClose { clearInterruptions(listener) }
 }
 
 /**
  * Audio route changes as a cold [Flow].
  *
- * Collecting registers [AudioSessionManager.observeRouteChanges]. There
- * is no unregister in the core API; cancelling the collector does not
- * drop a platform observer on Apple. Android, JVM, JS, and desktop
- * never emit from this path.
+ * Collecting registers [AudioSessionManager.observeRouteChanges]. The
+ * core API keeps a single listener, so this replaces any previous
+ * listener (including another collector). Cancelling the collector
+ * calls [AudioSessionManager.clearRouteChanges], which drops the Apple
+ * `NSNotificationCenter` observer. Android, JVM, JS, desktop, and
+ * macOS never emit from this path.
  *
  * @see AudioSessionManager.observeRouteChanges
+ * @see AudioSessionManager.clearRouteChanges
  */
 fun AudioSessionManager.routeChangeFlow(): Flow<AudioRouteChangeInfo> = callbackFlow {
     observeRouteChanges { info -> trySend(info) }
-    awaitClose { }
+    awaitClose { clearRouteChanges() }
 }

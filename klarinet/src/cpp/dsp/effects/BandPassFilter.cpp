@@ -1,6 +1,15 @@
 #include "BandPassFilter.h"
 
+#include <algorithm>
+#include <cmath>
+
 namespace klarinet {
+
+float bandwidthOctavesToQ(float octaves) {
+    const float bw = std::max(0.001f, octaves);
+    const float sinhArg = std::log(2.0f) * 0.5f * bw;
+    return 1.0f / (2.0f * std::max(std::sinh(sinhArg), 0.001f));
+}
 
 BandPassFilter::BandPassFilter() : AudioEffect(EffectType::BandPassFilter) {}
 
@@ -11,8 +20,9 @@ void BandPassFilter::process(float* buffer, int32_t numFrames, int32_t channelCo
     if (dirty_.exchange(false, std::memory_order_relaxed)) {
         float center = centerHz_.load(std::memory_order_relaxed);
         float bw = bandwidth_.load(std::memory_order_relaxed);
+        const float q = bandwidthOctavesToQ(bw);
         for (auto& bq : biquads_) {
-            bq.configure(BiquadType::BandPass, center, bw, 0.0f,
+            bq.configure(BiquadType::BandPass, center, q, 0.0f,
                          static_cast<float>(sampleRate_));
         }
     }

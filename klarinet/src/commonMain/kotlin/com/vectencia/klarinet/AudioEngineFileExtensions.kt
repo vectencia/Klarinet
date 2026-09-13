@@ -3,10 +3,12 @@ package com.vectencia.klarinet
 /**
  * Play an audio file through the engine.
  *
- * Opens an [AudioFileReader], creates an output [AudioStream] whose sample
- * rate and channel count match the file, and decodes audio data in the
- * stream callback. The reader is closed automatically when the stream
- * transitions to [StreamState.STOPPED] or [StreamState.CLOSED].
+ * Opens an [AudioFileReader], creates an output [AudioStream] whose channel
+ * count matches the file, and decodes audio data in the stream callback.
+ * The stream is requested at the file sample rate; if the platform
+ * negotiates a different rate, frames are resampled. The reader is closed
+ * automatically when the stream transitions to [StreamState.STOPPED] or
+ * [StreamState.CLOSED].
  *
  * Playback ends naturally when the reader reaches the end of the file
  * (the callback returns `0` frames). You can also stop playback early
@@ -15,7 +17,7 @@ package com.vectencia.klarinet
  * ## Usage
  *
  * ```kotlin
- * val engine = AudioEngine()
+ * val engine = AudioEngine.create()
  * val stream = engine.playFile("/path/to/music.mp3")
  * stream.start()  // begins playback
  *
@@ -37,7 +39,9 @@ package com.vectencia.klarinet
  * @param config Base stream configuration. The [AudioStreamConfig.sampleRate]
  *   and [AudioStreamConfig.channelCount] properties will be overridden
  *   to match the file. The [AudioStreamConfig.direction] is forced to
- *   [StreamDirection.OUTPUT].
+ *   [StreamDirection.OUTPUT]. If the platform negotiates a different
+ *   stream sample rate (JS AudioContext is often 48 kHz), file frames
+ *   are resampled to that rate.
  * @return An [AudioStream] in the [StreamState.OPEN] state. Call
  *   [AudioStream.start] to begin playback. The underlying
  *   [AudioFileReader] is closed automatically when the stream is
@@ -51,18 +55,26 @@ fun AudioEngine.playFile(
     config: AudioStreamConfig = AudioStreamConfig(),
 ): AudioStream {
     val reader = AudioFileReader(filePath)
+    val fileRate = reader.info.sampleRate
+    val channels = reader.info.channelCount
     val streamConfig = config.copy(
-        sampleRate = reader.info.sampleRate,
-        channelCount = reader.info.channelCount,
+        sampleRate = fileRate,
+        channelCount = channels,
         direction = StreamDirection.OUTPUT,
     )
-    return openStream(streamConfig, callback = object : AudioStreamCallback {
+    val resampler = LinearResampler(fileRate, channels)
+    var destRate = fileRate
+    val stream = openStream(streamConfig, callback = object : AudioStreamCallback {
         override fun onAudioReady(buffer: FloatArray, numFrames: Int): Int {
-            if (reader.isAtEnd) return 0
-            val decoded = reader.readFrames(numFrames)
-            if (decoded.isEmpty()) return 0
-            decoded.copyInto(buffer)
-            return decoded.size / streamConfig.channelCount
+            if (reader.isAtEnd && !resampler.hasBufferedSource()) return 0
+            return resampler.render(
+                destRate = destRate,
+                dest = buffer,
+                destFrames = numFrames,
+                readFrames = { maxFrames ->
+                    if (reader.isAtEnd) FloatArray(0) else reader.readFrames(maxFrames)
+                },
+            )
         }
 
         override fun onStreamStateChanged(stream: AudioStream, state: StreamState) {
@@ -71,6 +83,8 @@ fun AudioEngine.playFile(
             }
         }
     })
+    destRate = stream.config.sampleRate
+    return stream
 }
 
 /**
@@ -85,7 +99,7 @@ fun AudioEngine.playFile(
  * ## Usage
  *
  * ```kotlin
- * val engine = AudioEngine()
+ * val engine = AudioEngine.create()
  *
  * // Record to a WAV file (default format)
  * val stream = engine.recordToFile("/path/to/recording.wav")

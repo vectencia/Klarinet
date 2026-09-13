@@ -11,7 +11,7 @@ typedef struct KlarinetDevice  KlarinetDevice;
 typedef struct KlarinetDecoder KlarinetDecoder;
 typedef struct KlarinetEncoder KlarinetEncoder;
 
-/* Callback: called on the audio thread with interleaved float samples. */
+/* Callback: called on the worker thread with interleaved float samples. */
 typedef void (*KlarinetDataCallback)(
     void* userData,
     float* buffer,       /* output: write here; input: read from here */
@@ -19,6 +19,9 @@ typedef void (*KlarinetDataCallback)(
     int channelCount,
     int isCapture        /* 1 = input device, 0 = output device */
 );
+
+/* FIFO underrun (output) or overrun (input). Called on the worker thread. */
+typedef void (*KlarinetXrunNotify)(void* userData, int count);
 
 /* ---- Context ---- */
 KlarinetContext* klarinet_context_init(void);
@@ -41,6 +44,7 @@ void   klarinet_device_uninit(KlarinetDevice* dev);
 int    klarinet_device_get_state(KlarinetDevice* dev);
 double klarinet_device_get_latency_ms(KlarinetDevice* dev);
 void   klarinet_device_set_chain(KlarinetDevice* dev, void* chain);
+void   klarinet_device_set_xrun_notify(KlarinetDevice* dev, KlarinetXrunNotify cb);
 
 /* ---- Device enumeration ---- */
 int         klarinet_get_playback_device_count(KlarinetContext* ctx);

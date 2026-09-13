@@ -3,6 +3,7 @@
 package com.vectencia.klarinet
 
 import klarinet_dsp.KlarinetUserAudioCallback
+import klarinet_dsp.KlarinetXrunCallback
 import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.FloatVar
@@ -13,6 +14,7 @@ import kotlinx.cinterop.staticCFunction
 
 internal class AppleAudioUser(
     val callback: AudioStreamCallback,
+    val stream: AudioStream,
     val channelCount: Int,
 )
 
@@ -34,4 +36,10 @@ internal val appleUserAudioCallback: KlarinetUserAudioCallback =
             }
         }
         n
+    }
+
+internal val appleXrunCallback: KlarinetXrunCallback =
+    staticCFunction { userData: COpaquePointer?, count: Int ->
+        val user = userData?.asStableRef<AppleAudioUser>()?.get() ?: return@staticCFunction
+        user.callback.onStreamUnderrun(user.stream, count)
     }

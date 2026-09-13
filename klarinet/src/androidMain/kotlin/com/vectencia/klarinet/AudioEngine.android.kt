@@ -18,34 +18,13 @@ actual class AudioEngine private constructor() : AutoCloseable {
     actual fun openStream(config: AudioStreamConfig, callback: AudioStreamCallback?): AudioStream {
         requireActive(engineHandle != 0L, "AudioEngine")
         requireRequestedDevice(config)
+        requirePcmFloat(config.audioFormat)
+        if (config.direction == StreamDirection.INPUT) {
+            throwIfRecordAudioDenied(AndroidHostContext.hasRecordAudioPermission())
+        }
         val stream = AudioStream(config)
 
-        val wrappedCallback = if (callback != null) {
-            object : AudioStreamCallback {
-                override fun onAudioReady(buffer: FloatArray, numFrames: Int): Int {
-                    val result = callback.onAudioReady(buffer, numFrames)
-                    var peak = 0f
-                    for (i in buffer.indices) {
-                        val abs = if (buffer[i] >= 0f) buffer[i] else -buffer[i]
-                        if (abs > peak) peak = abs
-                    }
-                    stream.peakLevelAtomic.set(peak)
-                    return result
-                }
-
-                override fun onStreamStateChanged(stream: AudioStream, state: StreamState) {
-                    callback.onStreamStateChanged(stream, state)
-                }
-
-                override fun onStreamError(stream: AudioStream, error: KlarinetException) {
-                    callback.onStreamError(stream, error)
-                }
-
-                override fun onStreamUnderrun(stream: AudioStream, count: Int) {
-                    callback.onStreamUnderrun(stream, count)
-                }
-            }
-        } else null
+        val wrappedCallback = callback?.let { StreamCallbackBridge(stream, it) }
 
         val streamHandle = JniBridge.nativeOpenStream(
             engineHandle = engineHandle,

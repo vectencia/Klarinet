@@ -6,6 +6,7 @@ import klarinet_dsp.klarinet_chain_process
 import klarinet_dsp.klarinet_offload_create
 import klarinet_dsp.klarinet_offload_destroy
 import klarinet_dsp.klarinet_offload_process
+import klarinet_dsp.klarinet_offload_set_xrun_callback
 import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -227,7 +228,7 @@ actual class AudioStream internal constructor(
     private fun startOffload(isCapture: Boolean) {
         val cb = callback ?: return
         destroyOffload()
-        val user = StableRef.create(AppleAudioUser(cb, config.channelCount))
+        val user = StableRef.create(AppleAudioUser(cb, this, config.channelCount))
         offloadUser = user
         offload = klarinet_offload_create(
             burstFrames(),
@@ -236,6 +237,7 @@ actual class AudioStream internal constructor(
             appleUserAudioCallback,
             user.asCPointer(),
         )
+        offload?.let { handle -> klarinet_offload_set_xrun_callback(handle, appleXrunCallback) }
     }
 
     private fun destroyOffload() {

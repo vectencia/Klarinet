@@ -53,6 +53,18 @@ internal actual fun setPlatformAudioSessionActive(active: Boolean) {
     }
 }
 
+internal actual fun platformHasRecordPermission(): Boolean =
+    AVAudioSession.sharedInstance().recordPermission == AVAudioSessionRecordPermissionGranted
+
+internal actual fun requestPlatformRecordPermission(onResult: (Boolean) -> Unit) {
+    val session = AVAudioSession.sharedInstance()
+    if (session.recordPermission == AVAudioSessionRecordPermissionGranted) {
+        onResult(true)
+        return
+    }
+    session.requestRecordPermission { granted -> onResult(granted) }
+}
+
 internal actual fun configurePlatformAudioSessionForInput() {
     val session = AVAudioSession.sharedInstance()
     val errorPtr = nativeHeap.alloc<ObjCObjectVar<NSError?>>()
@@ -70,9 +82,7 @@ private var routeChangeObserver: NSObjectProtocol? = null
 private var interruptionObserver: NSObjectProtocol? = null
 
 internal actual fun observePlatformInterruptions(listener: (AudioInterruptionInfo) -> Unit) {
-    interruptionObserver?.let {
-        NSNotificationCenter.defaultCenter.removeObserver(it)
-    }
+    clearPlatformInterruptions()
     interruptionObserver = NSNotificationCenter.defaultCenter.addObserverForName(
         name = AVAudioSessionInterruptionNotification,
         `object` = AVAudioSession.sharedInstance(),
@@ -82,10 +92,15 @@ internal actual fun observePlatformInterruptions(listener: (AudioInterruptionInf
     }
 }
 
-internal actual fun observePlatformRouteChanges(listener: (AudioRouteChangeInfo) -> Unit) {
-    routeChangeObserver?.let {
+internal actual fun clearPlatformInterruptions() {
+    interruptionObserver?.let {
         NSNotificationCenter.defaultCenter.removeObserver(it)
     }
+    interruptionObserver = null
+}
+
+internal actual fun observePlatformRouteChanges(listener: (AudioRouteChangeInfo) -> Unit) {
+    clearPlatformRouteChanges()
 
     routeChangeObserver = NSNotificationCenter.defaultCenter.addObserverForName(
         name = AVAudioSessionRouteChangeNotification,
@@ -107,6 +122,13 @@ internal actual fun observePlatformRouteChanges(listener: (AudioRouteChangeInfo)
             )
         )
     }
+}
+
+internal actual fun clearPlatformRouteChanges() {
+    routeChangeObserver?.let {
+        NSNotificationCenter.defaultCenter.removeObserver(it)
+    }
+    routeChangeObserver = null
 }
 
 internal actual fun installPlatformInputTap(

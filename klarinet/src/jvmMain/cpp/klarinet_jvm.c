@@ -14,6 +14,7 @@ typedef struct {
     JavaVM*   jvm;
     jobject   callbackObj;
     jmethodID onAudioReadyMethod;
+    jmethodID notifyXrunMethod;
 } JvmUserAudio;
 
 typedef struct {
@@ -60,6 +61,25 @@ static int jvm_user_audio(void* userData, float* buffer, int numFrames, int chan
     }
     (*env)->DeleteLocalRef(env, jbuffer);
     return frames;
+}
+
+static void jvm_xrun(void* userData, int count) {
+    JvmUserAudio* user = (JvmUserAudio*)userData;
+    if (user == NULL || user->jvm == NULL || user->callbackObj == NULL ||
+        user->notifyXrunMethod == NULL) {
+        return;
+    }
+    JNIEnv* env = NULL;
+    if ((*user->jvm)->GetEnv(user->jvm, (void**)&env, JNI_VERSION_1_6) == JNI_EDETACHED) {
+        if ((*user->jvm)->AttachCurrentThreadAsDaemon(user->jvm, (void**)&env, NULL) != JNI_OK) {
+            return;
+        }
+    }
+    if (env == NULL) return;
+    (*env)->CallVoidMethod(env, user->callbackObj, user->notifyXrunMethod, (jint)count);
+    if ((*env)->ExceptionCheck(env)) {
+        (*env)->ExceptionClear(env);
+    }
 }
 
 static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
@@ -178,6 +198,10 @@ Java_com_vectencia_klarinet_JniBridge_nativeDeviceInit(
 
         jclass cbClass = (*env)->GetObjectClass(env, callbackObj);
         kd->onAudioReadyMethod = (*env)->GetMethodID(env, cbClass, "onAudioReady", "([FI)I");
+        kd->userAudio.notifyXrunMethod = (*env)->GetMethodID(env, cbClass, "notifyXrun", "(I)V");
+        if (kd->userAudio.notifyXrunMethod == NULL) {
+            (*env)->ExceptionClear(env);
+        }
         (*env)->DeleteLocalRef(env, cbClass);
 
         kd->userAudio.jvm = kd->jvm;
@@ -186,6 +210,9 @@ Java_com_vectencia_klarinet_JniBridge_nativeDeviceInit(
         int burst = bufferCapacityInFrames > 0 ? bufferCapacityInFrames : 256;
         kd->offload = klarinet_offload_create(
             burst, channelCount, direction == 0 ? 0 : 1, jvm_user_audio, &kd->userAudio);
+        if (kd->offload != NULL && kd->userAudio.notifyXrunMethod != NULL) {
+            klarinet_offload_set_xrun_callback(kd->offload, jvm_xrun);
+        }
 
         config.dataCallback = data_callback;
         config.pUserData    = kd;
@@ -232,7 +259,8 @@ Java_com_vectencia_klarinet_JniBridge_nativeDeviceWriteFloat(
     (void)timeoutNanos;
     (void)data;
     (void)numFrames;
-    /* miniaudio device API is callback-driven; push-mode not supported */
+    /* miniaudio is callback-driven. Kotlin AudioStream.write/read throw
+     * StreamOperationException; these JNI stubs must not be used. */
     return -1;
 }
 

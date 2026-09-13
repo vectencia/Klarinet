@@ -79,34 +79,34 @@ jlong KlarinetEngine::openStream(
     return handle;
 }
 
-void KlarinetEngine::startStream(jlong streamHandle) {
+oboe::Result KlarinetEngine::startStream(jlong streamHandle) {
     auto* stream = getStream(streamHandle);
-    if (stream) {
-        oboe::Result result = stream->requestStart();
-        if (result != oboe::Result::OK) {
-            LOGE("Failed to start stream: %s", oboe::convertToText(result));
-        }
+    if (!stream) return oboe::Result::ErrorInvalidHandle;
+    oboe::Result result = stream->requestStart();
+    if (result != oboe::Result::OK) {
+        LOGE("Failed to start stream: %s", oboe::convertToText(result));
     }
+    return result;
 }
 
-void KlarinetEngine::pauseStream(jlong streamHandle) {
+oboe::Result KlarinetEngine::pauseStream(jlong streamHandle) {
     auto* stream = getStream(streamHandle);
-    if (stream) {
-        oboe::Result result = stream->requestPause();
-        if (result != oboe::Result::OK) {
-            LOGE("Failed to pause stream: %s", oboe::convertToText(result));
-        }
+    if (!stream) return oboe::Result::ErrorInvalidHandle;
+    oboe::Result result = stream->requestPause();
+    if (result != oboe::Result::OK) {
+        LOGE("Failed to pause stream: %s", oboe::convertToText(result));
     }
+    return result;
 }
 
-void KlarinetEngine::stopStream(jlong streamHandle) {
+oboe::Result KlarinetEngine::stopStream(jlong streamHandle) {
     auto* stream = getStream(streamHandle);
-    if (stream) {
-        oboe::Result result = stream->requestStop();
-        if (result != oboe::Result::OK) {
-            LOGE("Failed to stop stream: %s", oboe::convertToText(result));
-        }
+    if (!stream) return oboe::Result::ErrorInvalidHandle;
+    oboe::Result result = stream->requestStop();
+    if (result != oboe::Result::OK) {
+        LOGE("Failed to stop stream: %s", oboe::convertToText(result));
     }
+    return result;
 }
 
 void KlarinetEngine::closeStream(jlong streamHandle) {
@@ -316,13 +316,11 @@ void KlarinetEngine::clearStreamEffectChain(jlong streamHandle) {
 // --- Enum mapping helpers ---
 
 oboe::AudioFormat KlarinetEngine::toOboeFormat(jint format) {
-    switch (format) {
-        case 0:  return oboe::AudioFormat::Float;    // PCM_FLOAT
-        case 1:  return oboe::AudioFormat::I16;      // PCM_I16
-        case 2:  return oboe::AudioFormat::I24;      // PCM_I24
-        case 3:  return oboe::AudioFormat::I32;      // PCM_I32
-        default: return oboe::AudioFormat::Float;
-    }
+    (void)format;
+    // Callback, FIFO, and DSP always process float32. Kotlin openStream
+    // rejects non-PCM_FLOAT before JNI; keep Float even if JNI is called
+    // with another ordinal.
+    return oboe::AudioFormat::Float;
 }
 
 oboe::PerformanceMode KlarinetEngine::toOboePerformanceMode(jint mode) {

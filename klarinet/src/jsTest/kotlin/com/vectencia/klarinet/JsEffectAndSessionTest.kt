@@ -9,6 +9,21 @@ import kotlin.test.assertTrue
 class JsEffectAndSessionTest {
 
     @Test
+    fun reverbDefaultRoomSizeMatchesKotlinContract() {
+        val effect = AudioEffect(AudioEffectType.REVERB)
+        assertEquals(0.5f, effect.getParameter(ReverbParams.ROOM_SIZE))
+        assertEquals(0.5f, effect.getParameter(ReverbParams.DAMPING))
+        assertEquals(0.3f, effect.getParameter(ReverbParams.WET_DRY_MIX))
+        assertEquals(1f, effect.getParameter(ReverbParams.WIDTH))
+        effect.release()
+    }
+
+    @Test
+    fun bandwidthOctavesToQMatchesRbJ() {
+        assertEquals(1.4142135f, bandwidthOctavesToQ(1f), 0.01f)
+    }
+
+    @Test
     fun gainEffectParameters() {
         val effect = AudioEffect(AudioEffectType.GAIN)
         assertEquals(AudioEffectType.GAIN, effect.type)

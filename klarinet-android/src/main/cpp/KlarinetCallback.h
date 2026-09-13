@@ -54,6 +54,7 @@ private:
     JavaVM* jvm_ = nullptr;
     jobject callbackRef_ = nullptr;
     jmethodID onAudioReadyMethod_ = nullptr;
+    jmethodID notifyXrunMethod_ = nullptr;
 
     oboe::Direction direction_ = oboe::Direction::Output;
     int32_t framesPerBurst_ = 0;
@@ -61,6 +62,8 @@ private:
 
     std::unique_ptr<klarinet::AudioFifo> fifo_;
     std::atomic<klarinet::EffectChain*> effectChain_{nullptr};
+    std::atomic<int> xrunCount_{0};
+    int lastReportedXruns_ = 0;
 
     std::atomic<bool> running_{false};
     std::thread worker_;

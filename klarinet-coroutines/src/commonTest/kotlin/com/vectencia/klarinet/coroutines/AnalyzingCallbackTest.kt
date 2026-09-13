@@ -74,4 +74,38 @@ class AnalyzingCallbackTest {
         assertEquals(256, result)
         scope.cancel()
     }
+
+    @Test
+    fun stereoBufferIsDownmixedNotTreatedAsMonoPrefix() = runTest {
+        val analyzer = AudioAnalyzer(fftSize = 256, sampleRate = 44100)
+        val scope = CoroutineScope(Dispatchers.Default)
+        val callback = AnalyzingCallback(analyzer, scope = scope)
+
+        val frames = 256
+        val stereo = FloatArray(frames * 2)
+        for (i in 0 until frames) {
+            stereo[i * 2] = 0.8f
+            stereo[i * 2 + 1] = 0f
+        }
+        callback.onAudioReady(stereo, frames)
+
+        val result = callback.results.first()
+        assertEquals(0.4f, result.peakLevel, 0.05f)
+        callback.close()
+        scope.cancel()
+    }
+
+    @Test
+    fun closeStopsWorkerAndFurtherCallbacksAreIgnored() = runTest {
+        val analyzer = AudioAnalyzer(fftSize = 256, sampleRate = 44100)
+        val scope = CoroutineScope(Dispatchers.Default)
+        val callback = AnalyzingCallback(analyzer, scope = scope)
+
+        callback.onAudioReady(FloatArray(256) { 0.2f }, 256)
+        callback.results.first()
+        callback.close()
+        callback.close()
+        assertEquals(256, callback.onAudioReady(FloatArray(256) { 1f }, 256))
+        scope.cancel()
+    }
 }

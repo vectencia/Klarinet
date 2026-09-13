@@ -18,7 +18,7 @@ namespace ReverbParams {
     /// Mapped internally: `feedback = roomSize * 0.28 + 0.7`, which gives
     /// a feedback range of approximately [0.7, 0.98].
     /// Range: 0.0 to 1.0.
-    /// Default: 0.7.
+    /// Default: 0.5.
     /// Units: normalized.
     constexpr int32_t kRoomSize = 0;
 
@@ -200,8 +200,8 @@ private:
         556, 441, 341, 225
     };
 
-    /// @brief Room size parameter [0, 1]. Controls feedback: `fb = roomSize * 0.28 + 0.7`. Default: 0.7.
-    std::atomic<float> roomSize_{0.7f};
+    /// @brief Room size parameter [0, 1]. Controls feedback: `fb = roomSize * 0.28 + 0.7`. Default: 0.5.
+    std::atomic<float> roomSize_{0.5f};
 
     /// @brief Damping parameter [0, 1]. Controls high-frequency decay. Default: 0.5.
     std::atomic<float> damping_{0.5f};

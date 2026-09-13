@@ -266,7 +266,11 @@ actual class AudioFileReader actual constructor(filePath: String) {
 
     actual fun readFrames(maxFrames: Int): FloatArray {
         if (_isAtEnd) return FloatArray(0)
-        val audioFile = extAudioFile ?: return FloatArray(0)
+        val audioFile = extAudioFile
+        if (audioFile == null) {
+            _isAtEnd = true
+            return FloatArray(0)
+        }
 
         val totalSamples = maxFrames * channelCount
         val result: FloatArray
@@ -323,6 +327,7 @@ actual class AudioFileReader actual constructor(filePath: String) {
             ExtAudioFileDispose(ref)
         }
         extAudioFile = null
+        _isAtEnd = true
     }
 }
 

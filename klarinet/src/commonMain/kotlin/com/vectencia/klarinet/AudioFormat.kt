@@ -7,11 +7,9 @@ package com.vectencia.klarinet
  * the application and the audio hardware. The chosen format affects both
  * audio quality and CPU usage.
  *
- * For most real-time use cases, [PCM_FLOAT] is recommended because it
- * provides the widest dynamic range and avoids clipping artifacts during
- * intermediate processing. Integer formats ([PCM_I16], [PCM_I24], [PCM_I32])
- * are useful when interoperating with file formats or hardware that
- * expects fixed-point data.
+ * Stream callbacks always use [PCM_FLOAT]. Integer values exist for
+ * configuration and file interop; on Android they are rejected at
+ * [AudioEngine.openStream].
  *
  * @see AudioStreamConfig.audioFormat
  */

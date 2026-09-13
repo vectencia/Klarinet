@@ -9,10 +9,12 @@ package com.vectencia.klarinet
  *
  * ## Supported formats
  *
- * - [AudioFileFormat.WAV] -- Uncompressed PCM. Supported on all platforms.
- * - [AudioFileFormat.MP3] -- MPEG Layer III. Supported on all platforms.
- * - [AudioFileFormat.AAC] / [AudioFileFormat.M4A] -- AAC in an MPEG-4
- *   container. Supported on all platforms via platform-native decoders.
+ * - [AudioFileFormat.WAV] / [AudioFileFormat.MP3] -- Android, iOS/macOS/tvOS,
+ *   JVM, and native desktop. JS after `decodeAudioFile` / `putWavBytes` /
+ *   `putAudioFile`. Not available on watchOS.
+ * - [AudioFileFormat.AAC] / [AudioFileFormat.M4A] -- Android and
+ *   iOS/macOS/tvOS; JS after decode. JVM, native desktop, and watchOS
+ *   throw [UnsupportedFormatException].
  *
  * ## Threading
  *

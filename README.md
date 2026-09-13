@@ -11,12 +11,12 @@
   <a href="https://central.sonatype.com/namespace/com.vectencia.klarinet"><img src="https://img.shields.io/maven-central/v/com.vectencia.klarinet/klarinet" alt="Maven Central"></a>
   <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a>
   <a href="https://kotlinlang.org"><img src="https://img.shields.io/badge/Kotlin-2.4.20-7F52FF.svg?logo=kotlin" alt="Kotlin"></a>
-  <a href="https://vectencia.github.io/Klarinet/"><img src="https://img.shields.io/badge/demo-GitHub%20Pages-2088FF.svg?logo=github" alt="GitHub Pages"></a>
+  <a href="https://github.com/vectencia/Klarinet/actions/workflows/pages.yml"><img src="https://github.com/vectencia/Klarinet/actions/workflows/pages.yml/badge.svg" alt="GitHub Pages"></a>
 </p>
 
 ---
 
-**Klarinet** is an open-source Kotlin Multiplatform audio library that provides a unified, idiomatic API for low-latency audio playback, recording, file I/O, and real-time effects processing across **9 platforms and 15 targets**.
+**Klarinet** is an open-source Kotlin Multiplatform audio library that provides a unified, idiomatic API for low-latency audio playback, recording, file I/O, and real-time effects processing across **9 platforms and 14 KMP targets**.
 
 Write your audio code once in Kotlin. Klarinet delegates to the best native backend on each platform — Google Oboe on Android, AVAudioEngine on Apple, miniaudio on JVM/Linux/Windows, and the Web Audio API in the browser — while preserving low-latency characteristics and real-time safety.
 
@@ -41,7 +41,7 @@ Create hearing aids, sound amplifiers, or audio processing apps for accessibilit
 Build music education apps with real-time feedback. Students play an instrument into the mic, your app analyzes pitch and timing via the callback, and displays results --- while simultaneously applying effects to make practice sound better.
 
 ### Podcast & Audio Editing
-Decode MP3/AAC/WAV files, apply effects (noise gate + compressor + EQ is a classic podcast chain), and encode the result. Use `AudioFileReader.asFlow()` to stream large files without loading them entirely into memory.
+Decode MP3/AAC/WAV files where the platform reader exists, apply effects (noise gate + compressor + EQ is a classic podcast chain), and encode WAV (AAC/M4A on Android and Apple except watchOS). MP3 cannot be encoded. Use `AudioFileReader.asFlow()` to stream large files without loading them entirely into memory.
 
 ## Highlights
 
@@ -49,7 +49,7 @@ Decode MP3/AAC/WAV files, apply effects (noise gate + compressor + EQ is a class
 - **Low-latency by default** --- Google Oboe on Android, AVAudioEngine on Apple, miniaudio on JVM/Linux/Windows, Web Audio in the browser
 - **16 built-in audio effects** --- Gain, EQ, Compressor, Reverb, Delay, Chorus, and more --- C++ DSP on native platforms, Web Audio nodes on JS
 - **Hot-swappable effect chains** --- Add, remove, and reorder effects while audio is streaming
-- **File I/O** --- Decode and encode WAV, MP3, AAC, M4A with metadata reading
+- **File I/O** --- Decode WAV/MP3/AAC/M4A where the platform decoder exists; encode WAV everywhere, plus AAC/M4A on Android and Apple (not watchOS). MP3 cannot be encoded. Metadata reading on supported readers.
 - **Coroutines support** --- Optional `klarinet-coroutines` module with Flow-based metering and async I/O
 - **SwiftUI ready** --- Use directly from native Swift/SwiftUI apps via Kotlin/Native framework export
 
@@ -105,7 +105,7 @@ Browser support uses the Web Audio API. The public Klarinet API is the same; the
 
 | Feature | Status | Notes |
 |---|---|---|
-| Audio playback (`AudioStream` output) | ✅ Supported | `ScriptProcessorNode` pulls `onAudioReady` |
+| Audio playback (`AudioStream` output) | ✅ Supported | `AudioWorklet` renders; Kotlin `onAudioReady` runs on the main thread via the worklet port |
 | Audio recording (`AudioStream` input) | ✅ Supported | `getUserMedia` on `start()`; state goes `STARTING` then `STARTED` |
 | Audio session management | N/A | No-op, same as JVM desktop |
 | WAV file write | ✅ Supported | In-memory store (no disk). Re-read with `AudioFileReader` or export with `audioFileWavBytes` |
@@ -228,17 +228,19 @@ val stream = engine.openStream(
         channelCount = 1,
         direction = StreamDirection.INPUT,
     ),
+    callback = object : AudioStreamCallback {
+        override fun onAudioReady(buffer: FloatArray, numFrames: Int): Int {
+            // Process captured audio in `buffer`...
+            return numFrames
+        }
+    },
 )
 
 stream.start()
-
-val buffer = FloatArray(1024)
-val framesRead = stream.read(buffer, numFrames = 1024)
-// Process recorded audio in `buffer`...
-
+// ... recording ...
 stream.stop()
 stream.close()
-engine.release()
+engine.close()
 ```
 
 ### Audio Effects
@@ -286,6 +288,8 @@ chain.remove(compressor)
 | **Modulation** | Chorus, Flanger, Phaser, Tremolo |
 
 ### File I/O
+
+Decode support is not universal: watchOS has no `AudioFileReader`; JVM and native desktop cannot read AAC/M4A; JS must `decodeAudioFile` / `putWavBytes` / `putAudioFile` first. Encode is WAV on every platform (JS in-memory), AAC/M4A on Android and iOS/macOS/tvOS, and never MP3.
 
 #### Reading metadata
 
@@ -362,10 +366,10 @@ stream.awaitState(StreamState.STARTED)
 timer.remainingMsFlow().collect { msLeft -> /* UI */ }
 timer.awaitState(SleepTimerState.COMPLETED)
 
-// Interruptions (replaces observeInterruptions while collected)
+// Interruptions (fans out; does not replace observeInterruptions)
 session.interruptionFlow().collect { info -> /* UI / logging */ }
 
-// Async file I/O (runs on Dispatchers.IO)
+// Async file I/O (Dispatchers.IO, or Default on JS)
 val samples = reader.readAllSuspend()
 writer.writeFramesSuspend(samples, samples.size)
 
@@ -427,13 +431,13 @@ The project includes demo applications for every supported platform:
 
 The same six screens as the Compose demo, plus local-file decode, URL decode, mic recording, and WAV download. Uses the Klarinet JS target.
 
-Live: [vectencia.github.io/Klarinet](https://vectencia.github.io/Klarinet/) (web demo) and [API docs](https://vectencia.github.io/Klarinet/api/).
+When **Settings → Pages → Source** is **GitHub Actions**, the production demo is at [vectencia.github.io/Klarinet](https://vectencia.github.io/Klarinet/) and API docs at [`/api/`](https://vectencia.github.io/Klarinet/api/). The workflow skips deploy until that is set. Locally:
 
 ```bash
 ./gradlew :demo-web:jsBrowserDevelopmentRun
 ```
 
-Then open the URL Gradle prints (usually `http://localhost:8080`). GitHub Pages deploys the production webpack build from `main` via `.github/workflows/pages.yml` after an org admin sets **Settings → Pages → Source** to **GitHub Actions**.
+Then open the URL Gradle prints (usually `http://localhost:8080`).
 
 ### Compose Multiplatform Demo (Android + iOS + Desktop)
 
@@ -464,8 +468,8 @@ Minimal command-line demos that play a 440 Hz sine wave for 3 seconds, proving l
 | `AudioStreamCallback` | Real-time callback for audio processing (`onAudioReady`). |
 | `AudioEffect` | A single audio effect with typed parameters. |
 | `AudioEffectChain` | Ordered chain of effects attached to a stream. |
-| `AudioFileReader` | Decodes audio files (WAV, MP3, AAC, M4A) to PCM. |
-| `AudioFileWriter` | Encodes PCM to audio files (WAV, AAC, M4A). |
+| `AudioFileReader` | Decodes WAV/MP3/AAC/M4A to PCM where the platform decoder exists (not watchOS; JVM/native have no AAC/M4A; JS after decode). |
+| `AudioFileWriter` | Encodes PCM to WAV on every platform; AAC/M4A on Android and iOS/macOS/tvOS. MP3 encode is not supported. |
 | `AudioDeviceInfo` | Information about an audio input/output device. |
 | `AudioSessionManager` | Session category, Android audio focus, interruption hooks. |
 | `AudioScene` / `AudioSceneJson` | Portable layer mix (ids, levels, effect params) as JSON. |
@@ -495,6 +499,7 @@ KlarinetException
   +-- PermissionException
   +-- UnsupportedFormatException
   +-- AudioFileException
+  +-- ResourceReleasedException
 ```
 
 ## Building from Source
@@ -535,7 +540,7 @@ open iosApp/iosApp.xcodeproj
 ./gradlew :klarinet:allTests
 
 # JS browser tests (Chrome Headless)
-./gradlew :klarinet:jsBrowserTest
+./gradlew :klarinet:jsBrowserTest :klarinet-coroutines:jsBrowserTest
 
 # C++ DSP tests
 ./gradlew :klarinet:dspTests
@@ -557,9 +562,11 @@ open iosApp/iosApp.xcodeproj
 | `make demo` | Build the demo app (Android) |
 | `make sample` | Run the one-file JVM sine-wave sample |
 | `make docs` | Generate Dokka HTML API docs |
-| `make test` | Run Kotlin tests |
+| `make test` | Run Kotlin tests (`:klarinet:allTests`) |
+| `make test-coroutines` | Run `klarinet-coroutines` tests |
+| `make test-js` | Run JS browser tests (Chrome Headless) |
 | `make test-dsp` | Run C++ DSP tests |
-| `make test-all` | Run Kotlin, C++ DSP, and iOS simulator tests |
+| `make test-all` | Run Klarinet + coroutines Kotlin tests, C++ DSP, iOS simulator, and consumer DSP link tests |
 | `make clean` | Clean build artifacts |
 | `make publish` | Publish to Maven Central |
 
@@ -668,7 +675,7 @@ Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
 // Cleanup
 stream.stop()
 stream.close()
-engine.release()
+engine.close()
 ```
 
 ## Contributing

@@ -3,17 +3,17 @@ package com.vectencia.klarinet
 /**
  * Supported audio file formats for reading and writing.
  *
- * Each entry represents a container/codec combination that Klarinet can
- * handle on at least one platform. Not every format is available on
- * every platform; attempting to use an unsupported format will throw
- * [UnsupportedFormatException].
+ * Each entry is available on at least one platform. Unsupported
+ * combinations throw [UnsupportedFormatException].
  *
- * | Format | Compression | Read | Write |
- * |--------|-------------|------|-------|
- * | [WAV]  | None (PCM)  | All  | All   |
- * | [MP3]  | Lossy       | All  | Platform-dependent |
- * | [AAC]  | Lossy       | All  | Platform-dependent |
- * | [M4A]  | Lossy       | All  | Platform-dependent |
+ * **Read:** [WAV] and [MP3] on Android, iOS/macOS/tvOS, JVM, and native
+ * desktop. [AAC] and [M4A] on Android and iOS/macOS/tvOS. JS reads from
+ * an in-memory store after `decodeAudioFile` / `putWavBytes` /
+ * `putAudioFile` (or a previous [AudioFileWriter]). watchOS has no
+ * [AudioFileReader].
+ *
+ * **Write:** [WAV] on every platform (JS is in-memory). [AAC] and [M4A]
+ * on Android and iOS/macOS/tvOS. [MP3] encode throws on every platform.
  *
  * @see AudioFileReader
  * @see AudioFileWriter
@@ -26,16 +26,18 @@ enum class AudioFileFormat {
      * significantly larger than compressed formats -- approximately
      * 10 MB per minute for 16-bit stereo at 44100 Hz.
      *
-     * Supported for both reading and writing on all platforms.
+     * Read and write on Android, iOS/macOS/tvOS, JVM, native desktop,
+     * and JS (write is in-memory). watchOS can write WAV but cannot read
+     * files.
      */
     WAV,
 
     /**
      * MPEG Audio Layer III (lossy compressed).
      *
-     * A widely compatible lossy format. Read support is available on all
-     * platforms. Write support depends on the availability of a platform
-     * MP3 encoder.
+     * A widely compatible lossy format. Readable on Android, iOS/macOS/tvOS,
+     * JVM, native desktop, and JS after decode. Not readable on watchOS.
+     * Encoding always throws [UnsupportedFormatException].
      */
     MP3,
 
@@ -46,18 +48,20 @@ enum class AudioFileFormat {
      * platform-native AAC encoders/decoders (e.g., MediaCodec on Android,
      * AudioToolbox on Apple platforms).
      *
-     * When writing, this produces a raw AAC stream. For an AAC stream
-     * inside an MPEG-4 container, use [M4A] instead.
+     * Read and write on Android and iOS/macOS/tvOS. JS can read after
+     * decode. JVM, native desktop, and watchOS throw
+     * [UnsupportedFormatException]. When writing, this produces a raw AAC
+     * stream; for an MPEG-4 container use [M4A].
      */
     AAC,
 
     /**
      * MPEG-4 audio container, typically containing AAC-encoded data.
      *
-     * This format wraps AAC audio in an MPEG-4 (ISO 14496-14) container,
-     * which allows embedding metadata tags and provides better seeking
-     * support than raw [AAC]. This is the format used by Apple Music and
-     * iTunes downloads.
+     * AAC in an MPEG-4 (ISO 14496-14) container, with tags and seeking.
+     * Read and write on Android and iOS/macOS/tvOS. JS can read after
+     * decode. JVM, native desktop, and watchOS throw
+     * [UnsupportedFormatException].
      */
     M4A,
 }

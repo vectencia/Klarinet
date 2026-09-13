@@ -10,14 +10,13 @@ package com.vectencia.klarinet
  *
  * ## Supported output formats
  *
- * - [AudioFileFormat.WAV] -- Uncompressed PCM. Supported on all platforms.
- *   Produces the largest files but avoids encoding latency.
- * - [AudioFileFormat.MP3] -- MPEG Layer III (lossy). Platform-dependent
- *   encoder availability.
- * - [AudioFileFormat.AAC] -- Advanced Audio Coding (lossy). Available via
- *   platform-native encoders.
- * - [AudioFileFormat.M4A] -- AAC in an MPEG-4 container. Available via
- *   platform-native encoders.
+ * - [AudioFileFormat.WAV] -- Uncompressed PCM on every platform (JS is
+ *   in-memory). Produces the largest files but avoids encoding latency.
+ * - [AudioFileFormat.AAC] / [AudioFileFormat.M4A] -- Android and
+ *   iOS/macOS/tvOS only. JVM, native desktop, JS, and watchOS throw
+ *   [UnsupportedFormatException].
+ * - [AudioFileFormat.MP3] -- Encoding throws [UnsupportedFormatException]
+ *   on every platform.
  *
  * ## Threading
  *

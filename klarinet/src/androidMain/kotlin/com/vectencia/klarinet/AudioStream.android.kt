@@ -23,6 +23,9 @@ actual class AudioStream internal constructor(actual val config: AudioStreamConf
 
     actual fun start() {
         requireActive(streamHandle != 0L, "AudioStream")
+        if (config.direction == StreamDirection.INPUT) {
+            throwIfRecordAudioDenied(AndroidHostContext.hasRecordAudioPermission())
+        }
         JniBridge.nativeStartStream(streamHandle)
     }
 

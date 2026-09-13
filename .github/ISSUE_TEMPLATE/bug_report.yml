@@ -1,0 +1,41 @@
+name: Bug report
+description: Something is broken in Klarinet
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Expected vs actual behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: Minimal Kotlin snippet or steps.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Klarinet version
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      multiple: true
+      options:
+        - Android
+        - iOS
+        - macOS
+        - JVM
+        - JS
+        - Linux
+        - Windows
+        - tvOS
+        - watchOS
+    validations:
+      required: true

@@ -56,10 +56,23 @@ expect class AudioSessionManager {
     /**
      * Register a listener for audio route change events.
      *
+     * Replaces any previous listener. On Apple (iOS/tvOS/watchOS) this
+     * installs an `AVAudioSession` route-change observer. Call
+     * [clearRouteChanges] to remove it. Android, JVM, JS, desktop, and
+     * macOS do not emit from this API.
+     *
      * @param listener Callback invoked when the audio route changes
      *   (e.g., headphones plugged in/out).
      */
     fun observeRouteChanges(listener: (AudioRouteChangeInfo) -> Unit)
+
+    /**
+     * Stop listening for route changes.
+     *
+     * On Apple this removes the `NSNotificationCenter` observer installed
+     * by [observeRouteChanges]. No-op on Android, JVM, JS, desktop, and macOS.
+     */
+    fun clearRouteChanges()
 
     /**
      * Register a listener for audio interruptions (phone calls, focus loss).
@@ -70,11 +83,43 @@ expect class AudioSessionManager {
      *
      * Attached streams are paused on [AudioInterruptionType.BEGAN] and
      * restarted on [AudioInterruptionType.ENDED] when [AudioInterruptionInfo.shouldResume]
-     * is true. The listener still runs after that.
+     * is true. Listeners still run after that.
+     *
+     * Multiple listeners are fanned out; this does not replace a previous
+     * registration. Call [clearInterruptions] with the same listener
+     * instance to unregister.
      *
      * @param listener Callback invoked when an interruption begins or ends.
      */
     fun observeInterruptions(listener: (AudioInterruptionInfo) -> Unit)
+
+    /**
+     * Stop delivering interruptions to [listener].
+     *
+     * Other listeners and [attach]ed streams are unchanged. No-op if
+     * [listener] was not registered. Compare listeners by identity.
+     */
+    fun clearInterruptions(listener: (AudioInterruptionInfo) -> Unit)
+
+    /**
+     * Whether microphone permission is currently granted.
+     *
+     * iOS/watchOS: `AVAudioSession.recordPermission`. Android: after
+     * `bind(context)`; if unbound, returns `true` so the [AudioEngine.openStream]
+     * bind-time check still applies. JVM, JS, desktop, macOS, and tvOS
+     * return `true` (JS prompts on [AudioStream.start]).
+     */
+    fun hasRecordPermission(): Boolean
+
+    /**
+     * Ask the system for microphone permission.
+     *
+     * iOS/watchOS show the system dialog if status is undetermined.
+     * Android cannot present a dialog without an `Activity`; [onResult]
+     * reports the current grant after `bind(context)`. Other platforms
+     * invoke [onResult] with `true`.
+     */
+    fun requestRecordPermission(onResult: (granted: Boolean) -> Unit)
 
     /**
      * Pause and resume this stream automatically on interruptions.

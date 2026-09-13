@@ -12,7 +12,7 @@ package com.vectencia.klarinet
  *
  * **Example usage:**
  * ```kotlin
- * val engine = AudioEngine()
+ * val engine = AudioEngine.create()
  * val chain = engine.createEffectChain()
  *
  * // Create and configure effects

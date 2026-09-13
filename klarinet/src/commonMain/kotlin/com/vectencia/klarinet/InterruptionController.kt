@@ -5,12 +5,18 @@ package com.vectencia.klarinet
  * [attach]ed streams. Platform session managers [dispatch] into this.
  */
 internal class InterruptionController {
-    private var listener: ((AudioInterruptionInfo) -> Unit)? = null
+    private val listeners = mutableListOf<(AudioInterruptionInfo) -> Unit>()
     private val attached = mutableListOf<AudioStream>()
     private val pausedByUs = mutableListOf<AudioStream>()
 
     fun observe(listener: (AudioInterruptionInfo) -> Unit) {
-        this.listener = listener
+        if (listeners.none { it === listener }) {
+            listeners += listener
+        }
+    }
+
+    fun remove(listener: (AudioInterruptionInfo) -> Unit) {
+        listeners.removeAll { it === listener }
     }
 
     fun attach(stream: AudioStream) {
@@ -24,12 +30,16 @@ internal class InterruptionController {
         pausedByUs.removeAll { it === stream }
     }
 
+    fun isIdle(): Boolean = listeners.isEmpty() && attached.isEmpty()
+
     fun dispatch(info: AudioInterruptionInfo) {
         when (info.type) {
             AudioInterruptionType.BEGAN -> pauseAttached()
             AudioInterruptionType.ENDED -> if (info.shouldResume) resumeAttached()
         }
-        listener?.invoke(info)
+        for (listener in listeners.toList()) {
+            listener(info)
+        }
     }
 
     private fun pauseAttached() {

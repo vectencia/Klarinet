@@ -21,12 +21,25 @@ struct Offload {
     int channelCount = 0;
     int isCapture = 0;
     KlarinetUserAudioCallback callback = nullptr;
+    std::atomic<KlarinetXrunCallback> xrunCallback{nullptr};
     void* userData = nullptr;
+    std::atomic<int> xrunCount{0};
+    int lastReportedXruns = 0;
     std::atomic<bool> running{false};
     std::thread worker;
     std::mutex mu;
     std::condition_variable cv;
 };
+
+void maybeReportXruns(Offload* o) {
+    const KlarinetXrunCallback cb = o->xrunCallback.load(std::memory_order_acquire);
+    if (cb == nullptr) return;
+    const int count = o->xrunCount.load(std::memory_order_acquire);
+    if (count != o->lastReportedXruns) {
+        o->lastReportedXruns = count;
+        cb(o->userData, count);
+    }
+}
 
 int burstSamples(const Offload* o) {
     return o->framesPerBurst * o->channelCount;
@@ -52,6 +65,7 @@ void workerLoop(Offload* o) {
     std::vector<float> scratch(static_cast<size_t>(needed), 0.0f);
 
     while (o->running.load(std::memory_order_acquire)) {
+        maybeReportXruns(o);
         if (!hasWork(o)) {
             waitForWork(o);
             continue;
@@ -129,12 +143,22 @@ void klarinet_offload_process(KlarinetOffloadHandle handle, float* audio, int nu
 
     const int total = numFrames * o->channelCount;
     if (o->isCapture != 0) {
-        o->fifo.write(audio, total);
+        const int written = o->fifo.write(audio, total);
+        if (written < total) {
+            o->xrunCount.fetch_add(1, std::memory_order_release);
+        }
     } else {
         const int got = o->fifo.read(audio, total);
         if (got < total) {
             std::memset(audio + got, 0, static_cast<size_t>(total - got) * sizeof(float));
+            o->xrunCount.fetch_add(1, std::memory_order_release);
         }
     }
     o->cv.notify_one();
+}
+
+void klarinet_offload_set_xrun_callback(KlarinetOffloadHandle handle, KlarinetXrunCallback cb) {
+    auto* o = static_cast<Offload*>(handle);
+    if (o == nullptr) return;
+    o->xrunCallback.store(cb, std::memory_order_release);
 }

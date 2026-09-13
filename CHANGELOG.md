@@ -7,13 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `AudioSessionManager.hasRecordPermission()` and `requestRecordPermission()`; Apple input `openStream` throws `PermissionException` when microphone permission is not granted
+- `AudioSessionManager.clearRouteChanges()` and `clearInterruptions(listener)`
+- `klarinet-coroutines` watchOS, Linux, and Windows native targets (same extra targets as `:klarinet`)
+- `SECURITY.md`, `CODE_OF_CONDUCT.md`, and GitHub issue/PR templates
+
 ### Changed
 
+- JS `AudioStream` renders with `AudioWorklet`; Kotlin `onAudioReady` runs on the main thread via the worklet port (not `ScriptProcessorNode`)
+- `interruptionFlow()` fans out and no longer replaces `observeInterruptions`
+- C++ reverb `ROOM_SIZE` default is `0.5`, matching Kotlin/JS
+- Native band-pass `BANDWIDTH` is octaves converted to biquad Q (same RBJ formula as JS)
+- Android `openStream` rejects non-float `AudioFormat` (`UnsupportedFormatException`); callbacks stay float
+- Push-mode `AudioStream.write` / `read` throw `StreamOperationException` on platforms that do not support them (instead of `-1` or a silent no-op)
+- `AnalyzingCallback` downmixes interleaved stereo and reuses a scratch buffer on the callback thread
+- Published POMs emit a single Apache 2.0 `<license>` (`POM_LICENCE_*` only)
+- File-format KDoc/README no longer claim universal MP3/AAC read or MP3 encode
+- `AudioStreamCallback` threading KDoc: worker+FIFO on Android/Apple/JVM/native; JS main thread via the worklet port
+- README: 14 KMP targets; GitHub Pages demo is documented as deploying only after Pages source is GitHub Actions
 - Demos (Compose, web, iOS SwiftUI): six top-tab destinations; SleepTimer on Tone Gen; `FADE_MS` on Effects; Scenes via `AudioScenePlayer`; `AudioSessionManager.bind` / `attach` on Android and iOS hosts
 - Compose and web demos collect 0.4.1 `interruptionFlow()`, `SleepTimer.stateFlow()`, `remainingMsFlow()`, and `awaitState()`
 
 ### Fixed
 
+- CI runs `:klarinet-coroutines:allTests` and JS browser tests; iOS simulator and Android instrumented jobs fail the workflow instead of `continue-on-error`
+- Android `start` / `pause` / `stop` throw `StreamOperationException` on Oboe errors; missing `RECORD_AUDIO` after `bind` throws `PermissionException`
+- JS `playFile` resamples when the stream sample rate differs from the file
+- `onStreamUnderrun` fires for FIFO output underrun and input overrun
+- `AudioFileReader.asFlow` no longer busy-loops after `close()`
+- `routeChangeFlow()` cancel removes the Apple `NSNotificationCenter` observer
+- Apple interruption `NSNotification` observer is removed when no listeners or attached streams remain
 - Apple DSP CMake/cinterop embedding runs only on macOS, so Linux Dokka and GitHub Pages do not require an iOS SDK
 
 ## [0.4.2] - 2026-09-12

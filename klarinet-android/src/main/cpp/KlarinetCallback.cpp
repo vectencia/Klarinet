@@ -21,6 +21,11 @@ KlarinetCallback::KlarinetCallback(JNIEnv* env, jobject callback) {
         if (onAudioReadyMethod_ == nullptr) {
             LOGE("Could not find onAudioReady method on callback");
         }
+        notifyXrunMethod_ = env->GetMethodID(cls, "notifyXrun", "(I)V");
+        if (notifyXrunMethod_ == nullptr) {
+            env->ExceptionClear();
+            LOGE("Could not find notifyXrun method on callback");
+        }
         env->DeleteLocalRef(cls);
     }
 }
@@ -56,6 +61,8 @@ void KlarinetCallback::prepare(
     direction_ = direction;
     const int32_t samplesPerBurst = framesPerBurst_ * channelCount_;
     fifo_ = std::make_unique<klarinet::AudioFifo>(samplesPerBurst * 8);
+    xrunCount_.store(0, std::memory_order_relaxed);
+    lastReportedXruns_ = 0;
     if (callbackRef_ != nullptr && onAudioReadyMethod_ != nullptr && jvm_ != nullptr) {
         running_.store(true, std::memory_order_release);
         worker_ = std::thread(&KlarinetCallback::workerLoop, this);
@@ -113,6 +120,16 @@ void KlarinetCallback::workerLoop() {
     std::vector<float> scratch(static_cast<size_t>(totalSamples), 0.0f);
 
     while (running_.load(std::memory_order_acquire)) {
+        const int xruns = xrunCount_.load(std::memory_order_acquire);
+        if (xruns != lastReportedXruns_ && notifyXrunMethod_ != nullptr) {
+            lastReportedXruns_ = xruns;
+            env->CallVoidMethod(callbackRef_, notifyXrunMethod_, xruns);
+            if (env->ExceptionCheck()) {
+                env->ExceptionDescribe();
+                env->ExceptionClear();
+                LOGE("Exception in notifyXrun callback");
+            }
+        }
         if (!hasWork()) {
             waitForWork();
             continue;
@@ -174,12 +191,16 @@ oboe::DataCallbackResult KlarinetCallback::onAudioReady(
             chain->process(floatData, numFrames, channelCount);
         }
         if (fifo_ != nullptr && callbackRef_ != nullptr) {
-            fifo_->write(floatData, totalSamples);
+            const int32_t written = fifo_->write(floatData, totalSamples);
+            if (written < totalSamples) {
+                xrunCount_.fetch_add(1, std::memory_order_release);
+            }
         }
     } else if (fifo_ != nullptr && callbackRef_ != nullptr) {
         const int32_t got = fifo_->read(floatData, totalSamples);
         if (got < totalSamples) {
             std::memset(floatData + got, 0, static_cast<size_t>(totalSamples - got) * sizeof(float));
+            xrunCount_.fetch_add(1, std::memory_order_release);
         }
         if (chain != nullptr) {
             chain->process(floatData, numFrames, channelCount);

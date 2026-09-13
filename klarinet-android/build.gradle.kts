@@ -43,12 +43,6 @@ mavenPublishing {
         name.set("Klarinet Android JNI")
         description.set("Oboe/C++ JNI backend for Klarinet on Android")
         url.set("https://github.com/vectencia/Klarinet")
-        licenses {
-            license {
-                name.set("Apache License, Version 2.0")
-                url.set("https://www.apache.org/licenses/LICENSE-2.0")
-            }
-        }
         scm {
             url.set("https://github.com/vectencia/Klarinet")
             connection.set("scm:git:https://github.com/vectencia/Klarinet.git")

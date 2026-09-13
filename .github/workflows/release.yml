@@ -21,7 +21,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Build and test
-        run: ./gradlew build :klarinet:allTests -x jsBrowserTest
+        run: ./gradlew build :klarinet:allTests :klarinet-coroutines:allTests -x jsBrowserTest
 
       - name: Publish to Maven Central
         run: ./gradlew publishAndReleaseToMavenCentral --no-configuration-cache

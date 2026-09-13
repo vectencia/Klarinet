@@ -17,6 +17,9 @@ actual class AudioEngine private constructor() : AutoCloseable {
     actual fun openStream(config: AudioStreamConfig, callback: AudioStreamCallback?): AudioStream {
         val engine = avEngine ?: throw ResourceReleasedException("AudioEngine has been released")
         requireRequestedDevice(config)
+        if (config.direction == StreamDirection.INPUT && !platformHasRecordPermission()) {
+            throw PermissionException("Microphone permission is not granted")
+        }
         applyPlatformAudioDevice(engine, config)
         val stream = AudioStream(config, engine, callback)
         streams.add(stream)

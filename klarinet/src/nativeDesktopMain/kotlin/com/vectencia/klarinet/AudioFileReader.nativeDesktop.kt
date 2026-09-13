@@ -58,7 +58,11 @@ actual class AudioFileReader actual constructor(filePath: String) {
 
     actual fun readFrames(maxFrames: Int): FloatArray {
         if (_isAtEnd) return FloatArray(0)
-        val dec = decoderPtr ?: return FloatArray(0)
+        val dec = decoderPtr
+        if (dec == null) {
+            _isAtEnd = true
+            return FloatArray(0)
+        }
         val totalSamples = maxFrames * channelCount
         val buffer = FloatArray(totalSamples)
         val framesRead = memScoped {
@@ -81,5 +85,6 @@ actual class AudioFileReader actual constructor(filePath: String) {
     actual fun close() {
         decoderPtr?.let { klarinet_decoder_uninit(it) }
         decoderPtr = null
+        _isAtEnd = true
     }
 }

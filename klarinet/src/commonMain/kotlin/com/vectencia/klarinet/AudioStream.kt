@@ -64,18 +64,20 @@ expect class AudioStream : AutoCloseable {
      * Transitions the stream from [StreamState.OPEN] or [StreamState.PAUSED]
      * to [StreamState.STARTED]. Once started, the
      * [AudioStreamCallback.onAudioReady] callback will begin firing
-     * (if a callback was provided at creation time). On Android that
-     * callback runs on a worker thread; on other platforms it runs on
-     * the audio thread. On JS, [start] returns immediately in
-     * [StreamState.STARTING]; [StreamState.STARTED] is delivered through
-     * [AudioStreamCallback.onStreamStateChanged] after `AudioContext.resume()`
-     * and, for input streams, `getUserMedia`.
+     * (if a callback was provided at creation time). On Android, Apple, JVM,
+     * and native desktop that callback runs on a worker thread. On JS it
+     * runs on the main thread via an `AudioWorklet` port. On JS, [start]
+     * returns immediately in [StreamState.STARTING]; [StreamState.STARTED]
+     * is delivered through [AudioStreamCallback.onStreamStateChanged] after
+     * the worklet module loads and, for input streams, `getUserMedia`.
      *
      * This method is safe to call from any thread.
      *
      * @throws StreamOperationException if the stream cannot be started,
      *   for example if it is already in the [StreamState.STOPPED] or
-     *   [StreamState.CLOSED] state.
+     *   [StreamState.CLOSED] state, or if the native backend reports an error.
+     * @throws PermissionException if this is an input stream and recording
+     *   permission is not granted (Android after [AudioSessionManager.bind]).
      */
     fun start()
 
@@ -133,10 +135,14 @@ expect class AudioStream : AutoCloseable {
      *   sample per channel.
      * @param timeoutNanos Maximum time to wait in nanoseconds for buffer
      *   space to become available. Use `0` for non-blocking behavior;
-     *   `Long.MAX_VALUE` to block indefinitely.
-     * @return The number of frames actually written, or a negative error code.
-     * @throws StreamOperationException if this stream's direction is
-     *   [StreamDirection.INPUT].
+     *   `Long.MAX_VALUE` to block indefinitely. Ignored on JS (cannot
+     *   block the main thread).
+     * @return The number of frames actually written. On Android a negative
+     *   value is an Oboe error code.
+     * @throws StreamOperationException if push-mode I/O is not supported
+     *   (Apple, JVM, Linux/Windows native) or if this stream's direction
+     *   is [StreamDirection.INPUT].
+     * @throws ResourceReleasedException if the stream is closed.
      */
     fun write(data: FloatArray, numFrames: Int, timeoutNanos: Long = 0): Int
 
@@ -154,10 +160,14 @@ expect class AudioStream : AutoCloseable {
      *   sample per channel.
      * @param timeoutNanos Maximum time to wait in nanoseconds for data to
      *   become available. Use `0` for non-blocking behavior;
-     *   `Long.MAX_VALUE` to block indefinitely.
-     * @return The number of frames actually read, or a negative error code.
-     * @throws StreamOperationException if this stream's direction is
-     *   [StreamDirection.OUTPUT].
+     *   `Long.MAX_VALUE` to block indefinitely. Ignored on JS (cannot
+     *   block the main thread).
+     * @return The number of frames actually read. On Android a negative
+     *   value is an Oboe error code.
+     * @throws StreamOperationException if push-mode I/O is not supported
+     *   (Apple, JVM, Linux/Windows native) or if this stream's direction
+     *   is [StreamDirection.OUTPUT].
+     * @throws ResourceReleasedException if the stream is closed.
      */
     fun read(data: FloatArray, numFrames: Int, timeoutNanos: Long = 0): Int
 

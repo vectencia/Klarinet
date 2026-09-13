@@ -16,10 +16,13 @@ actual class AudioSessionManager {
     }
 
     /**
-     * Provide an Android [Context] so [setActive] can request audio focus.
-     * Uses [Context.getApplicationContext]. No-op until this is called.
+     * Provide an Android [Context] so [setActive] can request audio focus
+     * and so input [AudioEngine.openStream] can throw [PermissionException]
+     * when [android.Manifest.permission.RECORD_AUDIO] is missing.
+     * Uses [Context.getApplicationContext].
      */
     fun bind(context: Context) {
+        AndroidHostContext.bind(context)
         audioManager = context.applicationContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     }
 
@@ -36,8 +39,21 @@ actual class AudioSessionManager {
 
     actual fun observeRouteChanges(listener: (AudioRouteChangeInfo) -> Unit) { /* no-op: use AudioDeviceCallback in the host */ }
 
+    actual fun clearRouteChanges() {}
+
     actual fun observeInterruptions(listener: (AudioInterruptionInfo) -> Unit) {
         interruptions.observe(listener)
+    }
+
+    actual fun clearInterruptions(listener: (AudioInterruptionInfo) -> Unit) {
+        interruptions.remove(listener)
+    }
+
+    actual fun hasRecordPermission(): Boolean =
+        AndroidHostContext.hasRecordAudioPermission() != false
+
+    actual fun requestRecordPermission(onResult: (granted: Boolean) -> Unit) {
+        onResult(hasRecordPermission())
     }
 
     actual fun attach(stream: AudioStream) = interruptions.attach(stream)

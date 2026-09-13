@@ -38,8 +38,9 @@ package com.vectencia.klarinet
  *   Values above 2 are supported only if the hardware allows it.
  *   Must be a positive integer. Default: 1.
  * @property audioFormat Sample format used for the audio data buffer.
- *   Determines bit depth and data type of samples passed to
- *   [AudioStreamCallback.onAudioReady]. Default: [AudioFormat.PCM_FLOAT].
+ *   [AudioStreamCallback.onAudioReady] always receives [AudioFormat.PCM_FLOAT]
+ *   samples. On Android, any other value throws [UnsupportedFormatException].
+ *   Default: [AudioFormat.PCM_FLOAT].
  * @property bufferCapacityInFrames Total buffer capacity in frames.
  *   A value of 0 lets the platform choose an optimal size.
  *   Larger values increase latency but reduce the risk of underruns.

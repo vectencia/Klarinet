@@ -27,7 +27,7 @@ public:
      * @param env JNI environment
      * @param sampleRate Desired sample rate (0 = device default)
      * @param channelCount Number of channels
-     * @param audioFormat Klarinet AudioFormat ordinal (0=Float, 1=I16, 2=I24, 3=I32)
+     * @param audioFormat Klarinet AudioFormat ordinal; streams always use Float
      * @param bufferCapacityInFrames Buffer capacity (0 = device default)
      * @param performanceMode Klarinet PerformanceMode ordinal (0=None, 1=LowLatency, 2=PowerSaving)
      * @param sharingMode Klarinet SharingMode ordinal (0=Shared, 1=Exclusive)
@@ -48,9 +48,9 @@ public:
         jint deviceId,
         jobject callback);
 
-    void startStream(jlong streamHandle);
-    void pauseStream(jlong streamHandle);
-    void stopStream(jlong streamHandle);
+    oboe::Result startStream(jlong streamHandle);
+    oboe::Result pauseStream(jlong streamHandle);
+    oboe::Result stopStream(jlong streamHandle);
     void closeStream(jlong streamHandle);
 
     int writeStream(jlong streamHandle, const float* data, int32_t numFrames, int64_t timeoutNanos);

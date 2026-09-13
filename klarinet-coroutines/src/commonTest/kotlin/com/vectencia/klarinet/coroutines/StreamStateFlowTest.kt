@@ -5,6 +5,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class StreamStateFlowTest {
+    /** Ordinals only. Live [stateFlow]/[awaitState] coverage is [StreamStateFlowJvmTest]. */
     @Test
     fun streamStateEnumHasExpectedValues() {
         assertEquals(StreamState.OPEN, StreamState.entries[1])

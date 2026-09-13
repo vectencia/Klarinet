@@ -58,7 +58,11 @@ actual class AudioFileReader actual constructor(filePath: String) {
     }
 
     actual fun readFrames(maxFrames: Int): FloatArray {
-        if (_isAtEnd || decoderPtr == 0L) return FloatArray(0)
+        if (decoderPtr == 0L) {
+            _isAtEnd = true
+            return FloatArray(0)
+        }
+        if (_isAtEnd) return FloatArray(0)
         val buffer = FloatArray(maxFrames * channelCount)
         val framesRead = JniBridge.nativeDecoderReadFrames(decoderPtr, buffer, maxFrames)
         if (framesRead <= 0) { _isAtEnd = true; return FloatArray(0) }
@@ -74,5 +78,6 @@ actual class AudioFileReader actual constructor(filePath: String) {
 
     actual fun close() {
         if (decoderPtr != 0L) { JniBridge.nativeDecoderUninit(decoderPtr); decoderPtr = 0L }
+        _isAtEnd = true
     }
 }

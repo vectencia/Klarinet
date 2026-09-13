@@ -22,15 +22,25 @@ internal actual fun configurePlatformAudioSessionForInput() {
     // No-op on macOS: no AVAudioSession needed for input access.
 }
 
+internal actual fun platformHasRecordPermission(): Boolean = true
+
+internal actual fun requestPlatformRecordPermission(onResult: (Boolean) -> Unit) {
+    onResult(true)
+}
+
 internal actual fun observePlatformRouteChanges(listener: (AudioRouteChangeInfo) -> Unit) {
     // No-op on macOS: AVAudioSession route change notifications are not available.
     // macOS apps can use Core Audio's AudioObjectAddPropertyListener for similar
     // functionality, but that is beyond the scope of the AudioSessionManager API.
 }
 
+internal actual fun clearPlatformRouteChanges() {}
+
 internal actual fun observePlatformInterruptions(listener: (AudioInterruptionInfo) -> Unit) {
     // No-op on macOS: AVAudioSession interruptions are not available.
 }
+
+internal actual fun clearPlatformInterruptions() {}
 
 internal actual fun installPlatformInputTap(
     engine: platform.AVFAudio.AVAudioEngine,

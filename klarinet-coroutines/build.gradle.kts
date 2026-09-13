@@ -23,10 +23,16 @@ kotlin {
     js {
         browser {
             testTask {
-                enabled = false
+                useKarma {
+                    useChromeHeadless()
+                }
             }
         }
     }
+
+    linuxX64()
+    linuxArm64()
+    mingwX64()
 
     val appleTargets = listOf(
         iosArm64(),
@@ -35,6 +41,8 @@ kotlin {
         macosArm64(),
         tvosArm64(),
         tvosSimulatorArm64(),
+        watchosArm64(),
+        watchosSimulatorArm64(),
     )
 
     appleTargets.forEach { target ->

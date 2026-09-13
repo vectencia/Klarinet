@@ -8,14 +8,17 @@ Thank you for your interest in contributing to Klarinet! This document provides 
 
 - **JDK 17** (Temurin recommended)
 - **Android SDK** with API level 24+ and NDK installed
-- **Xcode 15+** (for iOS/macOS targets, macOS only)
+- **Xcode 15+** (for iOS/macOS/watchOS/tvOS targets, macOS only)
+- **[Zig](https://ziglang.org/)** on `PATH` (only for rebuilding Linux/Windows JVM natives)
 - **Kotlin Multiplatform** plugin in your IDE (IntelliJ IDEA or Android Studio recommended)
+
+`gradle.properties` sets `useDebugDependencies=true` so the Compose `:demo` module (and `:demo-android`) compile against this tree. Set `useDebugDependencies=false` to point `:demo` at Maven Central. `:demo-web`, `:demo-native`, and `:sample` always use `project(":klarinet")`.
 
 ### Clone and Build
 
 ```bash
 git clone https://github.com/vectencia/Klarinet.git
-cd klarinet
+cd Klarinet
 ```
 
 ## Build Commands
@@ -36,6 +39,8 @@ Build individual modules:
 ./gradlew :klarinet:compileKotlinMacosArm64
 ./gradlew :klarinet:buildJvmNatives
 ./gradlew :demo-android:assembleDebug
+./gradlew :demo-web:jsBrowserDevelopmentRun
+./gradlew :sample:run
 ```
 
 `buildJvmNatives` rebuilds the packaged JVM miniaudio libraries. Host macOS binaries use CMake + Clang. Linux and Windows binaries require [Zig](https://ziglang.org/) on `PATH`.
@@ -46,6 +51,8 @@ Run all common tests:
 
 ```bash
 ./gradlew :klarinet:allTests
+./gradlew :klarinet-coroutines:allTests
+./gradlew :klarinet:dspTests
 ```
 
 Run Android instrumented tests (requires emulator or device):
@@ -63,7 +70,7 @@ Run iOS simulator tests (macOS only):
 Run all tests:
 
 ```bash
-./gradlew :klarinet:allTests :klarinet:iosSimulatorArm64Test
+./gradlew :klarinet:allTests :klarinet-coroutines:allTests :klarinet:dspTests :klarinet:iosSimulatorArm64Test
 ```
 
 ## Makefile Shortcuts
@@ -75,10 +82,13 @@ The project includes a `Makefile` for common commands:
 | `make build` | Build all modules |
 | `make klarinet` | Build the library only |
 | `make demo` | Build the demo app (Android) |
-| `make test` | Run common tests |
+| `make test` | Run `:klarinet:allTests` |
+| `make test-coroutines` | Run `:klarinet-coroutines:allTests` |
+| `make test-dsp` | Run C++ DSP tests |
+| `make test-js` | Run JS browser tests (Chrome Headless) |
 | `make test-android` | Run Android instrumented tests |
 | `make test-ios` | Run iOS simulator tests |
-| `make test-all` | Run all tests across platforms |
+| `make test-all` | Run Klarinet + coroutines + DSP + iOS simulator tests |
 | `make clean` | Clean build artifacts |
 | `make publish` | Publish to Maven Central |
 
@@ -91,6 +101,8 @@ The project includes a `Makefile` for common commands:
 | `klarinet-coroutines` | Optional Flow and suspending extensions |
 | `demo` | Shared Compose Multiplatform demo UI |
 | `demo-android` | Android application entry point |
+| `demo-web` | Browser demo |
+| `sample` | One-file JVM sine-wave sample |
 
 ## Pull Request Guidelines
 
@@ -101,7 +113,7 @@ The project includes a `Makefile` for common commands:
 5. **Update documentation** if your change affects the public API.
 6. **Run tests locally** before submitting:
    ```bash
-   ./gradlew :klarinet:allTests
+   ./gradlew :klarinet:allTests :klarinet-coroutines:allTests :klarinet:dspTests
    ```
 7. **Write a clear PR description** explaining what changed and why.
 
@@ -118,6 +130,8 @@ Use clear, descriptive commit messages. Prefer the imperative mood:
 - Use GitHub Issues to report bugs or request features.
 - Include steps to reproduce, expected behavior, and actual behavior.
 - Specify the platform (Android API level, iOS version, macOS version) and device.
+- Security reports: see [SECURITY.md](SECURITY.md).
+- Conduct: see [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ## License
 

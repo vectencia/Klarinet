@@ -21,6 +21,7 @@ struct KlarinetDevice {
     int                    channelCount;
     int                    isCapture;
     _Atomic(KlarinetEffectChainHandle) chain;
+    _Atomic(KlarinetXrunNotify) xrunNotify;
     KlarinetOffloadHandle  offload;
 };
 
@@ -41,6 +42,15 @@ static int native_user_audio(void* userData, float* buffer, int numFrames, int c
     if (kd == NULL || kd->callback == NULL) return 0;
     kd->callback(kd->userData, buffer, numFrames, channelCount, kd->isCapture);
     return numFrames;
+}
+
+static void native_xrun(void* userData, int count) {
+    KlarinetDevice* kd = (KlarinetDevice*)userData;
+    if (kd == NULL) return;
+    KlarinetXrunNotify cb = atomic_load(&kd->xrunNotify);
+    if (cb != NULL) {
+        cb(kd->userData, count);
+    }
 }
 
 static void ma_data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
@@ -116,6 +126,7 @@ KlarinetDevice* klarinet_device_init(
     kd->channelCount  = channelCount;
     kd->isCapture     = direction == 0 ? 0 : 1;
     atomic_init(&kd->chain, NULL);
+    atomic_init(&kd->xrunNotify, NULL);
 
     ma_device_config config;
     if (direction == 0) {
@@ -197,6 +208,14 @@ void klarinet_device_uninit(KlarinetDevice* dev) {
 void klarinet_device_set_chain(KlarinetDevice* dev, void* chain) {
     if (dev == NULL) return;
     atomic_store(&dev->chain, (KlarinetEffectChainHandle)chain);
+}
+
+void klarinet_device_set_xrun_notify(KlarinetDevice* dev, KlarinetXrunNotify cb) {
+    if (dev == NULL) return;
+    atomic_store(&dev->xrunNotify, cb);
+    if (dev->offload != NULL) {
+        klarinet_offload_set_xrun_callback(dev->offload, native_xrun);
+    }
 }
 
 int klarinet_device_get_state(KlarinetDevice* dev) {

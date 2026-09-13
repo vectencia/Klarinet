@@ -216,6 +216,11 @@ kotlin {
         getByName("linuxMain").dependsOn(nativeDesktopMain)
         getByName("mingwMain").dependsOn(nativeDesktopMain)
 
+        getByName("androidHostTest").dependencies {
+            implementation(libs.kotlin.test)
+            implementation(libs.kotlin.testJunit)
+        }
+
         getByName("androidDeviceTest").dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.kotlin.testJunit)
@@ -503,12 +508,6 @@ mavenPublishing {
         name.set("Klarinet")
         description.set("Low-latency audio I/O SDK for Kotlin Multiplatform")
         url.set("https://github.com/vectencia/Klarinet")
-        licenses {
-            license {
-                name.set("Apache License, Version 2.0")
-                url.set("https://www.apache.org/licenses/LICENSE-2.0")
-            }
-        }
         scm {
             url.set("https://github.com/vectencia/Klarinet")
             connection.set("scm:git:https://github.com/vectencia/Klarinet.git")

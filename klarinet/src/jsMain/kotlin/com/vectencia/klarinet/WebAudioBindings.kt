@@ -29,11 +29,6 @@ internal external class AudioContext {
     fun createConvolver(): ConvolverNode
     fun createConstantSource(): ConstantSourceNode
     fun createAnalyser(): AnalyserNode
-    fun createScriptProcessor(
-        bufferSize: Int,
-        numberOfInputChannels: Int,
-        numberOfOutputChannels: Int,
-    ): ScriptProcessorNode
     fun createMediaStreamSource(stream: MediaStream): MediaStreamAudioSourceNode
     fun createBuffer(numberOfChannels: Int, length: Int, sampleRate: Float): AudioBuffer
     fun decodeAudioData(audioData: ArrayBuffer): Promise<AudioBuffer>
@@ -109,8 +104,17 @@ internal external interface AnalyserNode : AudioNode {
     fun getFloatTimeDomainData(array: Float32Array)
 }
 
-internal external interface ScriptProcessorNode : AudioNode {
-    var onaudioprocess: ((AudioProcessingEvent) -> Unit)?
+internal abstract external class AudioWorkletNode : AudioNode {
+    val port: MessagePort
+}
+
+internal external interface MessagePort {
+    var onmessage: ((MessageEvent) -> Unit)?
+    fun postMessage(message: dynamic)
+}
+
+internal external interface MessageEvent {
+    val data: dynamic
 }
 
 internal external interface MediaStreamAudioSourceNode : AudioNode
@@ -123,9 +127,42 @@ internal external interface AudioBuffer {
     fun getChannelData(channel: Int): Float32Array
 }
 
-internal external interface AudioProcessingEvent {
-    val inputBuffer: AudioBuffer
-    val outputBuffer: AudioBuffer
+internal fun createWorkletModuleUrl(source: String): String =
+    js("URL.createObjectURL(new Blob([source], { type: 'application/javascript' }))")
+
+internal fun addAudioWorkletModule(ctx: AudioContext, url: String): Promise<JsAny?> =
+    js("ctx.audioWorklet.addModule(url)")
+
+internal fun createAudioWorkletNode(ctx: AudioContext, channelCount: Int): AudioWorkletNode =
+    js(
+        """
+        new AudioWorkletNode(ctx, 'klarinet-processor', {
+            numberOfInputs: 1,
+            numberOfOutputs: 1,
+            outputChannelCount: [channelCount],
+            channelCount: channelCount,
+            channelCountMode: 'explicit'
+        })
+        """,
+    )
+
+internal fun postWorkletOutput(port: MessagePort, samples: Float32Array) {
+    js("port.postMessage({ type: 'out', samples: samples })")
+}
+
+internal fun floatArrayToFloat32(src: FloatArray, samples: Int): Float32Array {
+    val out: Float32Array = js("new Float32Array(samples)")
+    for (i in 0 until samples) {
+        float32Set(out, i, src[i])
+    }
+    return out
+}
+
+internal fun copyFloat32ToFloatArray(src: Float32Array, dest: FloatArray, samples: Int) {
+    val n = minOf(samples, dest.size, src.length)
+    for (i in 0 until n) {
+        dest[i] = float32Get(src, i)
+    }
 }
 
 internal external class Float32Array {
@@ -179,6 +216,9 @@ internal fun float32Set(array: Float32Array, index: Int, value: Float) {
 internal fun jsLength(value: dynamic): Int = js("value.length")
 
 internal fun jsIndex(value: dynamic, index: Int): dynamic = js("value[index]")
+
+internal fun waitMs(ms: Int): Promise<JsAny?> =
+    js("new Promise(function(resolve){ setTimeout(resolve, ms); })")
 
 internal fun trySetSinkId(ctx: AudioContext, sinkId: String) {
     js("if (ctx.setSinkId) { ctx.setSinkId(sinkId); }")

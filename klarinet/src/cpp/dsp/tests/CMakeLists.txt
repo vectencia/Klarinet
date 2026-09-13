@@ -12,6 +12,7 @@ set(TEST_SOURCES
     test_reverb.cpp
     test_modulation.cpp
     test_effect_chain.cpp
+    test_audio_offload.cpp
 )
 
 foreach(TEST_SRC ${TEST_SOURCES})

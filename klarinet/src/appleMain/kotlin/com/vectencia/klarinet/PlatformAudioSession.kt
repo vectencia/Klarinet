@@ -17,7 +17,11 @@ internal expect fun setPlatformAudioSessionActive(active: Boolean)
 
 internal expect fun observePlatformRouteChanges(listener: (AudioRouteChangeInfo) -> Unit)
 
+internal expect fun clearPlatformRouteChanges()
+
 internal expect fun observePlatformInterruptions(listener: (AudioInterruptionInfo) -> Unit)
+
+internal expect fun clearPlatformInterruptions()
 
 /**
  * Configure the audio session for recording input.
@@ -25,6 +29,10 @@ internal expect fun observePlatformInterruptions(listener: (AudioInterruptionInf
  * On macOS, no-op.
  */
 internal expect fun configurePlatformAudioSessionForInput()
+
+internal expect fun platformHasRecordPermission(): Boolean
+
+internal expect fun requestPlatformRecordPermission(onResult: (Boolean) -> Unit)
 
 /**
  * Install an audio tap on the input node's bus 0.

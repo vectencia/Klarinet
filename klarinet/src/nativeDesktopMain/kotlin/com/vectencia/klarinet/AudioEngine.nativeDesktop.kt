@@ -64,6 +64,9 @@ actual class AudioEngine private constructor() : AutoCloseable {
 
         stream.devicePtr = devicePtr
         stream.callbackRef = stableRef
+        if (stableRef != null) {
+            klarinet_device_set_xrun_notify(devicePtr, nativeXrunNotify)
+        }
         streams.add(stream)
         return stream
     }
@@ -117,3 +120,9 @@ internal data class AudioCallbackData(
     val callback: AudioStreamCallback,
     val stream: AudioStream,
 )
+
+internal val nativeXrunNotify: KlarinetXrunNotify =
+    staticCFunction { userData: COpaquePointer?, count: Int ->
+        val data = userData?.asStableRef<AudioCallbackData>()?.get() ?: return@staticCFunction
+        data.callback.onStreamUnderrun(data.stream, count)
+    }

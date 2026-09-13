@@ -12,9 +12,14 @@ package com.vectencia.klarinet
  * Use the corresponding parameter constants object (e.g., [CompressorParams], [ReverbParams])
  * to discover valid parameter IDs for a given effect type.
  *
+ * On JS, effects are Web Audio nodes rather than the C++ DSP core. The
+ * noise gate is a compressor approximation ([NoiseGateParams.HOLD_MS] is
+ * unused). Reverb is a convolver impulse ([ReverbParams.WIDTH] is unused).
+ * [BPFParams.BANDWIDTH] is converted from octaves to biquad Q.
+ *
  * **Example usage:**
  * ```kotlin
- * val engine = AudioEngine()
+ * val engine = AudioEngine.create()
  * val compressor = engine.createEffect(AudioEffectType.COMPRESSOR)
  *
  * // Configure the compressor

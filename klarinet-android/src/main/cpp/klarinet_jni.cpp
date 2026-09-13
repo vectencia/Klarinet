@@ -1,5 +1,6 @@
 #include <jni.h>
 #include <android/log.h>
+#include <cstdio>
 #include <mutex>
 #include <unordered_map>
 #include "KlarinetEngine.h"
@@ -32,6 +33,45 @@ static KlarinetEngine* findEngine(jlong streamHandle) {
         return it->second;
     }
     return nullptr;
+}
+
+static void throwStreamOperation(JNIEnv* env, const char* message) {
+    // StreamOperationException(message, cause) — no (String)-only ctor on JVM
+    // without @JvmOverloads, so ThrowNew would fail with NoSuchMethodError.
+    jclass cls = env->FindClass("com/vectencia/klarinet/StreamOperationException");
+    if (cls == nullptr) return;
+    jmethodID ctor = env->GetMethodID(
+        cls,
+        "<init>",
+        "(Ljava/lang/String;Ljava/lang/Throwable;)V");
+    if (ctor == nullptr) {
+        env->DeleteLocalRef(cls);
+        return;
+    }
+    jstring msg = env->NewStringUTF(message);
+    if (msg == nullptr) {
+        env->DeleteLocalRef(cls);
+        return;
+    }
+    jobject ex = env->NewObject(cls, ctor, msg, nullptr);
+    if (ex != nullptr) {
+        env->Throw(static_cast<jthrowable>(ex));
+        env->DeleteLocalRef(ex);
+    }
+    env->DeleteLocalRef(msg);
+    env->DeleteLocalRef(cls);
+}
+
+static void throwIfNotOk(JNIEnv* env, const char* op, oboe::Result result) {
+    if (result == oboe::Result::OK) return;
+    char buf[256];
+    std::snprintf(
+        buf,
+        sizeof(buf),
+        "Failed to %s stream: %s",
+        op,
+        oboe::convertToText(result));
+    throwStreamOperation(env, buf);
 }
 
 extern "C" {
@@ -95,27 +135,33 @@ Java_com_vectencia_klarinet_JniBridge_nativeOpenStream(
 }
 
 JNIEXPORT void JNICALL
-Java_com_vectencia_klarinet_JniBridge_nativeStartStream(JNIEnv* /* env */, jobject /* thiz */, jlong streamHandle) {
+Java_com_vectencia_klarinet_JniBridge_nativeStartStream(JNIEnv* env, jobject /* thiz */, jlong streamHandle) {
     auto* engine = findEngine(streamHandle);
-    if (engine) {
-        engine->startStream(streamHandle);
+    if (!engine) {
+        throwIfNotOk(env, "start", oboe::Result::ErrorInvalidHandle);
+        return;
     }
+    throwIfNotOk(env, "start", engine->startStream(streamHandle));
 }
 
 JNIEXPORT void JNICALL
-Java_com_vectencia_klarinet_JniBridge_nativePauseStream(JNIEnv* /* env */, jobject /* thiz */, jlong streamHandle) {
+Java_com_vectencia_klarinet_JniBridge_nativePauseStream(JNIEnv* env, jobject /* thiz */, jlong streamHandle) {
     auto* engine = findEngine(streamHandle);
-    if (engine) {
-        engine->pauseStream(streamHandle);
+    if (!engine) {
+        throwIfNotOk(env, "pause", oboe::Result::ErrorInvalidHandle);
+        return;
     }
+    throwIfNotOk(env, "pause", engine->pauseStream(streamHandle));
 }
 
 JNIEXPORT void JNICALL
-Java_com_vectencia_klarinet_JniBridge_nativeStopStream(JNIEnv* /* env */, jobject /* thiz */, jlong streamHandle) {
+Java_com_vectencia_klarinet_JniBridge_nativeStopStream(JNIEnv* env, jobject /* thiz */, jlong streamHandle) {
     auto* engine = findEngine(streamHandle);
-    if (engine) {
-        engine->stopStream(streamHandle);
+    if (!engine) {
+        throwIfNotOk(env, "stop", oboe::Result::ErrorInvalidHandle);
+        return;
     }
+    throwIfNotOk(env, "stop", engine->stopStream(streamHandle));
 }
 
 JNIEXPORT void JNICALL

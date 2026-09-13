@@ -270,6 +270,7 @@ actual class AudioFileReader actual constructor(filePath: String) {
     }
 
     actual fun close() {
+        _isAtEnd = true
         try {
             if (codecStarted) {
                 codec.stop()

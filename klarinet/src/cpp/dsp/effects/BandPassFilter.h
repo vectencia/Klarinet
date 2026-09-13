@@ -20,21 +20,24 @@ namespace BPFParams {
     /// Units: Hertz (Hz).
     constexpr int32_t kCenterHz  = 0;
 
-    /// @brief Bandwidth (Q factor). ID = 1.
+    /// @brief Bandwidth in octaves. ID = 1.
     ///
-    /// Controls the width of the passband. Higher values produce a
-    /// narrower band (more selective), lower values produce a wider band.
-    /// Range: 0.1 to 18.0.
+    /// Converted to biquad Q as `1 / (2 * sinh(ln(2)/2 * octaves))`.
+    /// Higher values produce a wider passband.
+    /// Range: 0.1 to 4.0.
     /// Default: 1.0.
-    /// Units: dimensionless (Q factor).
+    /// Units: octaves.
     constexpr int32_t kBandwidth = 1;
 }
+
+/// RBJ cookbook: Q from bandwidth in octaves.
+float bandwidthOctavesToQ(float octaves);
 
 /**
  * @brief Single second-order (biquad) band-pass filter.
  *
  * Passes frequencies near the center frequency and attenuates frequencies
- * above and below it. The bandwidth (Q factor) controls how wide or narrow
+ * above and below it. The bandwidth in octaves controls how wide or narrow
  * the passband is. Useful for isolating specific frequency ranges, tone
  * shaping, or implementing wah-wah effects.
  *
@@ -107,7 +110,7 @@ public:
     void prepare(int32_t sampleRate, int32_t channelCount) override;
 
     /**
-     * @brief Resets the filter to default parameters (1000 Hz center, Q = 1.0).
+     * @brief Resets the filter to default parameters (1000 Hz center, 1.0 octave).
      *
      * Clears all biquad filter state and marks the filter as dirty.
      */
@@ -117,7 +120,7 @@ private:
     /// @brief Center frequency in Hz. Default: 1000.0 Hz.
     std::atomic<float> centerHz_{1000.0f};
 
-    /// @brief Bandwidth (Q factor). Default: 1.0.
+    /// @brief Bandwidth in octaves. Default: 1.0.
     std::atomic<float> bandwidth_{1.0f};
 
     /// @brief Dirty flag; true when biquad coefficients need recomputation.

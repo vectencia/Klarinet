@@ -15,7 +15,7 @@ actual class AudioStream internal constructor(
     private var _chain: AudioEffectChain? = null
     private var startGeneration = 0
 
-    private var processor: ScriptProcessorNode? = null
+    private var workletNode: AudioWorkletNode? = null
     private var mediaStream: MediaStream? = null
     private var mediaSource: MediaStreamAudioSourceNode? = null
     private var muteGain: GainNode? = null
@@ -46,11 +46,12 @@ actual class AudioStream internal constructor(
         val generation = ++startGeneration
         setState(StreamState.STARTING)
         try {
-            engine.context.resume().then(
+            ensureKlarinetWorklet(engine.context).then(
                 {
                     if (generation == startGeneration && _state == StreamState.STARTING) {
-                        continueStart(generation)
+                        continueStartConnected(generation)
                     }
+                    engine.context.resume()
                     null
                 },
                 { error ->
@@ -102,7 +103,7 @@ actual class AudioStream internal constructor(
         }
         setState(StreamState.CLOSING)
         detachChain()
-        processor = null
+        workletNode = null
         muteGain = null
         setState(StreamState.CLOSED)
     }
@@ -143,6 +144,7 @@ actual class AudioStream internal constructor(
     internal fun rebuildGraph() {
         disconnectGraph()
         val processorNode = ensureProcessor()
+        processorNode.port.onmessage = { event -> onWorkletMessage(event) }
         val ctx = engine.context
         when (config.direction) {
             StreamDirection.OUTPUT -> {
@@ -164,7 +166,7 @@ actual class AudioStream internal constructor(
                 mute.connect(ctx.destination)
             }
         }
-        processorNode.onaudioprocess = { event -> onAudioProcess(event) }
+        prefetchWorklet()
     }
 
     internal fun clearEffectChainIf(chain: AudioEffectChain) {
@@ -174,7 +176,7 @@ actual class AudioStream internal constructor(
         if (_state == StreamState.STARTED) rebuildGraph()
     }
 
-    private fun continueStart(generation: Int) {
+    private fun continueStartConnected(generation: Int) {
         if (config.deviceId != null && config.deviceId != 0 && config.deviceId != 1) {
             WebDeviceRegistry.webId(config.deviceId)?.let { sinkId ->
                 if (config.direction == StreamDirection.OUTPUT) {
@@ -234,16 +236,15 @@ actual class AudioStream internal constructor(
         return constraints
     }
 
-    private fun ensureProcessor(): ScriptProcessorNode {
-        processor?.let { return it }
-        val created = engine.context.createScriptProcessor(
-            config.bufferCapacityInFrames,
-            config.channelCount,
-            config.channelCount,
-        )
-        processor = created
+    private fun ensureProcessor(): AudioWorkletNode {
+        workletNode?.let { return it }
+        val created = createAudioWorkletNode(engine.context, config.channelCount)
+        created.port.onmessage = { event -> onWorkletMessage(event) }
+        workletNode = created
         return created
     }
+
+    internal fun usesAudioWorklet(): Boolean = workletNode != null
 
     private fun connectEffects(source: AudioNode): AudioNode {
         var node = source
@@ -256,49 +257,75 @@ actual class AudioStream internal constructor(
         return node
     }
 
-    private fun onAudioProcess(event: AudioProcessingEvent) {
-        if (_state != StreamState.STARTED) {
-            silence(event)
+    private fun onWorkletMessage(event: MessageEvent) {
+        val data = event.data ?: return
+        val type: String = js("String(data.type)")
+        if (type != "io") return
+        val frames: Int = js("data.frames|0")
+        val channels: Int = js("data.channels|0")
+        val input: Float32Array? = js("data.input")
+        handleWorkletIo(frames, channels, input)
+    }
+
+    private fun prefetchWorklet() {
+        if (config.direction != StreamDirection.OUTPUT) return
+        repeat(workletPrefetchQuanta(config.bufferCapacityInFrames)) {
+            handleWorkletIo(128, config.channelCount, input = null)
+        }
+    }
+
+    private fun handleWorkletIo(frames: Int, channels: Int, input: Float32Array?) {
+        if (frames <= 0) return
+        val ch = config.channelCount
+        val samples = frames * ch
+        val buffer = if (samples <= processBuffer.size) processBuffer else FloatArray(samples)
+        if (_state != StreamState.STARTED && _state != StreamState.STARTING) {
+            postOutput(FloatArray(samples), samples)
             return
         }
-        val frames = event.outputBuffer.length
-        val channels = config.channelCount
-        val samples = frames * channels
-        val buffer = if (samples <= processBuffer.size) processBuffer else FloatArray(samples)
         try {
             when (config.direction) {
                 StreamDirection.INPUT -> {
-                    copyInput(event, buffer, frames, channels)
+                    if (input != null) {
+                        copyFloat32ToFloatArray(input, buffer, samples)
+                    } else {
+                        for (i in 0 until samples) buffer[i] = 0f
+                    }
                     if (callback != null) {
                         callback.onAudioReady(buffer, frames)
                     } else {
                         inputRing.write(buffer, 0, samples)
                     }
                     updatePeak(buffer, samples)
-                    silence(event)
+                    postOutput(FloatArray(samples), samples)
                 }
                 StreamDirection.OUTPUT -> {
                     for (i in 0 until samples) buffer[i] = 0f
                     val produced = if (callback != null) {
                         callback.onAudioReady(buffer, frames)
                     } else {
-                        outputRing.read(buffer, 0, samples) / channels
+                        outputRing.read(buffer, 0, samples) / ch
                     }
                     if (produced < frames) {
-                        val start = (produced * channels).coerceAtLeast(0)
+                        val start = (produced * ch).coerceAtLeast(0)
                         for (i in start until samples) buffer[i] = 0f
                     }
                     updatePeak(buffer, samples)
-                    copyOutput(event, buffer, frames, channels)
+                    postOutput(buffer, samples)
                 }
             }
         } catch (error: Throwable) {
-            silence(event)
+            postOutput(FloatArray(samples), samples)
             callback?.onStreamError(
                 this,
                 StreamOperationException(error.message ?: "Audio callback failed", error),
             )
         }
+    }
+
+    private fun postOutput(buffer: FloatArray, samples: Int) {
+        val port = workletNode?.port ?: return
+        postWorkletOutput(port, floatArrayToFloat32(buffer, samples))
     }
 
     private fun updatePeak(buffer: FloatArray, samples: Int) {
@@ -310,41 +337,10 @@ actual class AudioStream internal constructor(
         peakLevelAtomic.set(peak)
     }
 
-    private fun copyInput(event: AudioProcessingEvent, dest: FloatArray, frames: Int, channels: Int) {
-        val input = event.inputBuffer
-        val srcCount = input.numberOfChannels.coerceAtLeast(1)
-        for (frame in 0 until frames) {
-            for (ch in 0 until channels) {
-                val srcCh = if (ch < srcCount) ch else 0
-                dest[frame * channels + ch] = float32Get(input.getChannelData(srcCh), frame)
-            }
-        }
-    }
-
-    private fun copyOutput(event: AudioProcessingEvent, src: FloatArray, frames: Int, channels: Int) {
-        val output = event.outputBuffer
-        val dstCount = output.numberOfChannels
-        for (ch in 0 until dstCount) {
-            val data = output.getChannelData(ch)
-            val srcCh = if (ch < channels) ch else 0
-            for (frame in 0 until frames) {
-                float32Set(data, frame, src[frame * channels + srcCh])
-            }
-        }
-    }
-
-    private fun silence(event: AudioProcessingEvent) {
-        val output = event.outputBuffer
-        for (ch in 0 until output.numberOfChannels) {
-            val data = output.getChannelData(ch)
-            for (i in 0 until output.length) float32Set(data, i, 0f)
-        }
-    }
-
     private fun disconnectGraph() {
-        processor?.onaudioprocess = null
+        workletNode?.port?.onmessage = null
         try {
-            processor?.disconnect()
+            workletNode?.disconnect()
         } catch (_: Throwable) {
         }
         try {
@@ -392,11 +388,11 @@ private fun negotiateConfig(context: AudioContext, requested: AudioStreamConfig)
     return requested.copy(
         sampleRate = context.sampleRate.toInt(),
         channelCount = channels,
-        bufferCapacityInFrames = scriptProcessorBufferSize(requested),
+        bufferCapacityInFrames = workletBufferSize(requested),
     )
 }
 
-private fun scriptProcessorBufferSize(config: AudioStreamConfig): Int {
+private fun workletBufferSize(config: AudioStreamConfig): Int {
     val requested = if (config.bufferCapacityInFrames > 0) {
         config.bufferCapacityInFrames
     } else {
@@ -406,8 +402,7 @@ private fun scriptProcessorBufferSize(config: AudioStreamConfig): Int {
             PerformanceMode.NONE -> 1024
         }
     }
-    val allowed = intArrayOf(256, 512, 1024, 2048, 4096, 8192, 16384)
-    return allowed.minBy { size -> abs(size - requested) }
+    return requested.coerceIn(128, 16384)
 }
 
 private fun maxProcessSamples(config: AudioStreamConfig): Int =

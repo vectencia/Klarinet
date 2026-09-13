@@ -8,6 +8,30 @@ import kotlin.test.assertTrue
 class AudioEffectProcessTest {
 
     @Test
+    fun bpfBandwidthGetParameterIsOctaves() {
+        AudioEngine.create().use { engine ->
+            val effect = engine.createEffect(AudioEffectType.BAND_PASS_FILTER)
+            assertEquals(1.0f, effect.getParameter(BPFParams.BANDWIDTH), 0.001f)
+            effect.setParameter(BPFParams.BANDWIDTH, 2.0f)
+            assertEquals(2.0f, effect.getParameter(BPFParams.BANDWIDTH), 0.001f)
+            effect.close()
+        }
+    }
+
+    @Test
+    fun reverbDefaultRoomSizeMatchesKotlinContract() {
+        AudioEngine.create().use { engine ->
+            val effect = engine.createEffect(AudioEffectType.REVERB)
+            assertEquals(0.5f, effect.getParameter(ReverbParams.ROOM_SIZE), 0.001f)
+            assertEquals(0.5f, effect.getParameter(ReverbParams.DAMPING), 0.001f)
+            assertEquals(0.3f, effect.getParameter(ReverbParams.WET_DRY_MIX), 0.001f)
+            assertEquals(1.0f, effect.getParameter(ReverbParams.WIDTH), 0.001f)
+            effect.close()
+        }
+    }
+
+
+    @Test
     fun gainMinus20dbScalesSamples() {
         AudioEngine.create().use { engine ->
             val effect = engine.createEffect(AudioEffectType.GAIN)

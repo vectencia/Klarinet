@@ -74,8 +74,13 @@ expect class AudioEngine : AutoCloseable {
      * @return A new [AudioStream] in the [StreamState.OPEN] state.
      * @throws StreamCreationException if the stream could not be created,
      *   for example due to unsupported configuration or unavailable hardware.
+     * @throws UnsupportedFormatException if [AudioStreamConfig.audioFormat] is
+     *   not [AudioFormat.PCM_FLOAT] on Android. Callbacks always receive
+     *   float samples.
      * @throws PermissionException if recording permission is required but not
-     *   granted (input streams only).
+     *   granted (input streams only). On Android this is checked after
+     *   [AudioSessionManager.bind]; without `bind`, a later [AudioStream.start]
+     *   failure is [StreamOperationException].
      */
     fun openStream(config: AudioStreamConfig, callback: AudioStreamCallback? = null): AudioStream
 

@@ -1,11 +1,19 @@
 package com.vectencia.klarinet
 
+import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlin.math.sinh
 
 internal fun dbToGain(db: Float): Float = 10f.pow(db / 20f)
+
+/** RBJ: Q = 1 / (2 * sinh(ln(2)/2 * bandwidthOctaves)). */
+internal fun bandwidthOctavesToQ(octaves: Float): Float {
+    val bw = max(0.001f, octaves)
+    return 1f / (2f * max(sinh(ln(2f) / 2f * bw), 0.001f))
+}
 
 internal fun defaultEffectParams(type: AudioEffectType): MutableMap<Int, Float> {
     val params = mutableMapOf<Int, Float>()
@@ -277,6 +285,7 @@ private fun buildGraph(
             apply
         }
         AudioEffectType.NOISE_GATE -> {
+            // Approximation: DynamicsCompressor, not a true gate. HOLD_MS is unused.
             val comp = ctx.createDynamicsCompressor()
             input.connect(comp)
             comp.connect(wet)
@@ -330,7 +339,11 @@ private fun buildGraph(
                 wireMix(dry, wet, enabled)
                 val cutoff = params[0] ?: if (type == AudioEffectType.LOW_PASS_FILTER) 20000f else if (type == AudioEffectType.HIGH_PASS_FILTER) 20f else 1000f
                 filter.frequency.value = cutoff
-                filter.Q.value = params[1] ?: 0.707f
+                filter.Q.value = if (type == AudioEffectType.BAND_PASS_FILTER) {
+                    bandwidthOctavesToQ(params[BPFParams.BANDWIDTH] ?: 1f)
+                } else {
+                    params[1] ?: 0.707f
+                }
             }
             apply
         }
@@ -353,6 +366,7 @@ private fun buildGraph(
             apply
         }
         AudioEffectType.REVERB -> {
+            // Approximation: Convolver impulse from ROOM_SIZE and DAMPING. WIDTH is unused.
             val convolver = ctx.createConvolver()
             val mix = ctx.createGain()
             input.connect(convolver)

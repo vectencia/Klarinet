@@ -60,8 +60,21 @@ actual class AudioStream internal constructor(actual val config: AudioStreamConf
         _state = StreamState.CLOSED
     }
 
-    actual fun write(data: FloatArray, numFrames: Int, timeoutNanos: Long): Int = -1
-    actual fun read(data: FloatArray, numFrames: Int, timeoutNanos: Long): Int = -1
+    actual fun write(data: FloatArray, numFrames: Int, timeoutNanos: Long): Int {
+        if (devicePtr == null) throw ResourceReleasedException("AudioStream has been released")
+        throw StreamOperationException(
+            "Push-model write is not supported on native desktop. " +
+                "Use AudioStreamCallback.onAudioReady for output streams.",
+        )
+    }
+
+    actual fun read(data: FloatArray, numFrames: Int, timeoutNanos: Long): Int {
+        if (devicePtr == null) throw ResourceReleasedException("AudioStream has been released")
+        throw StreamOperationException(
+            "Push-model read is not supported on native desktop. " +
+                "Use AudioStreamCallback.onAudioReady for input streams.",
+        )
+    }
 
     actual var effectChain: AudioEffectChain? = null
         set(value) {

@@ -12,7 +12,7 @@ import kotlinx.coroutines.withContext
  *
  * This is a suspending wrapper around [AudioFileReader.readAll] that
  * offloads the blocking I/O and decoding work to the specified
- * [dispatcher] (defaulting to [Dispatchers.IO][kotlinx.coroutines.Dispatchers.IO]).
+ * [dispatcher] (defaulting to the platform IO dispatcher).
  *
  * The entire decoded audio is loaded into memory at once. For large
  * files, consider using [asFlow] instead to process audio in chunks.
@@ -22,8 +22,9 @@ import kotlinx.coroutines.withContext
  * This function is cancellable at the dispatcher boundary. However,
  * once the native `readAll()` call begins, it runs to completion.
  *
- * @param dispatcher The [CoroutineDispatcher] to run the blocking read
- *   on. Defaults to [Dispatchers.IO][kotlinx.coroutines.Dispatchers.IO].
+ * @param dispatcher Dispatcher for the blocking read. Defaults to the
+ *   platform IO dispatcher ([Dispatchers.IO][kotlinx.coroutines.Dispatchers.IO]
+ *   except JS, which uses [Dispatchers.Default][kotlinx.coroutines.Dispatchers.Default]).
  * @return A [FloatArray] of interleaved PCM samples normalized to
  *   `[-1.0, 1.0]`.
  * @throws AudioFileException if a decoding error occurs.
@@ -41,12 +42,13 @@ suspend fun AudioFileReader.readAllSuspend(
  *
  * This is a suspending wrapper around [AudioFileReader.readFrames] that
  * offloads the blocking I/O and decoding work to the specified
- * [dispatcher] (defaulting to [Dispatchers.IO][kotlinx.coroutines.Dispatchers.IO]).
+ * [dispatcher] (defaulting to the platform IO dispatcher).
  *
  * @param maxFrames The maximum number of frames to read. The returned
  *   array may be shorter if the end of the file is reached.
- * @param dispatcher The [CoroutineDispatcher] to run the blocking read
- *   on. Defaults to [Dispatchers.IO][kotlinx.coroutines.Dispatchers.IO].
+ * @param dispatcher Dispatcher for the blocking read. Defaults to the
+ *   platform IO dispatcher ([Dispatchers.IO][kotlinx.coroutines.Dispatchers.IO]
+ *   except JS, which uses [Dispatchers.Default][kotlinx.coroutines.Dispatchers.Default]).
  * @return A [FloatArray] of interleaved PCM samples. The array length
  *   is at most `maxFrames * reader.info.channelCount`.
  * @throws AudioFileException if a decoding error occurs.
@@ -64,9 +66,10 @@ suspend fun AudioFileReader.readFramesSuspend(
  *
  * Creates a cold [Flow] that reads audio frames from the reader in
  * chunks of [chunkSize] frames and emits each chunk as a [FloatArray].
- * The flow runs on the specified [dispatcher] (defaulting to
- * [Dispatchers.IO][kotlinx.coroutines.Dispatchers.IO]) and completes
- * when [AudioFileReader.isAtEnd] becomes `true`.
+ * The flow runs on the specified [dispatcher] (defaulting to the
+ * platform IO dispatcher) and completes
+ * when [AudioFileReader.isAtEnd] is true or [AudioFileReader.readFrames]
+ * returns an empty array (end of file or a closed reader).
  *
  * This is the recommended approach for processing large audio files
  * without loading the entire file into memory.
@@ -94,8 +97,9 @@ suspend fun AudioFileReader.readFramesSuspend(
  * @param chunkSize The number of frames to read per emission. Each
  *   emitted [FloatArray] contains up to `chunkSize * info.channelCount`
  *   samples. Defaults to 4096 frames.
- * @param dispatcher The [CoroutineDispatcher] to run the blocking reads
- *   on. Defaults to [Dispatchers.IO][kotlinx.coroutines.Dispatchers.IO].
+ * @param dispatcher Dispatcher for the blocking reads. Defaults to the
+ *   platform IO dispatcher ([Dispatchers.IO][kotlinx.coroutines.Dispatchers.IO]
+ *   except JS, which uses [Dispatchers.Default][kotlinx.coroutines.Dispatchers.Default]).
  * @return A [Flow] of [FloatArray] chunks containing interleaved PCM
  *   samples.
  * @see readAllSuspend
@@ -107,8 +111,7 @@ fun AudioFileReader.asFlow(
 ): Flow<FloatArray> = flow {
     while (!isAtEnd) {
         val chunk = readFrames(chunkSize)
-        if (chunk.isNotEmpty()) {
-            emit(chunk)
-        }
+        if (chunk.isEmpty()) break
+        emit(chunk)
     }
 }.flowOn(dispatcher)

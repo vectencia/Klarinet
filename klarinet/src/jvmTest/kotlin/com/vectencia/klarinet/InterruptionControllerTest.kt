@@ -91,4 +91,26 @@ class InterruptionControllerTest {
         session.interruptions.dispatch(info)
         assertSame(info, last)
     }
+
+    @Test
+    fun twoListenersBothReceiveAndRemoveIsPerListener() {
+        val session = AudioSessionManager()
+        val first = mutableListOf<AudioInterruptionInfo>()
+        val second = mutableListOf<AudioInterruptionInfo>()
+        val listenerA: (AudioInterruptionInfo) -> Unit = { first += it }
+        val listenerB: (AudioInterruptionInfo) -> Unit = { second += it }
+        session.observeInterruptions(listenerA)
+        session.observeInterruptions(listenerB)
+
+        val began = AudioInterruptionInfo(AudioInterruptionType.BEGAN, shouldResume = false)
+        session.interruptions.dispatch(began)
+        assertEquals(listOf(began), first)
+        assertEquals(listOf(began), second)
+
+        session.clearInterruptions(listenerB)
+        val ended = AudioInterruptionInfo(AudioInterruptionType.ENDED, shouldResume = true)
+        session.interruptions.dispatch(ended)
+        assertEquals(listOf(began, ended), first)
+        assertEquals(listOf(began), second)
+    }
 }
