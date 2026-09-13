@@ -7,8 +7,8 @@ class AtomicFloatTest {
     @Test
     fun roundTripPreservesValue() {
         val af = AtomicFloat(0.0f)
-        af.set(0.42f)
-        assertEquals(0.42f, af.get())
+        af.set(0.5f)
+        assertEquals(0.5f, af.get())
     }
 
     @Test

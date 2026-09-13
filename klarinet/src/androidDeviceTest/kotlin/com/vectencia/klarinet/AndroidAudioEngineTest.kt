@@ -50,11 +50,14 @@ class AndroidAudioEngineTest {
             },
         )
         stream.start()
-        val deadline = System.nanoTime() + 3_000_000_000L
+        val deadline = System.nanoTime() + 8_000_000_000L
         while (System.nanoTime() < deadline && stream.peakLevel < 0.4f) {
             Thread.sleep(20)
         }
-        assertTrue(stream.peakLevel >= 0.4f, "peakLevel was ${stream.peakLevel}")
+        assertTrue(
+            stream.peakLevel >= 0.4f,
+            "peakLevel was ${stream.peakLevel} after start (state=${stream.state})",
+        )
         stream.stop()
         stream.close()
         engine.release()

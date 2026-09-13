@@ -50,8 +50,9 @@ class LatencyInfoTest {
     fun toStringContainsValues() {
         val info = LatencyInfo(inputLatencyMs = 2.5, outputLatencyMs = 5.0)
         val str = info.toString()
-        assertEquals(true, str.contains("2.5"))
-        assertEquals(true, str.contains("5.0"))
+        assertEquals(true, "2.5" in str)
+        // JS Double.toString() prints 5.0 as "5"
+        assertEquals(true, "outputLatencyMs=5" in str)
     }
 
     @Test
