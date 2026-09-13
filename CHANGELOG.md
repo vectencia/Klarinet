@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Demos (Compose, web, iOS SwiftUI): six top-tab destinations; SleepTimer on Tone Gen; `FADE_MS` on Effects; Scenes via `AudioScenePlayer`; `AudioSessionManager.bind` / `attach` on Android and iOS hosts
+- Compose and web demos collect 0.4.1 `interruptionFlow()`, `SleepTimer.stateFlow()`, `remainingMsFlow()`, and `awaitState()`
+
 ### Fixed
 
 - Apple DSP CMake/cinterop embedding runs only on macOS, so Linux Dokka and GitHub Pages do not require an iOS SDK

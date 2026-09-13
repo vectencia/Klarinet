@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct LatencyView: View {
-    @StateObject private var viewModel = LatencyViewModel()
+    @ObservedObject var viewModel: LatencyViewModel
 
     var body: some View {
         ScrollView {

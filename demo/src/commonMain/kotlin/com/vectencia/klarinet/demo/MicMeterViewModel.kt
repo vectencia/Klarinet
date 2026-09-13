@@ -58,6 +58,7 @@ class MicMeterViewModel : ViewModel() {
             val newStream = newEngine.openStream(config, callback)
             stream = newStream
             newStream.start()
+            DemoSession.attach(newStream)
 
             val latency = newStream.latencyInfo
             _uiState.update {
@@ -73,6 +74,7 @@ class MicMeterViewModel : ViewModel() {
                 }
             }
         } catch (e: Exception) {
+            stop()
             _uiState.update {
                 it.copy(
                     isRecording = false,
@@ -83,6 +85,7 @@ class MicMeterViewModel : ViewModel() {
     }
 
     private fun stop() {
+        stream?.let { DemoSession.detach(it) }
         try {
             stream?.stop()
             stream?.close()

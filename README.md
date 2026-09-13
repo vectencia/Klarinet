@@ -425,7 +425,7 @@ The project includes demo applications for every supported platform:
 
 ### Web Demo (browser)
 
-The same five screens as the Compose demo, plus local-file decode, URL decode, mic recording, and WAV download. Uses the Klarinet JS target.
+The same six screens as the Compose demo, plus local-file decode, URL decode, mic recording, and WAV download. Uses the Klarinet JS target.
 
 Live: [vectencia.github.io/Klarinet](https://vectencia.github.io/Klarinet/) (web demo) and [API docs](https://vectencia.github.io/Klarinet/api/).
 
@@ -437,7 +437,7 @@ Then open the URL Gradle prints (usually `http://localhost:8080`). GitHub Pages 
 
 ### Compose Multiplatform Demo (Android + iOS + Desktop)
 
-5 screens: Tone Generator, Mic Meter, Latency Benchmark, File Player, Effects Chain. Runs on Android, iOS, and JVM Desktop (macOS, Linux, Windows) from shared Compose UI code.
+Six destinations via scrollable top tabs: Tone Gen (`SleepTimer`), Mic Meter, Latency, File, Effects (`FADE_MS`), Scenes (`AudioScenePlayer`). Runs on Android, iOS, and JVM Desktop (macOS, Linux, Windows) from shared Compose UI code. On Android the host calls `DemoSession.manager.bind` and streams use `attach`.
 
 ```bash
 # Run desktop demo
@@ -446,7 +446,7 @@ Then open the URL Gradle prints (usually `http://localhost:8080`). GitHub Pages 
 
 ### Native SwiftUI Demo (iOS + tvOS + watchOS)
 
-Native SwiftUI tone generator demo for each Apple platform. The iOS app includes 5 full screens with MVVM architecture; tvOS and watchOS have simplified UIs adapted for their form factors.
+Native SwiftUI demo for each Apple platform. The iOS app mirrors Compose with six scrollable top-tab destinations (Tone Gen with `SleepTimer`, Mic Meter, Latency, File, Effects with `FADE_MS`, Scenes with `AudioScenePlayer`) and MVVM; tvOS and watchOS remain smoke-test tone UIs adapted for their form factors.
 
 ### Native Console Demo (Linux + Windows)
 

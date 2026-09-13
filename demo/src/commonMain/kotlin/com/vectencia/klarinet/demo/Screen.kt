@@ -6,4 +6,5 @@ enum class Screen(val title: String) {
     LATENCY("Latency"),
     FILE_PLAYER("File"),
     EFFECTS("Effects"),
+    SCENES("Scenes"),
 }

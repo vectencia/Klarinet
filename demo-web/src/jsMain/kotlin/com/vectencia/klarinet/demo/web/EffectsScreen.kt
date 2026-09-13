@@ -27,6 +27,7 @@ internal object EffectsScreen {
         screen.el("p", "status", "440 Hz sine through gain → delay → reverb. Tweak while it plays.")
 
         var gainDb = 0f
+        var fadeMs = 500f
         var gainOn = true
         var delayTime = 250f
         var delayFeedback = 0.4f
@@ -50,6 +51,7 @@ internal object EffectsScreen {
         val bar = meter.el("span")
 
         fun stop() {
+            stream?.let { DemoSession.detach(it) }
             try {
                 stream?.stop()
                 stream?.close()
@@ -84,6 +86,7 @@ internal object EffectsScreen {
                     engine = created
                     val gainFx = created.createEffect(AudioEffectType.GAIN).also {
                         it.setParameter(GainParams.GAIN_DB, gainDb)
+                        it.setParameter(GainParams.FADE_MS, fadeMs)
                         it.isEnabled = gainOn
                     }
                     val delayFx = created.createEffect(AudioEffectType.DELAY).also {
@@ -125,6 +128,7 @@ internal object EffectsScreen {
                     opened.effectChain = createdChain
                     stream = opened
                     opened.start()
+                    DemoSession.attach(opened)
                     play.textContent = "Stop"
                     scope.launch {
                         opened.stateFlow().collect { state ->
@@ -157,6 +161,10 @@ internal object EffectsScreen {
             param(body, "Volume", -24.0, 12.0, 0.5, gainDb.toDouble(), { "${it.roundToInt()} dB" }) { value ->
                 gainDb = value.toFloat()
                 gain?.setParameter(GainParams.GAIN_DB, gainDb)
+            }
+            param(body, "Fade", 0.0, 2000.0, 10.0, fadeMs.toDouble(), { "${it.roundToInt()} ms" }) { value ->
+                fadeMs = value.toFloat()
+                gain?.setParameter(GainParams.FADE_MS, fadeMs)
             }
         }
 

@@ -31,6 +31,7 @@ internal object LatencyScreen {
         var stream: AudioStream? = null
 
         fun stop() {
+            stream?.let { DemoSession.detach(it) }
             try {
                 stream?.stop()
                 stream?.close()
@@ -66,6 +67,7 @@ internal object LatencyScreen {
                         val opened = created.openStream(AudioStreamConfig())
                         stream = opened
                         opened.start()
+                        DemoSession.attach(opened)
                         measure.textContent = "Stop"
                         status.textContent = "Waiting for STARTED…"
                         opened.awaitState(StreamState.STARTED)

@@ -28,6 +28,7 @@ data class EffectsUiState(
     val outputLevel: Float = 0f,
     val gainEnabled: Boolean = true,
     val gainDb: Float = 0f,
+    val fadeMs: Float = 500f,
     val delayEnabled: Boolean = true,
     val delayTimeMs: Float = 250f,
     val delayFeedback: Float = 0.4f,
@@ -41,6 +42,7 @@ data class EffectsUiState(
 sealed interface EffectsEvent {
     data object TogglePlayback : EffectsEvent
     data class UpdateGainDb(val value: Float) : EffectsEvent
+    data class UpdateFadeMs(val value: Float) : EffectsEvent
     data class UpdateGainEnabled(val enabled: Boolean) : EffectsEvent
     data class UpdateDelayTimeMs(val value: Float) : EffectsEvent
     data class UpdateDelayFeedback(val value: Float) : EffectsEvent
@@ -72,6 +74,10 @@ class EffectsViewModel : ViewModel() {
             is EffectsEvent.UpdateGainDb -> {
                 _uiState.update { it.copy(gainDb = event.value) }
                 gainEffect?.setParameter(GainParams.GAIN_DB, event.value)
+            }
+            is EffectsEvent.UpdateFadeMs -> {
+                _uiState.update { it.copy(fadeMs = event.value) }
+                gainEffect?.setParameter(GainParams.FADE_MS, event.value)
             }
             is EffectsEvent.UpdateGainEnabled -> {
                 _uiState.update { it.copy(gainEnabled = event.enabled) }
@@ -123,6 +129,7 @@ class EffectsViewModel : ViewModel() {
             // Create effects
             val gain = newEngine.createEffect(AudioEffectType.GAIN)
             gain.setParameter(GainParams.GAIN_DB, currentState.gainDb)
+            gain.setParameter(GainParams.FADE_MS, currentState.fadeMs)
             gain.isEnabled = currentState.gainEnabled
             gainEffect = gain
 
@@ -173,6 +180,7 @@ class EffectsViewModel : ViewModel() {
             newStream.effectChain = newChain
             stream = newStream
             newStream.start()
+            DemoSession.attach(newStream)
             _uiState.update { it.copy(isPlaying = true) }
 
             viewModelScope.launch {
@@ -188,11 +196,13 @@ class EffectsViewModel : ViewModel() {
                 }
             }
         } catch (e: Exception) {
+            stop()
             _uiState.update { it.copy(streamState = StreamState.UNINITIALIZED, isPlaying = false) }
         }
     }
 
     private fun stop() {
+        stream?.let { DemoSession.detach(it) }
         try {
             stream?.stop()
             stream?.close()

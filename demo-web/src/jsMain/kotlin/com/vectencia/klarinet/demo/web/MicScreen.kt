@@ -31,6 +31,7 @@ internal object MicScreen {
         var stream: AudioStream? = null
 
         fun stop() {
+            stream?.let { DemoSession.detach(it) }
             try {
                 stream?.stop()
                 stream?.close()
@@ -66,6 +67,7 @@ internal object MicScreen {
                     )
                     stream = opened
                     opened.start()
+                    DemoSession.attach(opened)
                     record.textContent = "Stop"
                     status.textContent = "State: STARTING (waiting for microphone)"
                     scope.launch {

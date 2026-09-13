@@ -44,6 +44,7 @@ internal object FileScreen {
         var recording = false
 
         fun stopPlayback() {
+            stream?.let { DemoSession.detach(it) }
             try {
                 stream?.stop()
                 stream?.close()
@@ -144,6 +145,7 @@ internal object FileScreen {
                     val opened = created.playFile(loaded)
                     stream = opened
                     opened.start()
+                    DemoSession.attach(opened)
                     play.textContent = "Stop"
                     status.textContent = "Playing"
                 } catch (error: Throwable) {
@@ -177,6 +179,7 @@ internal object FileScreen {
                     stream = opened
                     recording = true
                     opened.start()
+                    DemoSession.attach(opened)
                     record.textContent = "Stop recording"
                     play.textContent = "Play"
                     status.textContent = "Recording (allow the microphone if asked)"

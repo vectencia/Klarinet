@@ -7,6 +7,7 @@ final class EffectsViewModel: ObservableObject {
 
     @Published var gainEnabled = true
     @Published var gainDb: Float = 0
+    @Published var fadeMs: Float = 500
 
     @Published var delayEnabled = true
     @Published var delayTimeMs: Float = 250
@@ -42,6 +43,7 @@ final class EffectsViewModel: ObservableObject {
         // Create effects
         let gain = eng.createEffect(type: .gain)
         gain.setParameter(paramId: GainParams.shared.GAIN_DB, value: gainDb)
+        gain.setParameter(paramId: GainParams.shared.FADE_MS, value: fadeMs)
         gainEffect = gain
 
         let delay = eng.createEffect(type: .delay)
@@ -64,7 +66,8 @@ final class EffectsViewModel: ObservableObject {
         chain = ch
 
         // Tone generator callback
-        let cb = AudioStreamCallbackImpl { [self] buffer, numFrames in
+        let cb = AudioStreamCallbackImpl { [weak self] buffer, numFrames in
+            guard let self else { return numFrames }
             let frames = numFrames.intValue
             let inc = twoPi * 440.0 / Float(sampleRate)
 
@@ -84,13 +87,15 @@ final class EffectsViewModel: ObservableObject {
             bufferCapacityInFrames: 0,
             performanceMode: .lowLatency,
             sharingMode: .shared,
-            direction: .output
+            direction: .output,
+            deviceId: nil
         )
 
         let s = eng.openStream(config: config, callback: cb)
         s.effectChain = ch
         stream = s
         s.start()
+        DemoSession.shared.attach(s)
         isPlaying = true
 
         levelTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
@@ -102,6 +107,7 @@ final class EffectsViewModel: ObservableObject {
     }
 
     private func stop() {
+        if let stream { DemoSession.shared.detach(stream) }
         levelTimer?.invalidate()
         levelTimer = nil
         stream?.stop()
@@ -126,6 +132,7 @@ final class EffectsViewModel: ObservableObject {
     // MARK: - Parameter Updates
 
     func updateGainDb(_ v: Float) { gainDb = v; gainEffect?.setParameter(paramId: GainParams.shared.GAIN_DB, value: v) }
+    func updateFadeMs(_ v: Float) { fadeMs = v; gainEffect?.setParameter(paramId: GainParams.shared.FADE_MS, value: v) }
     func updateGainEnabled(_ e: Bool) { gainEnabled = e; gainEffect?.isEnabled = e }
     func updateDelayTimeMs(_ v: Float) { delayTimeMs = v; delayEffect?.setParameter(paramId: DelayParams.shared.TIME_MS, value: v) }
     func updateDelayFeedback(_ v: Float) { delayFeedback = v; delayEffect?.setParameter(paramId: DelayParams.shared.FEEDBACK, value: v) }

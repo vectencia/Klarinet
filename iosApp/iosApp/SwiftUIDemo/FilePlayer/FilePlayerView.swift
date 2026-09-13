@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct FilePlayerView: View {
-    @StateObject private var viewModel = FilePlayerViewModel()
+    @ObservedObject var viewModel: FilePlayerViewModel
 
     var body: some View {
         ScrollView {

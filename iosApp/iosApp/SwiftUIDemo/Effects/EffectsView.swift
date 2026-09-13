@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct EffectsView: View {
-    @StateObject private var viewModel = EffectsViewModel()
+    @ObservedObject var viewModel: EffectsViewModel
 
     var body: some View {
         ScrollView {
@@ -66,6 +66,13 @@ struct EffectsView: View {
                         range: -24...12,
                         format: { "\(Int($0)) dB" },
                         onChange: { viewModel.updateGainDb($0) }
+                    )
+                    ParameterRow(
+                        label: "Fade",
+                        value: viewModel.fadeMs,
+                        range: 0...2000,
+                        format: { "\(Int($0)) ms" },
+                        onChange: { viewModel.updateFadeMs($0) }
                     )
                 }
 

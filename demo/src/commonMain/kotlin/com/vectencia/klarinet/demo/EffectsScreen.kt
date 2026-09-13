@@ -71,6 +71,13 @@ fun EffectsScreen(viewModel: EffectsViewModel = viewModel()) {
                 valueFormat = { "${it.roundToInt()} dB" },
                 onValueChange = { viewModel.onEvent(EffectsEvent.UpdateGainDb(it)) },
             )
+            ParameterSlider(
+                label = "Fade",
+                value = state.fadeMs,
+                valueRange = 0f..2000f,
+                valueFormat = { "${it.roundToInt()} ms" },
+                onValueChange = { viewModel.onEvent(EffectsEvent.UpdateFadeMs(it)) },
+            )
         }
 
         Spacer(modifier = Modifier.height(12.dp))

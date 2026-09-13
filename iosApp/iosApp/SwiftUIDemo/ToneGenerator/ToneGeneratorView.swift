@@ -1,7 +1,8 @@
 import SwiftUI
+import ComposeApp
 
 struct ToneGeneratorView: View {
-    @StateObject private var viewModel = ToneGeneratorViewModel()
+    @ObservedObject var viewModel: ToneGeneratorViewModel
 
     var body: some View {
         ScrollView {
@@ -76,6 +77,34 @@ struct ToneGeneratorView: View {
                     Spacer()
                     Text(viewModel.streamState)
                         .font(.subheadline.monospaced())
+                }
+                .padding()
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+
+                VStack(spacing: 12) {
+                    HStack {
+                        Button("5 s") { viewModel.sleepDurationMs = 5_000 }
+                        Button("10 s") { viewModel.sleepDurationMs = 10_000 }
+                        Button("30 s") { viewModel.sleepDurationMs = 30_000 }
+                    }
+                    HStack {
+                        Button("0.5 s") { viewModel.sleepFadeMs = 500 }
+                        Button("1 s") { viewModel.sleepFadeMs = 1_000 }
+                        Button("2 s") { viewModel.sleepFadeMs = 2_000 }
+                    }
+                    HStack {
+                        Button("Schedule") { viewModel.scheduleSleep() }
+                            .disabled(!viewModel.isPlaying)
+                        Button("Pause") { viewModel.pauseSleep() }
+                            .disabled(!viewModel.isPlaying)
+                        Button("Resume") { viewModel.resumeSleep() }
+                            .disabled(!viewModel.isPlaying)
+                        Button("Cancel") { viewModel.cancelSleep() }
+                            .disabled(!viewModel.isPlaying)
+                    }
+                    Text("Timer: \(viewModel.sleepState.name) remaining \(viewModel.sleepRemainingMs) ms")
+                        .font(.subheadline)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding()
                 .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))

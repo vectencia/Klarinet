@@ -41,6 +41,15 @@ html, body {
     color: var(--muted);
 }
 
+.banner {
+    background: var(--warn);
+    color: #111;
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin: 0 0 12px;
+}
+.banner[hidden] { display: none; }
+
 .tabs {
     display: flex;
     flex-wrap: wrap;

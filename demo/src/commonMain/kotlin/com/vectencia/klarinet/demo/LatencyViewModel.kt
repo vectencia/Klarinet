@@ -50,6 +50,7 @@ class LatencyViewModel : ViewModel() {
                 val newStream = newEngine.openStream(config)
                 stream = newStream
                 newStream.start()
+                DemoSession.attach(newStream)
                 _uiState.update { it.copy(isMeasuring = true) }
 
                 // Wait for stream to be fully started before reading latency
@@ -72,6 +73,7 @@ class LatencyViewModel : ViewModel() {
                     )
                 }
             } catch (e: Exception) {
+                stop()
                 _uiState.update {
                     it.copy(
                         isMeasuring = false,
@@ -84,6 +86,7 @@ class LatencyViewModel : ViewModel() {
     }
 
     private fun stop() {
+        stream?.let { DemoSession.detach(it) }
         try {
             stream?.stop()
             stream?.close()

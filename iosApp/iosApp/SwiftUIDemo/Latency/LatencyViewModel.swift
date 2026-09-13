@@ -33,12 +33,14 @@ final class LatencyViewModel: ObservableObject {
             bufferCapacityInFrames: 0,
             performanceMode: .lowLatency,
             sharingMode: .shared,
-            direction: .output
+            direction: .output,
+            deviceId: nil
         )
 
         let s = eng.openStream(config: config, callback: cb)
         stream = s
         s.start()
+        DemoSession.shared.attach(s)
         isMeasuring = true
 
         let latency = s.latencyInfo
@@ -53,6 +55,7 @@ final class LatencyViewModel: ObservableObject {
     }
 
     private func stop() {
+        if let stream { DemoSession.shared.detach(stream) }
         stream?.stop()
         stream?.close()
         engine?.release()

@@ -31,12 +31,14 @@ final class MicMeterViewModel: ObservableObject {
             bufferCapacityInFrames: 0,
             performanceMode: .lowLatency,
             sharingMode: .shared,
-            direction: .input
+            direction: .input,
+            deviceId: nil
         )
 
         let s = eng.openStream(config: config, callback: cb)
         stream = s
         s.start()
+        DemoSession.shared.attach(s)
         isRecording = true
 
         let latency = s.latencyInfo
@@ -51,6 +53,7 @@ final class MicMeterViewModel: ObservableObject {
     }
 
     private func stop() {
+        if let stream { DemoSession.shared.detach(stream) }
         levelTimer?.invalidate()
         levelTimer = nil
         stream?.stop()

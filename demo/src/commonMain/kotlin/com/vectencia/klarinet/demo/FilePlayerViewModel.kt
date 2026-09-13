@@ -61,8 +61,10 @@ class FilePlayerViewModel : ViewModel() {
             val newStream = newEngine.playFile(_uiState.value.filePath)
             stream = newStream
             newStream.start()
+            DemoSession.attach(newStream)
             _uiState.update { it.copy(isPlaying = true) }
         } catch (e: Exception) {
+            stop()
             _uiState.update {
                 it.copy(
                     errorMessage = e.message ?: "Playback failed",
@@ -73,6 +75,7 @@ class FilePlayerViewModel : ViewModel() {
     }
 
     private fun stop() {
+        stream?.let { DemoSession.detach(it) }
         try {
             stream?.stop()
             stream?.close()

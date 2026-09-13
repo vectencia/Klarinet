@@ -11,6 +11,7 @@ private val screens = listOf(
     "Latency",
     "File",
     "Effects",
+    "Scenes",
 )
 
 fun main() {
@@ -18,7 +19,14 @@ fun main() {
     val app = root.el("div", "app")
     val header = app.el("header", "header")
     header.el("h1", text = "Klarinet")
-    header.el("p", text = "Web Audio demo — same five screens as the native apps.")
+    header.el("p", text = "Web Audio demo — same six screens as the native apps.")
+
+    val banner = app.el("p", "banner")
+    banner.hidden = true
+    DemoSession.onBanner { text ->
+        banner.hidden = text == null
+        banner.textContent = text ?: ""
+    }
 
     val tabs = app.el("nav", "tabs")
     val content = app.el("main")
@@ -40,6 +48,7 @@ fun main() {
             2 -> LatencyScreen.mount(content, scope)
             3 -> FileScreen.mount(content, scope)
             4 -> EffectsScreen.mount(content, scope)
+            5 -> ScenesScreen.mount(content, scope)
         }
     }
 

@@ -52,17 +52,20 @@ final class FilePlayerViewModel: ObservableObject {
             bufferCapacityInFrames: 0,
             performanceMode: .lowLatency,
             sharingMode: .shared,
-            direction: .output
+            direction: .output,
+            deviceId: nil
         )
 
         let s = eng.playFile(filePath: filePath, config: config)
         stream = s
         s.start()
+        DemoSession.shared.attach(s)
         isPlaying = true
         errorMessage = nil
     }
 
     private func stop() {
+        if let stream { DemoSession.shared.detach(stream) }
         stream?.stop()
         stream?.close()
         engine?.release()

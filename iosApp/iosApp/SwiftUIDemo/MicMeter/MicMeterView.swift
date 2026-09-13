@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct MicMeterView: View {
-    @StateObject private var viewModel = MicMeterViewModel()
+    @ObservedObject var viewModel: MicMeterViewModel
 
     var body: some View {
         ScrollView {
