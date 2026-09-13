@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-13
+
 ### Added
 
 - `AudioSessionManager.hasRecordPermission()` and `requestRecordPermission()`; Apple input `openStream` throws `PermissionException` when microphone permission is not granted
@@ -40,6 +42,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `routeChangeFlow()` cancel removes the Apple `NSNotificationCenter` observer
 - Apple interruption `NSNotification` observer is removed when no listeners or attached streams remain
 - Apple DSP CMake/cinterop embedding runs only on macOS, so Linux Dokka and GitHub Pages do not require an iOS SDK
+
+### Docs
+
+- GitHub Pages (GitHub Actions source): [web demo](https://vectencia.github.io/Klarinet/) at `/` and [Dokka API docs](https://vectencia.github.io/Klarinet/api/) at `/api/`
+- README installation samples use `0.5.0`; 14 KMP targets; file-format and threading KDoc match platform actuals
 
 ## [0.4.2] - 2026-09-12
 
