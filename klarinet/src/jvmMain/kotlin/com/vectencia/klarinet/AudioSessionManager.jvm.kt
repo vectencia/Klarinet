@@ -1,6 +1,6 @@
 package com.vectencia.klarinet
 
-actual class AudioSessionManager {
+actual class AudioSessionManager actual constructor() {
     internal val interruptions = InterruptionController()
 
     actual fun configure(category: AudioSessionCategory, mode: AudioSessionMode) {}

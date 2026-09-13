@@ -34,7 +34,7 @@ package com.vectencia.klarinet
  * @see AudioSessionMode
  * @see AudioRouteChangeInfo
  */
-expect class AudioSessionManager {
+expect class AudioSessionManager() {
 
     /**
      * Configure the audio session category and mode.

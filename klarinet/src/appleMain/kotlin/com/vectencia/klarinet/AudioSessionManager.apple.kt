@@ -1,6 +1,6 @@
 package com.vectencia.klarinet
 
-actual class AudioSessionManager {
+actual class AudioSessionManager actual constructor() {
     private val interruptions = InterruptionController()
     private var interruptionHooked = false
 

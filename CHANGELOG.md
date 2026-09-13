@@ -42,6 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `routeChangeFlow()` cancel removes the Apple `NSNotificationCenter` observer
 - Apple interruption `NSNotification` observer is removed when no listeners or attached streams remain
 - Apple DSP CMake/cinterop embedding runs only on macOS, so Linux Dokka and GitHub Pages do not require an iOS SDK
+- `AudioSessionManager()` is an explicit empty constructor so common metadata (and `:demo`) can construct it
+- JS browser tests launch ChromeHeadless with `--no-sandbox` so Ubuntu CI can start Chrome
 
 ### Docs
 

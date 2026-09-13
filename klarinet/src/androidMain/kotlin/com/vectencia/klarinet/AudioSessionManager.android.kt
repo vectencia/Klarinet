@@ -6,7 +6,7 @@ import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Build
 
-actual class AudioSessionManager {
+actual class AudioSessionManager actual constructor() {
     private var audioManager: AudioManager? = null
     private var focusRequest: AudioFocusRequest? = null
     private val interruptions = InterruptionController()
