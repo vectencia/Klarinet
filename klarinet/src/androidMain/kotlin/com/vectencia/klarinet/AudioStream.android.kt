@@ -31,6 +31,10 @@ actual class AudioStream internal constructor(actual val config: AudioStreamConf
 
     actual fun pause() {
         requireActive(streamHandle != 0L, "AudioStream")
+        val current = state
+        if (current != StreamState.STARTED && current != StreamState.PAUSING) {
+            throw StreamOperationException("Cannot pause stream in state $current")
+        }
         JniBridge.nativePauseStream(streamHandle)
     }
 
