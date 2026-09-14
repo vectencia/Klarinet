@@ -187,6 +187,10 @@ internal object ToneScreen {
                                 }
                                 return numFrames
                             }
+
+                            override fun onStreamUnderrun(stream: AudioStream, count: Int) {
+                                status.textContent = "State: ${stream.state}  Xruns: $count"
+                            }
                         },
                     )
                     opened.effectChain = createdChain
@@ -207,7 +211,7 @@ internal object ToneScreen {
                         }
                     }
                 } catch (error: Throwable) {
-                    status.textContent = "Error: ${error.message}"
+                    status.textContent = demoErrorMessage(error)
                     status.className = "status error"
                     stop()
                     play.textContent = "Play"

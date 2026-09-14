@@ -14,8 +14,11 @@ final class EffectsViewModel: ObservableObject {
     @Published var delayFeedback: Float = 0.4
     @Published var delayMix: Float = 0.3
 
+    @Published var bpfEnabled = false
+    @Published var bpfCenterHz: Float = 1000
+    @Published var bpfBandwidthOctaves: Float = 1
     @Published var reverbEnabled = true
-    @Published var reverbRoomSize: Float = 0.7
+    @Published var reverbRoomSize: Float = 0.5
     @Published var reverbDamping: Float = 0.5
     @Published var reverbMix: Float = 0.3
 
@@ -24,6 +27,7 @@ final class EffectsViewModel: ObservableObject {
     private var chain: AudioEffectChain?
     private var gainEffect: AudioEffect?
     private var delayEffect: AudioEffect?
+    private var bpfEffect: AudioEffect?
     private var reverbEffect: AudioEffect?
     private var callback: AudioStreamCallbackImpl?
     private var phase: Float = 0
@@ -52,6 +56,12 @@ final class EffectsViewModel: ObservableObject {
         delay.setParameter(paramId: DelayParams.shared.WET_DRY_MIX, value: delayMix)
         delayEffect = delay
 
+        let bpf = eng.createEffect(type: .bandPassFilter)
+        bpf.setParameter(paramId: BPFParams.shared.CENTER_HZ, value: bpfCenterHz)
+        bpf.setParameter(paramId: BPFParams.shared.BANDWIDTH, value: bpfBandwidthOctaves)
+        bpf.isEnabled = bpfEnabled
+        bpfEffect = bpf
+
         let reverb = eng.createEffect(type: .reverb)
         reverb.setParameter(paramId: ReverbParams.shared.ROOM_SIZE, value: reverbRoomSize)
         reverb.setParameter(paramId: ReverbParams.shared.DAMPING, value: reverbDamping)
@@ -61,6 +71,7 @@ final class EffectsViewModel: ObservableObject {
         // Build chain
         let ch = eng.createEffectChain()
         ch.add(effect: gain)
+        ch.add(effect: bpf)
         ch.add(effect: delay)
         ch.add(effect: reverb)
         chain = ch
@@ -115,12 +126,14 @@ final class EffectsViewModel: ObservableObject {
         chain?.release()
         gainEffect?.release()
         delayEffect?.release()
+        bpfEffect?.release()
         reverbEffect?.release()
         engine?.release()
         stream = nil
         chain = nil
         gainEffect = nil
         delayEffect = nil
+        bpfEffect = nil
         reverbEffect = nil
         callback = nil
         engine = nil
@@ -138,6 +151,9 @@ final class EffectsViewModel: ObservableObject {
     func updateDelayFeedback(_ v: Float) { delayFeedback = v; delayEffect?.setParameter(paramId: DelayParams.shared.FEEDBACK, value: v) }
     func updateDelayMix(_ v: Float) { delayMix = v; delayEffect?.setParameter(paramId: DelayParams.shared.WET_DRY_MIX, value: v) }
     func updateDelayEnabled(_ e: Bool) { delayEnabled = e; delayEffect?.isEnabled = e }
+    func updateBpfEnabled(_ e: Bool) { bpfEnabled = e; bpfEffect?.isEnabled = e }
+    func updateBpfCenterHz(_ v: Float) { bpfCenterHz = v; bpfEffect?.setParameter(paramId: BPFParams.shared.CENTER_HZ, value: v) }
+    func updateBpfBandwidth(_ v: Float) { bpfBandwidthOctaves = v; bpfEffect?.setParameter(paramId: BPFParams.shared.BANDWIDTH, value: v) }
     func updateReverbRoomSize(_ v: Float) { reverbRoomSize = v; reverbEffect?.setParameter(paramId: ReverbParams.shared.ROOM_SIZE, value: v) }
     func updateReverbDamping(_ v: Float) { reverbDamping = v; reverbEffect?.setParameter(paramId: ReverbParams.shared.DAMPING, value: v) }
     func updateReverbMix(_ v: Float) { reverbMix = v; reverbEffect?.setParameter(paramId: ReverbParams.shared.WET_DRY_MIX, value: v) }

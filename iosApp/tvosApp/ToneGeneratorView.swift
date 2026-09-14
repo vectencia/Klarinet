@@ -10,7 +10,7 @@ struct ToneGeneratorView: View {
                 .font(.system(size: 60))
                 .foregroundStyle(.tint)
 
-            Text("Klarinet — tvOS Demo")
+            Text("Klarinet tvOS Demo")
                 .font(.title)
 
             Text("Frequency: \(Int(viewModel.frequency)) Hz")
@@ -35,7 +35,7 @@ struct ToneGeneratorView: View {
             .buttonStyle(.borderedProminent)
             .tint(viewModel.isPlaying ? .red : .accentColor)
 
-            Text("Stream: \(viewModel.streamState)")
+            Text("Stream: \(viewModel.streamState)  xruns \(viewModel.xruns)")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

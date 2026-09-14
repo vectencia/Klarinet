@@ -86,6 +86,8 @@ fun FilePlayerScreen(viewModel: FilePlayerViewModel = viewModel()) {
                     InfoRow("Channels", "${info.channelCount}")
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                     InfoRow("Bit Rate", "${info.bitRate / 1000} kbps")
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    InfoRow("Decoded frames", "${state.decodedFrames}")
                 }
             }
 

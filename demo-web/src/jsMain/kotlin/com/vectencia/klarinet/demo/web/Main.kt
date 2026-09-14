@@ -19,7 +19,7 @@ fun main() {
     val app = root.el("div", "app")
     val header = app.el("header", "header")
     header.el("h1", text = "Klarinet")
-    header.el("p", text = "Web Audio demo — same six screens as the native apps.")
+    header.el("p", text = "Web Audio demo. Same six screens as Compose and SwiftUI.")
 
     val banner = app.el("p", "banner")
     banner.hidden = true

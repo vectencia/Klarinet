@@ -31,7 +31,7 @@ struct ToneGeneratorView: View {
                 .buttonStyle(.borderedProminent)
                 .tint(viewModel.isPlaying ? .red : .accentColor)
 
-                Text(viewModel.streamState)
+                Text("\(viewModel.streamState)  xruns \(viewModel.xruns)")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }

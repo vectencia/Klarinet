@@ -7,6 +7,7 @@ import com.vectencia.klarinet.AudioEngine
 import com.vectencia.klarinet.AudioStream
 import com.vectencia.klarinet.AudioStreamCallback
 import com.vectencia.klarinet.AudioStreamConfig
+import com.vectencia.klarinet.BPFParams
 import com.vectencia.klarinet.DelayParams
 import com.vectencia.klarinet.GainParams
 import com.vectencia.klarinet.ReverbParams
@@ -33,7 +34,10 @@ internal object EffectsScreen {
         var delayFeedback = 0.4f
         var delayMix = 0.3f
         var delayOn = true
-        var room = 0.7f
+        var bpfOn = false
+        var bpfCenter = 1000f
+        var bpfWidth = 1f
+        var room = 0.5f
         var damping = 0.5f
         var reverbMix = 0.3f
         var reverbOn = true
@@ -43,6 +47,7 @@ internal object EffectsScreen {
         var chain: AudioEffectChain? = null
         var gain: AudioEffect? = null
         var delay: AudioEffect? = null
+        var bpf: AudioEffect? = null
         var reverb: AudioEffect? = null
         val phase = floatArrayOf(0f)
 
@@ -59,6 +64,7 @@ internal object EffectsScreen {
             }
             try {
                 gain?.release()
+                bpf?.release()
                 delay?.release()
                 reverb?.release()
                 chain?.release()
@@ -69,6 +75,7 @@ internal object EffectsScreen {
             chain = null
             gain = null
             delay = null
+            bpf = null
             reverb = null
             engine = null
             bar.style.width = "0%"
@@ -95,6 +102,11 @@ internal object EffectsScreen {
                         it.setParameter(DelayParams.WET_DRY_MIX, delayMix)
                         it.isEnabled = delayOn
                     }
+                    val bpfFx = created.createEffect(AudioEffectType.BAND_PASS_FILTER).also {
+                        it.setParameter(BPFParams.CENTER_HZ, bpfCenter)
+                        it.setParameter(BPFParams.BANDWIDTH, bpfWidth)
+                        it.isEnabled = bpfOn
+                    }
                     val reverbFx = created.createEffect(AudioEffectType.REVERB).also {
                         it.setParameter(ReverbParams.ROOM_SIZE, room)
                         it.setParameter(ReverbParams.DAMPING, damping)
@@ -103,9 +115,11 @@ internal object EffectsScreen {
                     }
                     gain = gainFx
                     delay = delayFx
+                    bpf = bpfFx
                     reverb = reverbFx
                     val createdChain = created.createEffectChain()
                     createdChain.add(gainFx)
+                    createdChain.add(bpfFx)
                     createdChain.add(delayFx)
                     createdChain.add(reverbFx)
                     chain = createdChain
@@ -147,7 +161,7 @@ internal object EffectsScreen {
                         }
                     }
                 } catch (error: Throwable) {
-                    status.textContent = "Error: ${error.message}"
+                    status.textContent = demoErrorMessage(error)
                     status.className = "status error"
                     stop()
                 }
@@ -165,6 +179,20 @@ internal object EffectsScreen {
             param(body, "Fade", 0.0, 2000.0, 10.0, fadeMs.toDouble(), { "${it.roundToInt()} ms" }) { value ->
                 fadeMs = value.toFloat()
                 gain?.setParameter(GainParams.FADE_MS, fadeMs)
+            }
+        }
+
+        effectCard(screen, "Band-Pass (octaves)", bpfOn) { enabled ->
+            bpfOn = enabled
+            bpf?.isEnabled = enabled
+        }.also { body ->
+            param(body, "Center", 20.0, 8000.0, 1.0, bpfCenter.toDouble(), { "${it.roundToInt()} Hz" }) { value ->
+                bpfCenter = value.toFloat()
+                bpf?.setParameter(BPFParams.CENTER_HZ, bpfCenter)
+            }
+            param(body, "Width", 0.1, 4.0, 0.1, bpfWidth.toDouble(), { "${((it * 10).toInt() / 10.0)} oct" }) { value ->
+                bpfWidth = value.toFloat()
+                bpf?.setParameter(BPFParams.BANDWIDTH, bpfWidth)
             }
         }
 

@@ -75,7 +75,7 @@ struct ToneGeneratorView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Text(viewModel.streamState)
+                    Text("\(viewModel.streamState)  xruns \(viewModel.xruns)")
                         .font(.subheadline.monospaced())
                 }
                 .padding()

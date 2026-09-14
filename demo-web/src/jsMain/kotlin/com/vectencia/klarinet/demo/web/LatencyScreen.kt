@@ -2,6 +2,7 @@ package com.vectencia.klarinet.demo.web
 
 import com.vectencia.klarinet.AudioEngine
 import com.vectencia.klarinet.AudioStream
+import com.vectencia.klarinet.AudioStreamCallback
 import com.vectencia.klarinet.AudioStreamConfig
 import com.vectencia.klarinet.StreamState
 import com.vectencia.klarinet.coroutines.awaitState
@@ -21,6 +22,7 @@ internal object LatencyScreen {
         val rate = row(card, "Sample rate")
         val buffer = row(card, "Buffer size")
         val mode = row(card, "Performance mode")
+        val xruns = row(card, "Xruns")
 
         val devices = screen.el("div", "card")
         devices.el("strong", text = "Devices")
@@ -64,7 +66,15 @@ internal object LatencyScreen {
                             }
                             "${device.name} ($kind)"
                         }.ifBlank { "No devices reported yet" }
-                        val opened = created.openStream(AudioStreamConfig())
+                        val opened = created.openStream(
+                            AudioStreamConfig(),
+                            object : AudioStreamCallback {
+                                override fun onAudioReady(buffer: FloatArray, numFrames: Int): Int = numFrames
+                                override fun onStreamUnderrun(stream: AudioStream, count: Int) {
+                                    xruns.textContent = "$count"
+                                }
+                            },
+                        )
                         stream = opened
                         opened.start()
                         DemoSession.attach(opened)
@@ -82,9 +92,10 @@ internal object LatencyScreen {
                             "Platform default"
                         }
                         mode.textContent = config.performanceMode.name
+                        xruns.textContent = "0"
                         status.textContent = "Measuring"
                     } catch (error: Throwable) {
-                        status.textContent = "Error: ${error.message}"
+                        status.textContent = demoErrorMessage(error)
                         status.className = "status error"
                         stop()
                     }

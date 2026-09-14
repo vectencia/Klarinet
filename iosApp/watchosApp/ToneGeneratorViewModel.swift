@@ -5,6 +5,7 @@ final class ToneGeneratorViewModel: ObservableObject {
     @Published var frequency: Float = 440
     @Published var isPlaying = false
     @Published var streamState = "Idle"
+    @Published var xruns: Int = 0
 
     private var engine: AudioEngine?
     private var stream: AudioStream?
@@ -35,6 +36,9 @@ final class ToneGeneratorViewModel: ObservableObject {
             return numFrames
         }
         callback = cb
+        cb.onUnderrun = { [weak self] _, count in
+            DispatchQueue.main.async { self?.xruns = count.intValue }
+        }
 
         let config = AudioStreamConfig(
             sampleRate: sampleRate,
@@ -43,7 +47,8 @@ final class ToneGeneratorViewModel: ObservableObject {
             bufferCapacityInFrames: 0,
             performanceMode: .lowLatency,
             sharingMode: .shared,
-            direction: .output
+            direction: .output,
+            deviceId: nil
         )
 
         let s = eng.openStream(config: config, callback: cb)

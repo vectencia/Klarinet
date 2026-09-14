@@ -32,6 +32,8 @@ data class ToneGeneratorUiState(
     val sleepRemainingMs: Long = 0L,
     val sleepDurationMs: Long = 5_000L,
     val sleepFadeMs: Float = 1_000f,
+    val xruns: Int = 0,
+    val errorMessage: String? = null,
 )
 
 sealed interface ToneGeneratorEvent {
@@ -111,6 +113,10 @@ class ToneGeneratorViewModel : ViewModel() {
                     }
                     return numFrames
                 }
+
+                override fun onStreamUnderrun(stream: AudioStream, count: Int) {
+                    _uiState.update { it.copy(xruns = count) }
+                }
             }
 
             val config = AudioStreamConfig(
@@ -132,7 +138,13 @@ class ToneGeneratorViewModel : ViewModel() {
             val timer = SleepTimer(newStream, newGain)
             sleepTimer = timer
             _uiState.update {
-                it.copy(isPlaying = true, sleepState = SleepTimerState.IDLE, sleepRemainingMs = 0L)
+                it.copy(
+                    isPlaying = true,
+                    sleepState = SleepTimerState.IDLE,
+                    sleepRemainingMs = 0L,
+                    xruns = 0,
+                    errorMessage = null,
+                )
             }
             collectSleep(timer)
 
@@ -143,7 +155,13 @@ class ToneGeneratorViewModel : ViewModel() {
             }
         } catch (e: Exception) {
             stop()
-            _uiState.update { it.copy(isPlaying = false, streamState = StreamState.UNINITIALIZED) }
+            _uiState.update {
+                it.copy(
+                    isPlaying = false,
+                    streamState = StreamState.UNINITIALIZED,
+                    errorMessage = demoErrorMessage(e),
+                )
+            }
         }
     }
 
@@ -169,6 +187,7 @@ class ToneGeneratorViewModel : ViewModel() {
                 isPlaying = false,
                 sleepState = if (keepCompleted) SleepTimerState.COMPLETED else SleepTimerState.IDLE,
                 sleepRemainingMs = 0L,
+                xruns = 0,
             )
         }
     }

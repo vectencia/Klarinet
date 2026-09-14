@@ -1,13 +1,15 @@
 package com.vectencia.klarinet.demo.web
 
+import com.vectencia.klarinet.AudioAnalyzer
 import com.vectencia.klarinet.AudioEngine
 import com.vectencia.klarinet.AudioStream
 import com.vectencia.klarinet.AudioStreamCallback
 import com.vectencia.klarinet.AudioStreamConfig
+import com.vectencia.klarinet.PermissionException
 import com.vectencia.klarinet.StreamDirection
 import com.vectencia.klarinet.StreamState
+import com.vectencia.klarinet.coroutines.AnalyzingCallback
 import com.vectencia.klarinet.coroutines.awaitState
-import com.vectencia.klarinet.coroutines.levelFlow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
@@ -29,8 +31,11 @@ internal object MicScreen {
 
         var engine: AudioEngine? = null
         var stream: AudioStream? = null
+        var analyzing: AnalyzingCallback? = null
 
         fun stop() {
+            analyzing?.close()
+            analyzing = null
             stream?.let { DemoSession.detach(it) }
             try {
                 stream?.stop()
@@ -56,42 +61,62 @@ internal object MicScreen {
                 latency.textContent = "Input latency: --"
                 peak.textContent = "Peak: 0%"
             } else {
-                try {
-                    val created = AudioEngine.create()
-                    engine = created
-                    val opened = created.openStream(
-                        AudioStreamConfig(direction = StreamDirection.INPUT, channelCount = 1),
-                        object : AudioStreamCallback {
-                            override fun onAudioReady(buffer: FloatArray, numFrames: Int): Int = numFrames
-                        },
-                    )
-                    stream = opened
-                    opened.start()
-                    DemoSession.attach(opened)
-                    record.textContent = "Stop"
-                    status.textContent = "State: STARTING (waiting for microphone)"
-                    scope.launch {
-                        opened.awaitState(StreamState.STARTED)
-                        val ms = opened.latencyInfo.inputLatencyMs.toInt()
-                        latency.textContent = "Input latency: $ms ms"
-                        status.textContent = "State: STARTED"
+                DemoSession.requestRecordPermission { granted ->
+                    if (!granted) {
+                        status.textContent = demoErrorMessage(PermissionException("Microphone permission denied"))
+                        status.className = "status error"
+                        return@requestRecordPermission
                     }
-                    scope.launch {
-                        opened.levelFlow(50L).collect { level ->
-                            val clamped = level.coerceIn(0f, 1f)
-                            bar.style.width = "${(clamped * 100).toInt()}%"
-                            meter.className = when {
-                                clamped > 0.8f -> "meter clip"
-                                clamped > 0.5f -> "meter warn"
-                                else -> "meter"
-                            }
-                            peak.textContent = "Peak: ${(clamped * 100).toInt()}%"
+                    try {
+                        val sampleRate = 48_000
+                        val created = AudioEngine.create()
+                        engine = created
+                        val analyzer = AudioAnalyzer(fftSize = 1024, sampleRate = sampleRate)
+                        val callback = AnalyzingCallback(
+                            analyzer = analyzer,
+                            delegate = object : AudioStreamCallback {
+                                override fun onAudioReady(buffer: FloatArray, numFrames: Int): Int = numFrames
+                            },
+                            scope = scope,
+                        )
+                        analyzing = callback
+                        val opened = created.openStream(
+                            AudioStreamConfig(
+                                sampleRate = sampleRate,
+                                direction = StreamDirection.INPUT,
+                                channelCount = 1,
+                            ),
+                            callback,
+                        )
+                        stream = opened
+                        opened.start()
+                        DemoSession.attach(opened)
+                        record.textContent = "Stop"
+                        status.textContent = "State: STARTING (waiting for microphone)"
+                        scope.launch {
+                            opened.awaitState(StreamState.STARTED)
+                            val ms = opened.latencyInfo.inputLatencyMs.toInt()
+                            latency.textContent = "Input latency: $ms ms"
+                            status.textContent = "State: STARTED"
                         }
+                        scope.launch {
+                            callback.results.collect { result ->
+                                val clamped = result.peakLevel.coerceIn(0f, 1f)
+                                bar.style.width = "${(clamped * 100).toInt()}%"
+                                meter.className = when {
+                                    clamped > 0.8f -> "meter clip"
+                                    clamped > 0.5f -> "meter warn"
+                                    else -> "meter"
+                                }
+                                peak.textContent =
+                                    "Peak: ${(clamped * 100).toInt()}%  RMS ${formatDb(result.rmsDb)}"
+                            }
+                        }
+                    } catch (error: Throwable) {
+                        status.textContent = demoErrorMessage(error)
+                        status.className = "status error"
+                        stop()
                     }
-                } catch (error: Throwable) {
-                    status.textContent = "Error: ${error.message}"
-                    status.className = "status error"
-                    stop()
                 }
             }
         }

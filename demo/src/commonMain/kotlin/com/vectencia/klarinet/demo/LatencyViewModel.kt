@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vectencia.klarinet.AudioEngine
 import com.vectencia.klarinet.AudioStream
+import com.vectencia.klarinet.AudioStreamCallback
 import com.vectencia.klarinet.AudioStreamConfig
 import com.vectencia.klarinet.StreamState
 import com.vectencia.klarinet.coroutines.awaitState
@@ -20,6 +21,7 @@ data class LatencyUiState(
     val sampleRate: String = "--",
     val bufferSize: String = "--",
     val performanceMode: String = "--",
+    val xruns: Int = 0,
 )
 
 sealed interface LatencyEvent {
@@ -47,11 +49,19 @@ class LatencyViewModel : ViewModel() {
                 val newEngine = AudioEngine.create()
                 engine = newEngine
                 val config = AudioStreamConfig()
-                val newStream = newEngine.openStream(config)
+                val newStream = newEngine.openStream(
+                    config,
+                    object : AudioStreamCallback {
+                        override fun onAudioReady(buffer: FloatArray, numFrames: Int): Int = numFrames
+                        override fun onStreamUnderrun(stream: AudioStream, count: Int) {
+                            _uiState.update { it.copy(xruns = count) }
+                        }
+                    },
+                )
                 stream = newStream
                 newStream.start()
                 DemoSession.attach(newStream)
-                _uiState.update { it.copy(isMeasuring = true) }
+                _uiState.update { it.copy(isMeasuring = true, xruns = 0) }
 
                 // Wait for stream to be fully started before reading latency
                 newStream.awaitState(StreamState.STARTED)
@@ -78,7 +88,7 @@ class LatencyViewModel : ViewModel() {
                     it.copy(
                         isMeasuring = false,
                         outputLatency = "Error",
-                        inputLatency = e.message ?: "Unknown error",
+                        inputLatency = demoErrorMessage(e),
                     )
                 }
             }
@@ -96,7 +106,7 @@ class LatencyViewModel : ViewModel() {
         } catch (_: Exception) {}
         stream = null
         engine = null
-        _uiState.update { it.copy(isMeasuring = false) }
+        _uiState.update { it.copy(isMeasuring = false, xruns = 0) }
     }
 
     override fun onCleared() {

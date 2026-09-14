@@ -13,23 +13,43 @@ struct SwiftUIDemoView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if session.interrupted {
-                Text("Interrupted")
-                    .frame(maxWidth: .infinity)
-                    .padding(8)
-                    .background(Color.yellow.opacity(0.35))
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Klarinet")
+                    .font(.largeTitle.weight(.semibold))
+                Text("Studio demo")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+
+            if session.interrupted {
+                banner("Interrupted")
+            }
+            if let route = session.routeLabel {
+                banner(route)
+            }
+
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack {
+                HStack(spacing: 8) {
                     ForEach(titles.indices, id: \.self) { index in
-                        Button(titles[index]) { screen = index }
-                            .buttonStyle(.borderedProminent)
-                            .tint(screen == index ? Color.accentColor : Color.gray)
+                        Button(titles[index]) {
+                            withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                                screen = index
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(screen == index ? Color.accentColor : Color.primary.opacity(0.08), in: Capsule())
+                        .foregroundStyle(screen == index ? Color.black : Color.primary)
                     }
                 }
-                .padding(.horizontal)
-                .padding(.vertical, 8)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
             }
+
             ZStack {
                 pane(0) { ToneGeneratorView(viewModel: tone) }
                 pane(1) { MicMeterView(viewModel: mic) }
@@ -40,13 +60,27 @@ struct SwiftUIDemoView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .navigationBarBackButtonHidden(false)
+        .background(Color.black.opacity(0.04).ignoresSafeArea())
+        .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("SwiftUI Demo")
+    }
+
+    private func banner(_ text: String) -> some View {
+        Text(text)
+            .font(.subheadline.weight(.medium))
+            .frame(maxWidth: .infinity)
+            .padding(10)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(.horizontal, 16)
+            .padding(.top, 6)
+            .transition(.move(edge: .top).combined(with: .opacity))
     }
 
     private func pane<Content: View>(_ index: Int, @ViewBuilder content: () -> Content) -> some View {
         content()
             .opacity(screen == index ? 1 : 0)
+            .offset(x: screen == index ? 0 : 12)
+            .animation(.spring(response: 0.42, dampingFraction: 0.86), value: screen)
             .zIndex(screen == index ? 1 : 0)
             .allowsHitTesting(screen == index)
             .accessibilityHidden(screen != index)

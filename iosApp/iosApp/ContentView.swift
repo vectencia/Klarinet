@@ -9,19 +9,23 @@ struct ContentView: View {
             VStack(spacing: 32) {
                 Spacer()
 
-                VStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text("Klarinet")
-                        .font(.largeTitle.bold())
-                    Text("Audio SDK Demo")
+                        .font(.largeTitle.weight(.semibold))
+                    Text("Audio SDK demo")
                         .font(.title3)
                         .foregroundStyle(.secondary)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 32)
 
                 Spacer()
 
                 VStack(spacing: 16) {
                     Button {
-                        showCompose = true
+                        withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                            showCompose = true
+                        }
                     } label: {
                         Label("Compose Multiplatform", systemImage: "apps.iphone")
                             .frame(maxWidth: .infinity)
@@ -30,7 +34,9 @@ struct ContentView: View {
                     .controlSize(.large)
 
                     Button {
-                        showSwiftUI = true
+                        withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                            showSwiftUI = true
+                        }
                     } label: {
                         Label("SwiftUI", systemImage: "swift")
                             .frame(maxWidth: .infinity)

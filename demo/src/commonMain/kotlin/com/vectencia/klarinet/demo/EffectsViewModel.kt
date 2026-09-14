@@ -9,6 +9,7 @@ import com.vectencia.klarinet.AudioEngine
 import com.vectencia.klarinet.AudioStream
 import com.vectencia.klarinet.AudioStreamCallback
 import com.vectencia.klarinet.AudioStreamConfig
+import com.vectencia.klarinet.BPFParams
 import com.vectencia.klarinet.DelayParams
 import com.vectencia.klarinet.GainParams
 import com.vectencia.klarinet.ReverbParams
@@ -26,6 +27,7 @@ data class EffectsUiState(
     val isPlaying: Boolean = false,
     val streamState: StreamState = StreamState.UNINITIALIZED,
     val outputLevel: Float = 0f,
+    val xruns: Int = 0,
     val gainEnabled: Boolean = true,
     val gainDb: Float = 0f,
     val fadeMs: Float = 500f,
@@ -33,8 +35,11 @@ data class EffectsUiState(
     val delayTimeMs: Float = 250f,
     val delayFeedback: Float = 0.4f,
     val delayMix: Float = 0.3f,
+    val bpfEnabled: Boolean = false,
+    val bpfCenterHz: Float = 1_000f,
+    val bpfBandwidthOctaves: Float = 1f,
     val reverbEnabled: Boolean = true,
-    val reverbRoomSize: Float = 0.7f,
+    val reverbRoomSize: Float = 0.5f,
     val reverbDamping: Float = 0.5f,
     val reverbMix: Float = 0.3f,
 )
@@ -48,6 +53,9 @@ sealed interface EffectsEvent {
     data class UpdateDelayFeedback(val value: Float) : EffectsEvent
     data class UpdateDelayMix(val value: Float) : EffectsEvent
     data class UpdateDelayEnabled(val enabled: Boolean) : EffectsEvent
+    data class UpdateBpfEnabled(val enabled: Boolean) : EffectsEvent
+    data class UpdateBpfCenterHz(val value: Float) : EffectsEvent
+    data class UpdateBpfBandwidth(val value: Float) : EffectsEvent
     data class UpdateReverbRoomSize(val value: Float) : EffectsEvent
     data class UpdateReverbDamping(val value: Float) : EffectsEvent
     data class UpdateReverbMix(val value: Float) : EffectsEvent
@@ -63,6 +71,7 @@ class EffectsViewModel : ViewModel() {
     private var chain: AudioEffectChain? = null
     private var gainEffect: AudioEffect? = null
     private var delayEffect: AudioEffect? = null
+    private var bpfEffect: AudioEffect? = null
     private var reverbEffect: AudioEffect? = null
     private val phase = floatArrayOf(0f)
 
@@ -98,6 +107,18 @@ class EffectsViewModel : ViewModel() {
             is EffectsEvent.UpdateDelayEnabled -> {
                 _uiState.update { it.copy(delayEnabled = event.enabled) }
                 delayEffect?.isEnabled = event.enabled
+            }
+            is EffectsEvent.UpdateBpfEnabled -> {
+                _uiState.update { it.copy(bpfEnabled = event.enabled) }
+                bpfEffect?.isEnabled = event.enabled
+            }
+            is EffectsEvent.UpdateBpfCenterHz -> {
+                _uiState.update { it.copy(bpfCenterHz = event.value) }
+                bpfEffect?.setParameter(BPFParams.CENTER_HZ, event.value)
+            }
+            is EffectsEvent.UpdateBpfBandwidth -> {
+                _uiState.update { it.copy(bpfBandwidthOctaves = event.value) }
+                bpfEffect?.setParameter(BPFParams.BANDWIDTH, event.value)
             }
             is EffectsEvent.UpdateReverbRoomSize -> {
                 _uiState.update { it.copy(reverbRoomSize = event.value) }
@@ -140,6 +161,12 @@ class EffectsViewModel : ViewModel() {
             delay.isEnabled = currentState.delayEnabled
             delayEffect = delay
 
+            val bpf = newEngine.createEffect(AudioEffectType.BAND_PASS_FILTER)
+            bpf.setParameter(BPFParams.CENTER_HZ, currentState.bpfCenterHz)
+            bpf.setParameter(BPFParams.BANDWIDTH, currentState.bpfBandwidthOctaves)
+            bpf.isEnabled = currentState.bpfEnabled
+            bpfEffect = bpf
+
             val reverb = newEngine.createEffect(AudioEffectType.REVERB)
             reverb.setParameter(ReverbParams.ROOM_SIZE, currentState.reverbRoomSize)
             reverb.setParameter(ReverbParams.DAMPING, currentState.reverbDamping)
@@ -150,6 +177,7 @@ class EffectsViewModel : ViewModel() {
             // Build effect chain
             val newChain = newEngine.createEffectChain()
             newChain.add(gain)
+            newChain.add(bpf)
             newChain.add(delay)
             newChain.add(reverb)
             chain = newChain
@@ -169,6 +197,10 @@ class EffectsViewModel : ViewModel() {
                     }
                     return numFrames
                 }
+
+                override fun onStreamUnderrun(stream: AudioStream, count: Int) {
+                    _uiState.update { it.copy(xruns = count) }
+                }
             }
 
             val config = AudioStreamConfig(
@@ -181,7 +213,7 @@ class EffectsViewModel : ViewModel() {
             stream = newStream
             newStream.start()
             DemoSession.attach(newStream)
-            _uiState.update { it.copy(isPlaying = true) }
+            _uiState.update { it.copy(isPlaying = true, xruns = 0) }
 
             viewModelScope.launch {
                 launch {
@@ -209,6 +241,7 @@ class EffectsViewModel : ViewModel() {
         } catch (_: Exception) {}
         try {
             gainEffect?.release()
+            bpfEffect?.release()
             delayEffect?.release()
             reverbEffect?.release()
         } catch (_: Exception) {}
@@ -222,9 +255,10 @@ class EffectsViewModel : ViewModel() {
         chain = null
         gainEffect = null
         delayEffect = null
+        bpfEffect = null
         reverbEffect = null
         engine = null
-        _uiState.update { it.copy(isPlaying = false, outputLevel = 0f) }
+        _uiState.update { it.copy(isPlaying = false, outputLevel = 0f, xruns = 0) }
     }
 
     override fun onCleared() {

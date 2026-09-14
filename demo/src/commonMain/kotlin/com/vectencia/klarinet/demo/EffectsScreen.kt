@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import com.vectencia.klarinet.theme.DemoPanel
+import com.vectencia.klarinet.theme.DemoPrimaryButton
+import com.vectencia.klarinet.theme.LevelMeter
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,22 +40,24 @@ fun EffectsScreen(viewModel: EffectsViewModel = viewModel()) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
     ) {
-        Text("Effects Demo", fontSize = 24.sp)
+        Text("Effects", style = MaterialTheme.typography.headlineMedium)
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Button(
+        DemoPrimaryButton(
+            label = if (state.isPlaying) "Stop" else "Play",
             onClick = { viewModel.onEvent(EffectsEvent.TogglePlayback) },
-        ) {
-            Text(if (state.isPlaying) "Stop" else "Play")
-        }
+            active = state.isPlaying,
+        )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Text("State: ${state.streamState}", fontSize = 14.sp)
+        Text("State: ${state.streamState}", style = MaterialTheme.typography.bodyMedium)
 
         if (state.isPlaying) {
-            Text("Output Level: ${(state.outputLevel * 100).toInt()}%", fontSize = 14.sp)
+            Spacer(modifier = Modifier.height(8.dp))
+            LevelMeter(state.outputLevel)
+            Text("Xruns ${state.xruns}", style = MaterialTheme.typography.bodyMedium)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -77,6 +81,29 @@ fun EffectsScreen(viewModel: EffectsViewModel = viewModel()) {
                 valueRange = 0f..2000f,
                 valueFormat = { "${it.roundToInt()} ms" },
                 onValueChange = { viewModel.onEvent(EffectsEvent.UpdateFadeMs(it)) },
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        EffectCard(
+            name = "Band-Pass (octaves)",
+            enabled = state.bpfEnabled,
+            onEnabledChange = { viewModel.onEvent(EffectsEvent.UpdateBpfEnabled(it)) },
+        ) {
+            ParameterSlider(
+                label = "Center",
+                value = state.bpfCenterHz,
+                valueRange = 20f..8_000f,
+                valueFormat = { "${it.roundToInt()} Hz" },
+                onValueChange = { viewModel.onEvent(EffectsEvent.UpdateBpfCenterHz(it)) },
+            )
+            ParameterSlider(
+                label = "Width",
+                value = state.bpfBandwidthOctaves,
+                valueRange = 0.1f..4f,
+                valueFormat = { "${((it * 10).toInt() / 10f)} oct" },
+                onValueChange = { viewModel.onEvent(EffectsEvent.UpdateBpfBandwidth(it)) },
             )
         }
 
@@ -153,12 +180,7 @@ private fun EffectCard(
     onEnabledChange: (Boolean) -> Unit,
     content: @Composable () -> Unit,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-        ) {
+    DemoPanel(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -172,7 +194,6 @@ private fun EffectCard(
             }
             Spacer(modifier = Modifier.height(8.dp))
             content()
-        }
     }
 }
 

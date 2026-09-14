@@ -1,28 +1,25 @@
 package com.vectencia.klarinet.demo
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vectencia.klarinet.AudioMath
+import com.vectencia.klarinet.theme.DemoPanel
+import com.vectencia.klarinet.theme.DemoPrimaryButton
+import com.vectencia.klarinet.theme.LevelMeter
 
 @Composable
 fun MicMeterScreen(viewModel: MicMeterViewModel = viewModel()) {
@@ -31,62 +28,38 @@ fun MicMeterScreen(viewModel: MicMeterViewModel = viewModel()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
     ) {
-        Text("Mic Meter", fontSize = 24.sp)
+        Text("Mic Meter", style = MaterialTheme.typography.headlineMedium)
+        Spacer(Modifier.height(6.dp))
+        Text("Input analysis on the worker thread", style = MaterialTheme.typography.bodyMedium)
+        Spacer(Modifier.height(20.dp))
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-            ) {
-                Text("Level", fontSize = 16.sp)
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(32.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(Color.DarkGray),
-                ) {
-                    val clampedLevel = state.level.coerceIn(0f, 1f)
-                    val barColor = when {
-                        clampedLevel > 0.8f -> Color.Red
-                        clampedLevel > 0.5f -> Color.Yellow
-                        else -> Color.Green
-                    }
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(fraction = clampedLevel)
-                            .height(32.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(barColor),
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text("Peak: ${(state.level * 100).toInt()}%", fontSize = 14.sp)
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text("Input Latency: ${state.inputLatency}", fontSize = 14.sp)
-            }
+        DemoPanel(modifier = Modifier.fillMaxWidth()) {
+            Text("Level", style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(12.dp))
+            LevelMeter(state.level)
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "Peak ${(state.level * 100).toInt()}%   RMS ${state.rmsDb}   Peak ${state.peakDb}",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Bands L/M/H  ${formatDb(AudioMath.linearToDb(state.lowBand))} / ${formatDb(AudioMath.linearToDb(state.midBand))} / ${formatDb(AudioMath.linearToDb(state.highBand))}",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text("Latency ${state.inputLatency}   Xruns ${state.xruns}", style = MaterialTheme.typography.bodyMedium)
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
+        Spacer(Modifier.height(20.dp))
+        DemoPrimaryButton(
+            label = if (state.isRecording) "Stop" else "Record",
             onClick = { viewModel.onEvent(MicMeterEvent.ToggleRecording) },
-        ) {
-            Text(if (state.isRecording) "Stop" else "Record")
-        }
+            active = state.isRecording,
+        )
     }
 }

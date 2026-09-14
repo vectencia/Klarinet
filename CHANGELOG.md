@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - GitHub Pages site assembly is `scripts/assemble-pages.sh`, shared by the workflow and `make pages`
+- Demos (Compose, web, SwiftUI): 0.5.0 session APIs (`requestRecordPermission`, `routeChangeFlow` / `clearRouteChanges`, `AnalyzingCallback`, `asFlow`, BPF bandwidth in octaves, underrun counts) and a studio visual system with animated screen transitions
+
+### Added
+
+- `:sample` `perm` listen path for `hasRecordPermission` / `requestRecordPermission`
 
 ### Docs
 

@@ -9,6 +9,7 @@ final class ToneGeneratorViewModel: ObservableObject {
     @Published var sleepRemainingMs: Int64 = 0
     @Published var sleepDurationMs: Int64 = 5_000
     @Published var sleepFadeMs: Float = 1_000
+    @Published var xruns: Int = 0
 
     private var engine: AudioEngine?
     private var stream: AudioStream?
@@ -64,6 +65,9 @@ final class ToneGeneratorViewModel: ObservableObject {
             return numFrames
         }
         callback = cb
+        cb.onUnderrun = { [weak self] _, count in
+            DispatchQueue.main.async { self?.xruns = count.intValue }
+        }
 
         let gainFx = eng.createEffect(type: .gain)
         gainFx.setParameter(paramId: GainParams.shared.GAIN_DB, value: 0)
@@ -97,6 +101,7 @@ final class ToneGeneratorViewModel: ObservableObject {
         isPlaying = true
         sleepState = .idle
         sleepRemainingMs = 0
+        xruns = 0
         streamState = "Started"
         startSleepPoll()
     }

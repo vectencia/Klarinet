@@ -4,6 +4,8 @@
     <dict>
         <key>CADisableMinimumFrameDurationOnPhone</key>
         <true/>
+        <key>NSMicrophoneUsageDescription</key>
+        <string>Klarinet records audio for the Mic Meter demo.</string>
         <key>UIBackgroundModes</key>
         <array>
             <string>audio</string>

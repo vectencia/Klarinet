@@ -1,5 +1,6 @@
 import com.vectencia.klarinet.AudioEffectType
 import com.vectencia.klarinet.AudioEngine
+import com.vectencia.klarinet.AudioSessionManager
 import com.vectencia.klarinet.AudioScene
 import com.vectencia.klarinet.AudioScenePlayer
 import com.vectencia.klarinet.AudioStreamCallback
@@ -17,7 +18,16 @@ fun main(args: Array<String>) {
         "fade" -> listenFade()
         "sleep" -> listenSleepTimer()
         "scene" -> listenScene()
+        "perm" -> printPermission()
         else -> playSine()
+    }
+}
+
+private fun printPermission() {
+    val session = AudioSessionManager()
+    println("hasRecordPermission=${session.hasRecordPermission()}")
+    session.requestRecordPermission { granted ->
+        println("requestRecordPermission=$granted")
     }
 }
 

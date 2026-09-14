@@ -7,10 +7,12 @@ import com.vectencia.klarinet.AudioStream
 import com.vectencia.klarinet.audioFileWavBytes
 import com.vectencia.klarinet.decodeAudioBytes
 import com.vectencia.klarinet.decodeAudioFile
+import com.vectencia.klarinet.coroutines.asFlow
 import com.vectencia.klarinet.playFile
 import com.vectencia.klarinet.recordToFile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.job
+import kotlinx.coroutines.launch
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 
@@ -60,21 +62,33 @@ internal object FileScreen {
         }
 
         fun showInfo(readerPath: String) {
-            val reader = AudioFileReader(readerPath)
-            val info = reader.info
-            reader.close()
-            path = readerPath
-            infoBody.textContent = buildString {
-                appendLine("Path: $readerPath")
-                appendLine("Format: ${info.format}")
-                appendLine("Duration: ${formatDuration(info.durationMs)}")
-                appendLine("Sample rate: ${info.sampleRate} Hz")
-                appendLine("Channels: ${info.channelCount}")
-                appendLine("Bit rate: ${info.bitRate / 1000} kbps")
-                info.tags.title?.let { appendLine("Title: $it") }
+            scope.launch {
+                val reader = AudioFileReader(readerPath)
+                try {
+                    val channels = reader.info.channelCount.coerceAtLeast(1)
+                    var samples = 0
+                    reader.asFlow(chunkSize = 4096).collect { chunk -> samples += chunk.size }
+                    val info = reader.info
+                    path = readerPath
+                    infoBody.textContent = buildString {
+                        appendLine("Path: $readerPath")
+                        appendLine("Format: ${info.format}")
+                        appendLine("Duration: ${formatDuration(info.durationMs)}")
+                        appendLine("Sample rate: ${info.sampleRate} Hz")
+                        appendLine("Channels: ${info.channelCount}")
+                        appendLine("Bit rate: ${info.bitRate / 1000} kbps")
+                        appendLine("Decoded frames: ${samples / channels}")
+                        info.tags.title?.let { appendLine("Title: $it") }
+                    }
+                    status.textContent = "Ready"
+                    status.className = "status"
+                } catch (error: Throwable) {
+                    status.textContent = demoErrorMessage(error)
+                    status.className = "status error"
+                } finally {
+                    reader.close()
+                }
             }
-            status.textContent = "Ready"
-            status.className = "status"
         }
 
         fun fail(message: String) {

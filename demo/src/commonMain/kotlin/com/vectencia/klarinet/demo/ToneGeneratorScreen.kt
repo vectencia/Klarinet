@@ -11,9 +11,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import com.vectencia.klarinet.theme.DemoPanel
+import com.vectencia.klarinet.theme.DemoPrimaryButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,17 +38,12 @@ fun ToneGeneratorScreen(viewModel: ToneGeneratorViewModel = viewModel()) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
     ) {
-        Text("Tone Generator", fontSize = 24.sp)
+        Text("Tone Generator", style = MaterialTheme.typography.headlineMedium)
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
+        DemoPanel(modifier = Modifier.fillMaxWidth()) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Frequency: ${state.frequency.roundToInt()} Hz", fontSize = 18.sp)
 
                 Slider(
@@ -60,15 +57,17 @@ fun ToneGeneratorScreen(viewModel: ToneGeneratorViewModel = viewModel()) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Button(
+        DemoPrimaryButton(
+            label = if (state.isPlaying) "Stop" else "Play",
             onClick = { viewModel.onEvent(ToneGeneratorEvent.TogglePlayback) },
-        ) {
-            Text(if (state.isPlaying) "Stop" else "Play")
-        }
+            active = state.isPlaying,
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Text("State: ${state.streamState}", fontSize = 14.sp)
+        Text("Xruns: ${state.xruns}", fontSize = 14.sp)
+        state.errorMessage?.let { Text(it, fontSize = 14.sp) }
 
         Spacer(modifier = Modifier.height(16.dp))
 

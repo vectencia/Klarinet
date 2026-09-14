@@ -8,10 +8,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import com.vectencia.klarinet.theme.DemoPanel
+import com.vectencia.klarinet.theme.DemoPrimaryButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -32,16 +33,11 @@ fun LatencyScreen(viewModel: LatencyViewModel = viewModel()) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
     ) {
-        Text("Latency Info", fontSize = 24.sp)
+        Text("Latency Info", style = MaterialTheme.typography.headlineMedium)
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-            ) {
+        DemoPanel(modifier = Modifier.fillMaxWidth()) {
                 LatencyRow("Output Latency", state.outputLatency)
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                 LatencyRow("Input Latency", state.inputLatency)
@@ -51,16 +47,17 @@ fun LatencyScreen(viewModel: LatencyViewModel = viewModel()) {
                 LatencyRow("Buffer Size", state.bufferSize)
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                 LatencyRow("Performance Mode", state.performanceMode)
-            }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                LatencyRow("Xruns", "${state.xruns}")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Button(
+        DemoPrimaryButton(
+            label = if (state.isMeasuring) "Stop" else "Measure",
             onClick = { viewModel.onEvent(LatencyEvent.ToggleMeasure) },
-        ) {
-            Text(if (state.isMeasuring) "Stop" else "Measure")
-        }
+            active = state.isMeasuring,
+        )
     }
 }
 

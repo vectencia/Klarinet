@@ -11,8 +11,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import com.vectencia.klarinet.theme.DemoPrimaryButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,7 +38,7 @@ fun ScenesScreen(viewModel: ScenesViewModel = viewModel()) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
     ) {
-        Text("Scenes", fontSize = 24.sp)
+        Text("Scenes", style = MaterialTheme.typography.headlineMedium)
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -78,9 +80,11 @@ fun ScenesScreen(viewModel: ScenesViewModel = viewModel()) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Button(onClick = { viewModel.onEvent(ScenesEvent.Stop) }) {
-            Text("Stop")
-        }
+        DemoPrimaryButton(
+            label = "Stop",
+            onClick = { viewModel.onEvent(ScenesEvent.Stop) },
+            active = state.currentId != null,
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 

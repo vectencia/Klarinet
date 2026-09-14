@@ -10,6 +10,9 @@ fun main() {
     val twoPi = 2.0 * kotlin.math.PI
     var phase = 0.0
 
+    val session = AudioSessionManager()
+    println("Record permission: ${session.hasRecordPermission()}")
+    var xruns = 0
     val callback = object : AudioStreamCallback {
         override fun onAudioReady(buffer: FloatArray, numFrames: Int): Int {
             val inc = twoPi * 440.0 / sampleRate
@@ -18,6 +21,10 @@ fun main() {
                 phase += inc
             }
             return numFrames
+        }
+
+        override fun onStreamUnderrun(stream: AudioStream, count: Int) {
+            xruns = count
         }
     }
 
@@ -40,5 +47,6 @@ fun main() {
     stream.stop()
     stream.close()
     engine.release()
+    println("Xruns: $xruns")
     println("Done.")
 }

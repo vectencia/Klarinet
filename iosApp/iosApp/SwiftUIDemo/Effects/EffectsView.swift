@@ -76,6 +76,28 @@ struct EffectsView: View {
                     )
                 }
 
+                EffectCard(
+                    name: "Band-Pass",
+                    icon: "slider.horizontal.2.square",
+                    enabled: viewModel.bpfEnabled,
+                    onEnabledChange: { viewModel.updateBpfEnabled($0) }
+                ) {
+                    ParameterRow(
+                        label: "Center",
+                        value: viewModel.bpfCenterHz,
+                        range: 20...8000,
+                        format: { "\(Int($0)) Hz" },
+                        onChange: { viewModel.updateBpfCenterHz($0) }
+                    )
+                    ParameterRow(
+                        label: "Width",
+                        value: viewModel.bpfBandwidthOctaves,
+                        range: 0.1...4,
+                        format: { String(format: "%.1f oct", $0) },
+                        onChange: { viewModel.updateBpfBandwidth($0) }
+                    )
+                }
+
                 // Delay effect card
                 EffectCard(
                     name: "Delay",

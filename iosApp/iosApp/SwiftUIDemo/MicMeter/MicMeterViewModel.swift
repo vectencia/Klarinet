@@ -11,11 +11,24 @@ final class MicMeterViewModel: ObservableObject {
     private var callback: AudioStreamCallbackImpl?
     private var levelTimer: Timer?
 
+    @Published var errorMessage: String?
+
     func toggleRecording() {
         isRecording ? stop() : start()
     }
 
     private func start() {
+        DemoSession.shared.requestRecordPermission { granted in
+            if granted {
+                self.startUnlocked()
+            } else {
+                self.errorMessage = "Microphone permission denied"
+            }
+        }
+    }
+
+    private func startUnlocked() {
+        errorMessage = nil
         let eng = AudioEngine.companion.create()
         engine = eng
 
