@@ -431,13 +431,22 @@ The project includes demo applications for every supported platform:
 
 The same six screens as the Compose demo, plus local-file decode, URL decode, mic recording, and WAV download. Uses the Klarinet JS target.
 
-When **Settings → Pages → Source** is **GitHub Actions**, the production demo is at [vectencia.github.io/Klarinet](https://vectencia.github.io/Klarinet/) and API docs at [`/api/`](https://vectencia.github.io/Klarinet/api/). The workflow skips deploy until that is set. Locally:
+Production (GitHub Pages):
+
+- Demo: [vectencia.github.io/Klarinet](https://vectencia.github.io/Klarinet/)
+- Dokka API docs: [`/api/`](https://vectencia.github.io/Klarinet/api/)
+
+The [Pages workflow](https://github.com/vectencia/Klarinet/actions/workflows/pages.yml) builds on every `main` push. Deploy is skipped with a warning if `GET /repos/{owner}/{repo}/pages` fails (Pages not enabled; typical on a new fork). Layout, enablement, local production preview, CORS/mic notes, and troubleshooting: [GITHUB_PAGES.md](GITHUB_PAGES.md).
 
 ```bash
+# webpack-dev-server (not the Pages bundle)
 ./gradlew :demo-web:jsBrowserDevelopmentRun
-```
+# URL Gradle prints, usually http://localhost:8080
 
-Then open the URL Gradle prints (usually `http://localhost:8080`).
+# same public/ tree as GitHub Pages (demo at /, Dokka at /api/)
+make pages
+python3 -m http.server 8080 --directory public
+```
 
 ### Compose Multiplatform Demo (Android + iOS + Desktop)
 
@@ -457,6 +466,8 @@ Native SwiftUI demo for each Apple platform. The iOS app mirrors Compose with si
 Minimal command-line demos that play a 440 Hz sine wave for 3 seconds, proving low-latency audio works on each native target.
 
 ## API Reference
+
+Hosted Dokka HTML (same Pages deploy as the web demo): [vectencia.github.io/Klarinet/api/](https://vectencia.github.io/Klarinet/api/). Generate locally with `./gradlew :dokkaGenerate` (`build/dokka/html/`).
 
 ### Core Types
 
@@ -561,7 +572,8 @@ open iosApp/iosApp.xcodeproj
 | `make klarinet` | Build the library only |
 | `make demo` | Build the demo app (Android) |
 | `make sample` | Run the one-file JVM sine-wave sample |
-| `make docs` | Generate Dokka HTML API docs |
+| `make docs` | Generate Dokka HTML API docs (`build/dokka/html/`) |
+| `make pages` | Production web demo + Dokka into `public/` (GitHub Pages layout) |
 | `make test` | Run Kotlin tests (`:klarinet:allTests`) |
 | `make test-coroutines` | Run `klarinet-coroutines` tests |
 | `make test-js` | Run JS browser tests (Chrome Headless) |

@@ -1,4 +1,4 @@
-.PHONY: build klarinet demo sample docs test test-klarinet test-coroutines test-dsp test-android test-ios test-js test-all clean publish
+.PHONY: build klarinet demo sample docs pages test test-klarinet test-coroutines test-dsp test-android test-ios test-js test-all clean publish
 
 build:
 	./gradlew build
@@ -14,6 +14,10 @@ sample:
 
 docs:
 	./gradlew :dokkaGenerate
+
+pages:
+	./gradlew :demo-web:jsBrowserDistribution :dokkaGenerate
+	bash ./scripts/assemble-pages.sh
 
 test: test-klarinet
 

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- GitHub Pages site assembly is `scripts/assemble-pages.sh`, shared by the workflow and `make pages`
+
+### Docs
+
+- GitHub Pages maintainer guide ([GITHUB_PAGES.md](GITHUB_PAGES.md)): published tree, enablement, workflow, `make pages` local preview, CORS/mic, troubleshooting
+- README and CONTRIBUTING link the live demo/`/api/` URLs to that guide
+
 ## [0.5.0] - 2026-09-13
 
 ### Added

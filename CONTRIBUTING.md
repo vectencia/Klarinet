@@ -82,6 +82,7 @@ The project includes a `Makefile` for common commands:
 | `make build` | Build all modules |
 | `make klarinet` | Build the library only |
 | `make demo` | Build the demo app (Android) |
+| `make pages` | Assemble GitHub Pages tree into `public/` (demo + Dokka) |
 | `make test` | Run `:klarinet:allTests` |
 | `make test-coroutines` | Run `:klarinet-coroutines:allTests` |
 | `make test-dsp` | Run C++ DSP tests |
@@ -101,8 +102,23 @@ The project includes a `Makefile` for common commands:
 | `klarinet-coroutines` | Optional Flow and suspending extensions |
 | `demo` | Shared Compose Multiplatform demo UI |
 | `demo-android` | Android application entry point |
-| `demo-web` | Browser demo |
+| `demo-web` | Browser demo (published at `/` on GitHub Pages) |
 | `sample` | One-file JVM sine-wave sample |
+
+## GitHub Pages
+
+The production web demo and Dokka API docs are a GitHub Pages site built by [`.github/workflows/pages.yml`](.github/workflows/pages.yml). Maintainer details (site layout, org-admin enablement, `make pages`, CORS/mic, troubleshooting) are in [GITHUB_PAGES.md](GITHUB_PAGES.md).
+
+PRs do not publish a preview URL. After merge to `main`, check the [Pages workflow](https://github.com/vectencia/Klarinet/actions/workflows/pages.yml). On this repo the site is live; on a fork, if the deploy step is skipped, `GET /repos/{owner}/{repo}/pages` failed (Pages not enabled) — a repo admin must set **Settings → Pages → Source** to **GitHub Actions**.
+
+When a PR changes `:demo-web`, KDoc that Dokka renders, or the Pages workflow/assemble script, include a local Pages preview in the test plan:
+
+```bash
+make pages
+python3 -m http.server 8080 --directory public
+```
+
+Confirm the demo at `http://localhost:8080/` and API docs at `http://localhost:8080/api/`. Keep demo asset URLs relative; the live site is served under `/Klarinet/`.
 
 ## Pull Request Guidelines
 

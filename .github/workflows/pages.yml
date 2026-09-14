@@ -1,3 +1,4 @@
+# Web demo at / and Dokka HTML at /api/. Maintainer guide: GITHUB_PAGES.md
 name: GitHub Pages
 
 on:
@@ -33,17 +34,7 @@ jobs:
         run: ./gradlew :demo-web:jsBrowserDistribution :dokkaGenerate
 
       - name: Assemble site
-        run: |
-          set -euo pipefail
-          DEMO_DIR="demo-web/build/dist/js/productionExecutable"
-          DOCS_DIR="build/dokka/html"
-          test -f "$DEMO_DIR/index.html"
-          test -f "$DOCS_DIR/index.html"
-          rm -rf public
-          mkdir -p public/api
-          cp -R "$DEMO_DIR"/. public/
-          cp -R "$DOCS_DIR"/. public/api/
-          touch public/.nojekyll
+        run: bash ./scripts/assemble-pages.sh
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
