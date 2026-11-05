@@ -37,9 +37,13 @@ actual class AudioSessionManager actual constructor() {
         }
     }
 
-    actual fun observeRouteChanges(listener: (AudioRouteChangeInfo) -> Unit) { /* no-op: use AudioDeviceCallback in the host */ }
+    actual fun observeRouteChanges(listener: (AudioRouteChangeInfo) -> Unit) {
+        AndroidRouteEvents.setListener(listener)
+    }
 
-    actual fun clearRouteChanges() {}
+    actual fun clearRouteChanges() {
+        AndroidRouteEvents.setListener(null)
+    }
 
     actual fun observeInterruptions(listener: (AudioInterruptionInfo) -> Unit) {
         interruptions.observe(listener)

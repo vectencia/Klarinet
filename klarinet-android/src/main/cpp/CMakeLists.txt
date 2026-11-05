@@ -12,7 +12,7 @@ include(FetchContent)
 FetchContent_Declare(
     oboe
     GIT_REPOSITORY https://github.com/google/oboe.git
-    GIT_TAG 1.10.0
+    GIT_TAG 1.11.0
 )
 FetchContent_MakeAvailable(oboe)
 

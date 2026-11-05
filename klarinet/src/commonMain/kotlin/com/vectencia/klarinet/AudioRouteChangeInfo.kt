@@ -11,7 +11,12 @@ package com.vectencia.klarinet
  *
  * ## Platform Behavior
  *
- * - **Android**: Route changes are reported via `AudioDeviceCallback`.
+ * - **Android**: On API 37 and later, Oboe reports
+ *   `AudioStreamRoutingCallback` while a stream is open and its routed
+ *   devices change without disconnecting the stream. [reason] is
+ *   `"RoutingChanged"`. [previousRoute] is the previous device id
+ *   list (`"unspecified"` when there was none). Earlier Android versions
+ *   disconnect the stream instead, and that path does not emit here.
  * - **Apple**: Route changes are reported via
  *   `AVAudioSession.routeChangeNotification`.
  *
@@ -27,3 +32,15 @@ data class AudioRouteChangeInfo(
     val reason: String,
     val previousRoute: String,
 )
+
+/** [AudioRouteChangeInfo.reason] for an Oboe routing-changed callback. */
+internal const val ROUTING_CHANGED_REASON = "RoutingChanged"
+
+internal fun formatRoutedDeviceIds(deviceIds: IntArray): String =
+    if (deviceIds.isEmpty()) "unspecified" else deviceIds.joinToString(",")
+
+internal fun routingChangedInfo(previousDeviceIds: IntArray): AudioRouteChangeInfo =
+    AudioRouteChangeInfo(
+        reason = ROUTING_CHANGED_REASON,
+        previousRoute = formatRoutedDeviceIds(previousDeviceIds),
+    )

@@ -83,7 +83,7 @@ public:
 private:
     struct StreamEntry {
         std::shared_ptr<oboe::AudioStream> stream;
-        std::unique_ptr<KlarinetCallback> callback;
+        std::shared_ptr<KlarinetCallback> callback;
     };
 
     std::mutex mutex_;

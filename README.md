@@ -622,7 +622,7 @@ session.setActive(true) // Android: call bind(context) first
 ```
 
 - **Apple:** `PLAYBACK` maps to `AVAudioSessionCategoryPlayback`. Interruptions come from `AVAudioSessionInterruptionNotification`.
-- **Android:** `AudioSessionManager.bind(context)` then `setActive(true)` requests `AUDIOFOCUS_GAIN`. Focus loss/gain is reported as interruptions.
+- **Android:** `AudioSessionManager.bind(context)` then `setActive(true)` requests `AUDIOFOCUS_GAIN`. Focus loss/gain is reported as interruptions. On API 37 and later, `observeRouteChanges` also receives Oboe routing changes (`reason` is `"RoutingChanged"`) when an open stream stays connected and its devices change.
 
 ### Host leftover
 

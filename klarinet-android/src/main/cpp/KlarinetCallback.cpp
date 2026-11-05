@@ -11,9 +11,17 @@
 #define LOG_TAG "KlarinetCallback"
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
+namespace {
+struct RouteDispatch;
+RouteDispatch* routeDispatch(JNIEnv* env);
+}
+
 KlarinetCallback::KlarinetCallback(JNIEnv* env, jobject callback) {
+    env->GetJavaVM(&jvm_);
+    // Cache the JNI class from this Java thread. FindClass on the later
+    // routing thread only sees the bootstrap loader.
+    routeDispatch(env);
     if (callback != nullptr) {
-        env->GetJavaVM(&jvm_);
         callbackRef_ = env->NewGlobalRef(callback);
 
         jclass cls = env->GetObjectClass(callback);
@@ -50,6 +58,54 @@ KlarinetCallback::~KlarinetCallback() {
         callbackRef_ = nullptr;
     }
 }
+
+void KlarinetCallback::noteRoutedDevices(const int32_t* deviceIds, int32_t numDevices) {
+    std::lock_guard<std::mutex> lock(routeMu_);
+    routedDeviceIds_.clear();
+    if (deviceIds != nullptr && numDevices > 0) {
+        routedDeviceIds_.assign(deviceIds, deviceIds + numDevices);
+    }
+}
+
+namespace {
+
+struct RouteDispatch {
+    jclass cls = nullptr;
+    jmethodID method = nullptr;
+};
+
+RouteDispatch* routeDispatch(JNIEnv* env) {
+    static RouteDispatch cached;
+    static std::once_flag once;
+    std::call_once(once, [&] {
+        jclass local = env->FindClass("com/vectencia/klarinet/AndroidRouteEvents");
+        if (local == nullptr) {
+            env->ExceptionClear();
+            LOGE("Could not find AndroidRouteEvents");
+            return;
+        }
+        cached.cls = reinterpret_cast<jclass>(env->NewGlobalRef(local));
+        cached.method = env->GetStaticMethodID(local, "dispatch", "([I[I)V");
+        if (cached.method == nullptr) {
+            env->ExceptionClear();
+            LOGE("Could not find AndroidRouteEvents.dispatch");
+        }
+        env->DeleteLocalRef(local);
+    });
+    if (cached.cls == nullptr || cached.method == nullptr) return nullptr;
+    return &cached;
+}
+
+jintArray newDeviceIdArray(JNIEnv* env, const int32_t* deviceIds, int32_t numDevices) {
+    const jsize count = deviceIds != nullptr && numDevices > 0 ? numDevices : 0;
+    jintArray array = env->NewIntArray(count);
+    if (array != nullptr && count > 0) {
+        env->SetIntArrayRegion(array, 0, count, reinterpret_cast<const jint*>(deviceIds));
+    }
+    return array;
+}
+
+}  // namespace
 
 void KlarinetCallback::prepare(
     int32_t framesPerBurst,
@@ -214,6 +270,52 @@ oboe::DataCallbackResult KlarinetCallback::onAudioReady(
 
     cv_.notify_one();
     return oboe::DataCallbackResult::Continue;
+}
+
+void KlarinetCallback::onRoutingChanged(
+    oboe::AudioStream* /*stream*/,
+    const int32_t* deviceIds,
+    int32_t numDevices) {
+    if (jvm_ == nullptr) return;
+
+    std::vector<int32_t> previous;
+    {
+        std::lock_guard<std::mutex> lock(routeMu_);
+        previous = routedDeviceIds_;
+        routedDeviceIds_.clear();
+        if (deviceIds != nullptr && numDevices > 0) {
+            routedDeviceIds_.assign(deviceIds, deviceIds + numDevices);
+        }
+    }
+
+    JNIEnv* env = nullptr;
+    bool attached = false;
+    const jint envResult = jvm_->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6);
+    if (envResult == JNI_EDETACHED) {
+        if (jvm_->AttachCurrentThread(&env, nullptr) != JNI_OK) return;
+        attached = true;
+    }
+    if (env == nullptr) return;
+
+    RouteDispatch* dispatch = routeDispatch(env);
+    if (dispatch != nullptr) {
+        jintArray previousArray = newDeviceIdArray(env, previous.data(), static_cast<int32_t>(previous.size()));
+        jintArray currentArray = newDeviceIdArray(env, deviceIds, numDevices);
+        if (previousArray != nullptr && currentArray != nullptr) {
+            env->CallStaticVoidMethod(dispatch->cls, dispatch->method, previousArray, currentArray);
+            if (env->ExceptionCheck()) {
+                env->ExceptionDescribe();
+                env->ExceptionClear();
+                LOGE("Exception in routing changed dispatch");
+            }
+        }
+        if (previousArray != nullptr) env->DeleteLocalRef(previousArray);
+        if (currentArray != nullptr) env->DeleteLocalRef(currentArray);
+    }
+
+    if (attached) {
+        jvm_->DetachCurrentThread();
+    }
 }
 
 void KlarinetCallback::onErrorBeforeClose(oboe::AudioStream* stream, oboe::Result error) {

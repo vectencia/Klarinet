@@ -9,11 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Android native backend uses Google Oboe 1.11.0. Data, error, and routing callbacks are `shared_ptr`s (`setDataCallback`, `setErrorCallback`, `setRoutingCallback`)
 - GitHub Pages site assembly is `scripts/assemble-pages.sh`, shared by the workflow and `make pages`
-- Demos (Compose, web, SwiftUI): 0.5.0 session APIs (`requestRecordPermission`, `routeChangeFlow` / `clearRouteChanges`, `AnalyzingCallback`, `asFlow`, BPF bandwidth in octaves, underrun counts) and a studio visual system with animated screen transitions
 
 ### Added
 
+- Android `observeRouteChanges` / `routeChangeFlow` emit `reason = "RoutingChanged"` when Oboe reports a routing change on API 37+. `previousRoute` is the previous device id list, or `unspecified`. Older Android versions still disconnect the stream and do not emit here
+- Demos (Compose, web, SwiftUI): 0.5.0 session APIs (`requestRecordPermission`, `routeChangeFlow` / `clearRouteChanges`, `AnalyzingCallback`, `asFlow`, BPF bandwidth in octaves, underrun counts) and a studio visual system with animated screen transitions
 - `:sample` `perm` listen path for `hasRecordPermission` / `requestRecordPermission`
 
 ### Docs

@@ -41,8 +41,9 @@ fun AudioSessionManager.interruptionFlow(): Flow<AudioInterruptionInfo> = callba
  * core API keeps a single listener, so this replaces any previous
  * listener (including another collector). Cancelling the collector
  * calls [AudioSessionManager.clearRouteChanges], which drops the Apple
- * `NSNotificationCenter` observer. Android, JVM, JS, desktop, and
- * macOS never emit from this path.
+ * `NSNotificationCenter` observer and the Android routing listener.
+ * Android emits when Oboe reports a routing change on API 37 or later.
+ * JVM, JS, desktop, and macOS never emit from this path.
  *
  * @see AudioSessionManager.observeRouteChanges
  * @see AudioSessionManager.clearRouteChanges

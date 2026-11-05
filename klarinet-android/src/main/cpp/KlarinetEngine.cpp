@@ -1,5 +1,6 @@
 #include "KlarinetEngine.h"
 #include <android/log.h>
+#include <vector>
 
 #define LOG_TAG "KlarinetEngine"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -28,7 +29,7 @@ jlong KlarinetEngine::openStream(
     jint deviceId,
     jobject callback) {
 
-    auto klarinetCallback = std::make_unique<KlarinetCallback>(env, callback);
+    auto klarinetCallback = std::make_shared<KlarinetCallback>(env, callback);
 
     oboe::AudioStreamBuilder builder;
     builder.setDirection(toOboeDirection(direction));
@@ -36,8 +37,12 @@ jlong KlarinetEngine::openStream(
     builder.setSharingMode(toOboeSharingMode(sharingMode));
     builder.setFormat(toOboeFormat(audioFormat));
     builder.setChannelCount(channelCount);
-    builder.setDataCallback(klarinetCallback.get());
-    builder.setErrorCallback(klarinetCallback.get());
+    // Oboe 1.11 invokes routing changes on a detached thread and only keeps the
+    // callback alive when it is a shared_ptr. The same ownership applies to the
+    // data and error callbacks.
+    builder.setDataCallback(klarinetCallback);
+    builder.setErrorCallback(klarinetCallback);
+    builder.setRoutingCallback(klarinetCallback);
 
     if (sampleRate > 0) {
         builder.setSampleRate(sampleRate);
@@ -66,6 +71,19 @@ jlong KlarinetEngine::openStream(
         stream->getFramesPerBurst(),
         stream->getChannelCount(),
         stream->getDirection());
+    const std::vector<int32_t> openedDeviceIds = stream->getDeviceIds();
+    if (!openedDeviceIds.empty()) {
+        klarinetCallback->noteRoutedDevices(
+            openedDeviceIds.data(),
+            static_cast<int32_t>(openedDeviceIds.size()));
+    } else {
+        const int32_t device = stream->getDeviceId();
+        if (device >= 0) {
+            klarinetCallback->noteRoutedDevices(&device, 1);
+        } else {
+            klarinetCallback->noteRoutedDevices(nullptr, 0);
+        }
+    }
 
     jlong handle = reinterpret_cast<jlong>(stream.get());
 

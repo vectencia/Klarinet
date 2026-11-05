@@ -57,9 +57,11 @@ expect class AudioSessionManager() {
      * Register a listener for audio route change events.
      *
      * Replaces any previous listener. On Apple (iOS/tvOS/watchOS) this
-     * installs an `AVAudioSession` route-change observer. Call
-     * [clearRouteChanges] to remove it. Android, JVM, JS, desktop, and
-     * macOS do not emit from this API.
+     * installs an `AVAudioSession` route-change observer. On Android API 37
+     * and later, an open stream reports Oboe routing changes here when the
+     * route changes without disconnecting the stream (`reason` is
+     * `"RoutingChanged"`). Call [clearRouteChanges] to remove the listener.
+     * JVM, JS, desktop, and macOS do not emit from this API.
      *
      * @param listener Callback invoked when the audio route changes
      *   (e.g., headphones plugged in/out).
@@ -70,7 +72,8 @@ expect class AudioSessionManager() {
      * Stop listening for route changes.
      *
      * On Apple this removes the `NSNotificationCenter` observer installed
-     * by [observeRouteChanges]. No-op on Android, JVM, JS, desktop, and macOS.
+     * by [observeRouteChanges]. On Android this clears the routing listener.
+     * No-op on JVM, JS, desktop, and macOS.
      */
     fun clearRouteChanges()
 
