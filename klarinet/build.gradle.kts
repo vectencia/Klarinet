@@ -454,10 +454,16 @@ val generateKlarinetWasm = tasks.register("generateKlarinetWasm") {
     val outPath = layout.buildDirectory.file("generated/jsWasm/KlarinetWasm.kt").get().asFile.absolutePath
     outputs.file(outPath)
     doLast {
-        val cargo = listOf(
-            File(System.getProperty("user.home"), ".cargo/bin/cargo"),
-            File("/opt/homebrew/bin/cargo"),
-        ).firstOrNull { it.canExecute() } ?: error("cargo was not found")
+        val cargo = run {
+            val candidates = mutableListOf(
+                File(System.getProperty("user.home"), ".cargo/bin/cargo"),
+                File("/opt/homebrew/bin/cargo"),
+            )
+            System.getenv("PATH")?.split(File.pathSeparator)?.forEach { dir ->
+                candidates += File(dir, "cargo")
+            }
+            candidates.firstOrNull { it.canExecute() } ?: error("cargo was not found")
+        }
         val result = ProcessBuilder(
             cargo.absolutePath,
             "build",
@@ -557,8 +563,16 @@ val buildKlarinetNativeLinuxX64 = tasks.register("buildKlarinetNativeLinuxX64") 
         }
         val out = File(outPath)
         out.mkdirs()
-        val cargo = File(System.getProperty("user.home"), ".cargo/bin/cargo")
-        check(cargo.canExecute()) { "cargo was not found at ${cargo.absolutePath}" }
+        val cargo = run {
+            val candidates = mutableListOf(
+                File(System.getProperty("user.home"), ".cargo/bin/cargo"),
+                File("/opt/homebrew/bin/cargo"),
+            )
+            System.getenv("PATH")?.split(File.pathSeparator)?.forEach { dir ->
+                candidates += File(dir, "cargo")
+            }
+            candidates.firstOrNull { it.canExecute() } ?: error("cargo was not found")
+        }
         val targetDir = File(out, "target")
         run(
             listOf(
