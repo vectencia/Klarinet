@@ -1,5 +1,5 @@
 import SwiftUI
-import Klarinet
+import ComposeApp
 
 struct ToneGeneratorView: View {
     @StateObject private var viewModel = ToneGeneratorViewModel()

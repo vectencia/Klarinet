@@ -45,6 +45,11 @@ public:
      * @param maxSizeInSamples Initial buffer size in samples (0 = no allocation).
      */
     explicit CircularBuffer(int32_t maxSizeInSamples = 0);
+#ifdef KLARINET_DSP_RUST_EFFECTS
+    ~CircularBuffer();
+    CircularBuffer(const CircularBuffer&) = delete;
+    CircularBuffer& operator=(const CircularBuffer&) = delete;
+#endif
 
     /**
      * @brief Resize the buffer.
@@ -98,12 +103,19 @@ public:
      * @brief Get the current buffer size.
      * @return Size in samples.
      */
+#ifdef KLARINET_DSP_RUST_EFFECTS
+    int32_t getSize() const;
+#else
     int32_t getSize() const { return size_; }
+#endif
 
 private:
     std::vector<float> buffer_;  ///< Backing storage for the delay line.
     int32_t writePos_ = 0;      ///< Current write cursor (wraps modulo size_).
     int32_t size_ = 0;          ///< Current buffer size in samples.
+#ifdef KLARINET_DSP_RUST_EFFECTS
+    void* rust_ = nullptr;
+#endif
 };
 
 } // namespace klarinet

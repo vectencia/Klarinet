@@ -1,5 +1,39 @@
 #include "Chorus.h"
 
+#ifdef KLARINET_DSP_RUST_EFFECTS
+#include "klarinet_fx.h"
+
+namespace klarinet {
+
+Chorus::Chorus() : AudioEffect(EffectType::Chorus) {
+    rust_ = klarinet_fx_create(static_cast<int32_t>(EffectType::Chorus));
+}
+
+void Chorus::process(float* buffer, int32_t numFrames, int32_t channelCount) {
+    if (!isEnabled()) return;
+    klarinet_fx_process(rust_, buffer, numFrames, channelCount);
+}
+
+void Chorus::setParameter(int32_t paramId, float value) {
+    klarinet_fx_set_parameter(rust_, paramId, value);
+}
+
+float Chorus::getParameter(int32_t paramId) const {
+    return klarinet_fx_get_parameter(rust_, paramId);
+}
+
+void Chorus::prepare(int32_t sampleRate, int32_t channelCount) {
+    sampleRate_ = sampleRate;
+    channelCount_ = channelCount;
+    klarinet_fx_prepare(rust_, sampleRate, channelCount);
+}
+
+void Chorus::reset() {
+    klarinet_fx_reset(rust_);
+}
+
+} // namespace klarinet
+#else
 namespace klarinet {
 
 Chorus::Chorus() : AudioEffect(EffectType::Chorus) {}
@@ -95,3 +129,5 @@ void Chorus::reset() {
 }
 
 } // namespace klarinet
+
+#endif

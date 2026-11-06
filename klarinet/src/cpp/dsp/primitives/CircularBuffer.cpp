@@ -17,6 +17,46 @@
 #include <algorithm>
 #include <cmath>
 
+#ifdef KLARINET_DSP_RUST_EFFECTS
+#include "klarinet_fx.h"
+
+namespace klarinet {
+
+CircularBuffer::CircularBuffer(int32_t maxSizeInSamples)
+    : rust_(klarinet_circ_create(maxSizeInSamples)) {}
+
+CircularBuffer::~CircularBuffer() {
+    if (rust_ != nullptr) {
+        klarinet_circ_destroy(rust_);
+    }
+}
+
+void CircularBuffer::setSize(int32_t sizeInSamples) {
+    klarinet_circ_set_size(rust_, sizeInSamples);
+}
+
+void CircularBuffer::clear() {
+    klarinet_circ_clear(rust_);
+}
+
+void CircularBuffer::write(float sample) {
+    klarinet_circ_write(rust_, sample);
+}
+
+float CircularBuffer::read(float delaySamples) const {
+    return klarinet_circ_read(rust_, delaySamples);
+}
+
+float CircularBuffer::readLinear(float delaySamples) const {
+    return klarinet_circ_read_linear(rust_, delaySamples);
+}
+
+int32_t CircularBuffer::getSize() const {
+    return klarinet_circ_size(rust_);
+}
+
+} // namespace klarinet
+#else
 namespace klarinet {
 
 CircularBuffer::CircularBuffer(int32_t maxSizeInSamples) {
@@ -79,3 +119,5 @@ float CircularBuffer::readLinear(float delaySamples) const {
 }
 
 } // namespace klarinet
+
+#endif

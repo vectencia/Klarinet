@@ -1,0 +1,3 @@
+headers = klarinet_audio_test.h
+headerFilter = klarinet_audio_test.h
+compilerOpts = -Isrc/linuxX64Test/cinterop

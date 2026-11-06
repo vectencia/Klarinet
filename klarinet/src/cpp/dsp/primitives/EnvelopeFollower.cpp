@@ -20,6 +20,41 @@
 #include "EnvelopeFollower.h"
 #include <cmath>
 
+#ifdef KLARINET_DSP_RUST_EFFECTS
+#include "klarinet_fx.h"
+
+namespace klarinet {
+
+EnvelopeFollower::EnvelopeFollower() : rust_(klarinet_env_create()) {}
+
+EnvelopeFollower::~EnvelopeFollower() {
+    if (rust_ != nullptr) {
+        klarinet_env_destroy(rust_);
+    }
+}
+
+void EnvelopeFollower::prepare(float sampleRate) {
+    klarinet_env_prepare(rust_, sampleRate);
+}
+
+void EnvelopeFollower::setAttackMs(float ms) {
+    klarinet_env_set_attack(rust_, ms);
+}
+
+void EnvelopeFollower::setReleaseMs(float ms) {
+    klarinet_env_set_release(rust_, ms);
+}
+
+float EnvelopeFollower::process(float input) {
+    return klarinet_env_process(rust_, input);
+}
+
+void EnvelopeFollower::reset() {
+    klarinet_env_reset(rust_);
+}
+
+} // namespace klarinet
+#else
 namespace klarinet {
 
 float EnvelopeFollower::msToCoeff(float ms, float sampleRate) {
@@ -54,3 +89,5 @@ void EnvelopeFollower::reset() {
 }
 
 } // namespace klarinet
+
+#endif

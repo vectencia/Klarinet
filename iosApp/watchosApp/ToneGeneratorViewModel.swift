@@ -1,5 +1,5 @@
 import Foundation
-import Klarinet
+import ComposeApp
 
 final class ToneGeneratorViewModel: ObservableObject {
     @Published var frequency: Float = 440
@@ -18,7 +18,6 @@ final class ToneGeneratorViewModel: ObservableObject {
 
     private func play() {
         let sampleRate: Int32 = 48_000
-        let twoPi = Float.pi * 2
 
         let eng = AudioEngine.companion.create()
         engine = eng
@@ -26,13 +25,14 @@ final class ToneGeneratorViewModel: ObservableObject {
         let cb = AudioStreamCallbackImpl { [self] buffer, numFrames in
             let frames = numFrames.intValue
             let freq = frequency
-            let inc = twoPi * freq / Float(sampleRate)
-
-            for i in 0..<frames {
-                buffer.set(index: Int32(i), value: sinf(phase) * 0.5)
-                phase += inc
-                if phase > twoPi { phase -= twoPi }
-            }
+            phase = SineFillKt.fillCallbackSine(
+                buffer: buffer,
+                frames: Int32(frames),
+                phase: phase,
+                frequencyHz: freq,
+                sampleRate: sampleRate,
+                amplitude: 0.5
+            )
             return numFrames
         }
         callback = cb

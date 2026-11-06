@@ -57,4 +57,53 @@ internal object JniBridge {
     @JvmStatic external fun nativeChainProcess(chainHandle: Long, data: FloatArray, numFrames: Int, channelCount: Int)
     @JvmStatic external fun nativeSetDeviceEffectChain(devicePtr: Long, chainHandle: Long)
     @JvmStatic external fun nativeClearDeviceEffectChain(devicePtr: Long)
+
+    @JvmStatic external fun nativeFftCreate(size: Int): Long
+    @JvmStatic external fun nativeFftDestroy(handle: Long)
+    @JvmStatic external fun nativeFftForward(handle: Long, real: FloatArray, imag: FloatArray, length: Int)
+    @JvmStatic external fun nativeFftMagnitude(
+        handle: Long,
+        real: FloatArray,
+        imag: FloatArray,
+        out: FloatArray,
+        outLen: Int,
+    )
+
+    @JvmStatic external fun nativeMathRms(data: FloatArray, offset: Int, length: Int): Float
+    @JvmStatic external fun nativeMathPeak(data: FloatArray, offset: Int, length: Int): Float
+    @JvmStatic external fun nativeMathLinearToDb(linear: Float): Float
+    @JvmStatic external fun nativeMathDbToLinear(db: Float): Float
+    @JvmStatic external fun nativeMathHann(out: FloatArray, size: Int)
+
+    @JvmStatic external fun nativeAnalyzerCreate(fftSize: Int, sampleRate: Int): Long
+    @JvmStatic external fun nativeAnalyzerDestroy(handle: Long)
+    @JvmStatic external fun nativeAnalyzerAnalyze(
+        handle: Long,
+        buffer: FloatArray,
+        bufferSamples: Int,
+        numFrames: Int,
+        channelCount: Int,
+        spectrum: FloatArray,
+        spectrumLen: Int,
+        levels: FloatArray,
+    )
+    @JvmStatic external fun nativeAnalyzerBandEnergy(
+        spectrum: FloatArray,
+        spectrumLen: Int,
+        resolution: Float,
+        lowHz: Float,
+        highHz: Float,
+    ): Float
+
+    @JvmStatic external fun nativeResamplerCreate(sourceRate: Int, channels: Int): Long
+    @JvmStatic external fun nativeResamplerDestroy(handle: Long)
+    @JvmStatic external fun nativeResamplerHasBuffered(handle: Long): Int
+    @JvmStatic external fun nativeResampleLinear(
+        handle: Long,
+        destRate: Int,
+        dest: FloatArray,
+        destFrames: Int,
+        channels: Int,
+        read: ResamplerRead,
+    ): Int
 }

@@ -1,3 +1,4 @@
+import org.gradle.api.tasks.testing.Test
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -16,6 +17,9 @@ kotlin {
             jvmTarget.set(JvmTarget.JVM_11)
         }
         withHostTest {}
+        withDeviceTest {
+            instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        }
     }
 
     jvm()
@@ -62,6 +66,20 @@ kotlin {
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
         }
+        getByName("androidDeviceTest").dependencies {
+            implementation(libs.kotlin.test)
+            implementation(libs.kotlin.testJunit)
+            implementation(libs.androidx.testExt.junit)
+            implementation(libs.androidx.espresso.core)
+            implementation(libs.kotlinx.coroutines.test)
+        }
+    }
+}
+
+// The host JVM cannot load libklarinet-jni.so. AnalyzingCallbackTest is the JVM check.
+tasks.withType<Test>().matching { it.name == "testAndroidHostTest" }.configureEach {
+    filter {
+        excludeTestsMatching("com.vectencia.klarinet.coroutines.AnalyzingCallbackTest")
     }
 }
 

@@ -147,14 +147,14 @@ final class ScenesViewModel: ObservableObject {
         let cb = AudioStreamCallbackImpl { [weak self] buffer, numFrames in
             guard let self else { return numFrames }
             let frames = numFrames.intValue
-            let twoPi = Float.pi * 2
-            let increment = twoPi * Float(hz) / Float(sampleRate)
-            var phase = self.phases[phaseKey] ?? 0
-            for i in 0..<frames {
-                buffer.set(index: Int32(i), value: sinf(phase) * 0.2)
-                phase += increment
-                if phase > twoPi { phase -= twoPi }
-            }
+            let phase = SineFillKt.fillCallbackSine(
+                buffer: buffer,
+                frames: Int32(frames),
+                phase: self.phases[phaseKey] ?? 0,
+                frequencyHz: Float(hz),
+                sampleRate: sampleRate,
+                amplitude: 0.2
+            )
             self.phases[phaseKey] = phase
             return numFrames
         }

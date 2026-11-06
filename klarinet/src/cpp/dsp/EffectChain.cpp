@@ -7,6 +7,139 @@
 #include "EffectChain.h"
 #include <algorithm>
 
+#ifdef KLARINET_DSP_RUST_EFFECTS
+#include "klarinet_fx.h"
+#include <vector>
+
+namespace {
+
+struct EffectNode {
+    std::shared_ptr<klarinet::AudioEffect> effect;
+};
+
+extern "C" {
+// Internal linkage. These addresses are passed into the Rust chain. They must
+// not export klarinet_* names; klarinet_effect_set_parameter is the public C API.
+static void klarinet_node_process(void* ctx, float* buffer, int32_t frames, int32_t channels) {
+    auto* node = static_cast<EffectNode*>(ctx);
+    if (node == nullptr || !node->effect || !node->effect->isEnabled()) {
+        return;
+    }
+    node->effect->process(buffer, frames, channels);
+}
+
+static void klarinet_node_prepare(void* ctx, int32_t sample_rate, int32_t channel_count) {
+    auto* node = static_cast<EffectNode*>(ctx);
+    if (node == nullptr || !node->effect) {
+        return;
+    }
+    node->effect->prepare(sample_rate, channel_count);
+}
+
+static void klarinet_node_destroy(void* ctx) {
+    delete static_cast<EffectNode*>(ctx);
+}
+
+static void* klarinet_node_clone(void* ctx) {
+    auto* node = static_cast<EffectNode*>(ctx);
+    if (node == nullptr) {
+        return nullptr;
+    }
+    return new EffectNode{node->effect};
+}
+
+static void klarinet_node_set_parameter(void* effect, int32_t param_id, float value) {
+    if (effect == nullptr) {
+        return;
+    }
+    static_cast<klarinet::AudioEffect*>(effect)->setParameter(param_id, value);
+}
+} // extern "C"
+
+} // namespace
+
+namespace klarinet {
+
+EffectChain::EffectChain() : rust_(klarinet_echain_create()) {}
+
+EffectChain::~EffectChain() {
+    if (rust_ != nullptr) {
+        klarinet_echain_destroy(rust_);
+    }
+}
+
+void EffectChain::process(float* buffer, int32_t numFrames, int32_t channelCount) {
+    if (rust_ == nullptr) {
+        return;
+    }
+    klarinet_echain_process(rust_, buffer, numFrames, channelCount);
+}
+
+void EffectChain::addEffect(std::shared_ptr<AudioEffect> effect) {
+    if (rust_ == nullptr) {
+        return;
+    }
+    auto* raw = effect.get();
+    auto* node = new EffectNode{std::move(effect)};
+    klarinet_echain_add(
+        rust_,
+        raw,
+        node,
+        klarinet_node_process,
+        klarinet_node_prepare,
+        klarinet_node_destroy,
+        klarinet_node_clone);
+}
+
+void EffectChain::removeEffect(AudioEffect* effect) {
+    if (rust_ == nullptr) {
+        return;
+    }
+    klarinet_echain_remove(rust_, effect);
+}
+
+void EffectChain::reorderEffects(const std::vector<AudioEffect*>& newOrder) {
+    if (rust_ == nullptr) {
+        return;
+    }
+    std::vector<void*> keys;
+    keys.reserve(newOrder.size());
+    for (auto* effect : newOrder) {
+        keys.push_back(effect);
+    }
+    klarinet_echain_reorder(rust_, keys.data(), static_cast<int32_t>(keys.size()));
+}
+
+void EffectChain::clear() {
+    if (rust_ == nullptr) {
+        return;
+    }
+    klarinet_echain_clear(rust_);
+}
+
+void EffectChain::enqueueParameterChange(AudioEffect* effect, int32_t paramId, float value) {
+    if (rust_ == nullptr) {
+        return;
+    }
+    klarinet_echain_enqueue(rust_, effect, klarinet_node_set_parameter, paramId, value);
+}
+
+void EffectChain::prepare(int32_t sampleRate, int32_t channelCount) {
+    if (rust_ == nullptr) {
+        return;
+    }
+    klarinet_echain_prepare(rust_, sampleRate, channelCount);
+}
+
+int32_t EffectChain::getEffectCount() const {
+    if (rust_ == nullptr) {
+        return 0;
+    }
+    return klarinet_echain_count(rust_);
+}
+
+} // namespace klarinet
+#else
 namespace klarinet {
 
 EffectChain::EffectChain() {
@@ -141,3 +274,5 @@ void EffectChain::swapChain(EffectList* newChain) {
 }
 
 } // namespace klarinet
+
+#endif

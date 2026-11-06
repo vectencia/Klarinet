@@ -15,7 +15,11 @@ actual class AudioStream internal constructor(
     private var _chain: AudioEffectChain? = null
     private var startGeneration = 0
 
-    private var workletNode: AudioWorkletNode? = null
+    internal var workletNode: AudioWorkletNode? = null
+    internal val effectInserts = mutableListOf<AudioWorkletNode>()
+    private var clockId: Int = -1
+    private var clockOrigin: Double = 0.0
+    private var clockFrames: Int = 0
     private var mediaStream: MediaStream? = null
     private var mediaSource: MediaStreamAudioSourceNode? = null
     private var muteGain: GainNode? = null
@@ -51,7 +55,15 @@ actual class AudioStream internal constructor(
                     if (generation == startGeneration && _state == StreamState.STARTING) {
                         continueStartConnected(generation)
                     }
-                    engine.context.resume()
+                    engine.context.resume().then(
+                        { null },
+                        { error ->
+                            if (generation == startGeneration && _state == StreamState.STARTING) {
+                                failStart(generation, error)
+                            }
+                            null
+                        },
+                    )
                     null
                 },
                 { error ->
@@ -149,13 +161,13 @@ actual class AudioStream internal constructor(
         when (config.direction) {
             StreamDirection.OUTPUT -> {
                 var node: AudioNode = processorNode
-                node = connectEffects(node)
+                node = connectEffects(node, processorNode)
                 node.connect(ctx.destination)
             }
             StreamDirection.INPUT -> {
                 val source = mediaSource ?: return
                 var node: AudioNode = source
-                node = connectEffects(node)
+                node = connectEffects(node, processorNode)
                 node.connect(processorNode)
                 val mute = muteGain ?: ctx.createGain().also { created ->
                     created.gain.value = 0f
@@ -167,6 +179,8 @@ actual class AudioStream internal constructor(
             }
         }
         prefetchWorklet()
+        postWorkletTransport(processorNode.port, "start")
+        startOutputClock()
     }
 
     internal fun clearEffectChainIf(chain: AudioEffectChain) {
@@ -238,7 +252,8 @@ actual class AudioStream internal constructor(
 
     private fun ensureProcessor(): AudioWorkletNode {
         workletNode?.let { return it }
-        val created = createAudioWorkletNode(engine.context, config.channelCount)
+        val direction = if (config.direction == StreamDirection.INPUT) "input" else "output"
+        val created = createAudioWorkletNode(engine.context, config.channelCount, direction)
         created.port.onmessage = { event -> onWorkletMessage(event) }
         workletNode = created
         return created
@@ -246,13 +261,54 @@ actual class AudioStream internal constructor(
 
     internal fun usesAudioWorklet(): Boolean = workletNode != null
 
-    private fun connectEffects(source: AudioNode): AudioNode {
+    private fun connectEffects(source: AudioNode, processorNode: AudioWorkletNode): AudioNode {
         var node = source
-        val effects = _chain?.effects ?: return node
-        for (effect in effects) {
-            val graph = effect.attach(engine.context)
-            node.connect(graph.input)
-            node = graph.output
+        val sampleRate = engine.context.sampleRate.toInt()
+        val channels = config.channelCount
+        val effects = _chain?.effects
+        if (effects.isNullOrEmpty()) {
+            postWorkletChain(processorNode.port, sampleRate, channels, emptyList())
+            return node
+        }
+        var index = 0
+        var installedOnIo = false
+        while (index < effects.size) {
+            val effect = effects[index]
+            if (effect.type != AudioEffectType.GAIN) {
+                val graph = effect.attachWeb(engine.context)
+                val input = graph.input ?: error("web effect is missing an input")
+                val output = graph.output ?: error("web effect is missing an output")
+                node.connect(input)
+                node = output
+                index++
+                continue
+            }
+            val start = index
+            while (index < effects.size && effects[index].type == AudioEffectType.GAIN) {
+                index++
+            }
+            val leadingOutput = config.direction == StreamDirection.OUTPUT &&
+                node === processorNode &&
+                start == 0
+            val trailingInput = config.direction == StreamDirection.INPUT && index == effects.size
+            val port = if (leadingOutput || trailingInput) {
+                installedOnIo = true
+                processorNode.port
+            } else {
+                val insert = createEffectWorkletNode(engine.context, channels)
+                effectInserts.add(insert)
+                node.connect(insert)
+                node = insert
+                insert.port
+            }
+            val specs = ArrayList<WasmGainSpec>(index - start)
+            for (cursor in start until index) {
+                specs.add(effects[cursor].installWasm(port))
+            }
+            postWorkletChain(port, sampleRate, channels, specs)
+        }
+        if (!installedOnIo) {
+            postWorkletChain(processorNode.port, sampleRate, channels, emptyList())
         }
         return node
     }
@@ -260,11 +316,23 @@ actual class AudioStream internal constructor(
     private fun onWorkletMessage(event: MessageEvent) {
         val data = event.data ?: return
         val type: String = js("String(data.type)")
-        if (type != "io") return
-        val frames: Int = js("data.frames|0")
-        val channels: Int = js("data.channels|0")
-        val input: Float32Array? = js("data.input")
-        handleWorkletIo(frames, channels, input)
+        when (type) {
+            "io" -> {
+                val frames: Int = js("data.frames|0")
+                val channels: Int = js("data.channels|0")
+                val input: Float32Array? = js("data.input")
+                handleWorkletIo(frames, channels, input)
+            }
+            "need" -> {
+                if (config.direction != StreamDirection.OUTPUT) return
+                val frames: Int = js("data.frames|0")
+                val count: Int = js("data.n|0")
+                if (frames <= 0 || count <= 0) return
+                repeat(count) {
+                    handleWorkletIo(frames, config.channelCount, null)
+                }
+            }
+        }
     }
 
     private fun prefetchWorklet() {
@@ -337,7 +405,47 @@ actual class AudioStream internal constructor(
         peakLevelAtomic.set(peak)
     }
 
+    private fun startOutputClock() {
+        stopOutputClock()
+        val sampleRate = config.sampleRate.coerceAtLeast(1)
+        clockOrigin = engine.context.currentTime
+        clockFrames = 0
+        clockId = startWorkletPump {
+            workletNode?.port?.let { port -> postWorkletTransport(port, "flush") }
+            if (config.direction != StreamDirection.OUTPUT) return@startWorkletPump
+            val elapsed = engine.context.currentTime - clockOrigin
+            val rendered = (elapsed * sampleRate).toInt()
+            var due = rendered - clockFrames
+            if (due > 128 * 8) {
+                clockFrames = rendered - 128
+                due = 128
+            }
+            while (due >= 128) {
+                handleWorkletIo(128, config.channelCount, null)
+                clockFrames += 128
+                due -= 128
+            }
+        }
+    }
+
+    private fun stopOutputClock() {
+        if (clockId >= 0) {
+            stopWorkletPump(clockId)
+            clockId = -1
+        }
+    }
+
     private fun disconnectGraph() {
+        stopOutputClock()
+        workletNode?.let { node -> postWorkletTransport(node.port, "stop") }
+        effectInserts.forEach { insert ->
+            postWorkletTransport(insert.port, "stop")
+            try {
+                insert.disconnect()
+            } catch (_: Throwable) {
+            }
+        }
+        effectInserts.clear()
         workletNode?.port?.onmessage = null
         try {
             workletNode?.disconnect()

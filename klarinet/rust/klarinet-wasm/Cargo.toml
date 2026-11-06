@@ -1,0 +1,18 @@
+[package]
+name = "klarinet_wasm"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Klarinet effect and analysis ABI compiled to wasm32-unknown-unknown."
+
+[lib]
+crate-type = ["cdylib"]
+path = "src/lib.rs"
+
+[dependencies]
+klarinet_dsp_core = { path = "../klarinet-dsp", default-features = false, features = ["effects", "analysis"] }
+klarinet_wav = { path = "../klarinet-wav" }
+
+[profile.release]
+panic = "abort"
+lto = true

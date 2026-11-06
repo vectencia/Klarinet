@@ -1,0 +1,20 @@
+[package]
+name = "klarinet_native"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Klarinet native-desktop staticlib. klarinet_native.h over wrapped miniaudio."
+
+[lib]
+name = "klarinet_native"
+crate-type = ["staticlib"]
+path = "src/lib.rs"
+
+[dependencies]
+klarinet_dsp_core = { path = "../klarinet-dsp", features = ["effects"] }
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"

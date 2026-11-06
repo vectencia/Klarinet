@@ -1,5 +1,39 @@
 #include "LowPassFilter.h"
 
+#ifdef KLARINET_DSP_RUST_EFFECTS
+#include "klarinet_fx.h"
+
+namespace klarinet {
+
+LowPassFilter::LowPassFilter() : AudioEffect(EffectType::LowPassFilter) {
+    rust_ = klarinet_fx_create(static_cast<int32_t>(EffectType::LowPassFilter));
+}
+
+void LowPassFilter::process(float* buffer, int32_t numFrames, int32_t channelCount) {
+    if (!isEnabled()) return;
+    klarinet_fx_process(rust_, buffer, numFrames, channelCount);
+}
+
+void LowPassFilter::setParameter(int32_t paramId, float value) {
+    klarinet_fx_set_parameter(rust_, paramId, value);
+}
+
+float LowPassFilter::getParameter(int32_t paramId) const {
+    return klarinet_fx_get_parameter(rust_, paramId);
+}
+
+void LowPassFilter::prepare(int32_t sampleRate, int32_t channelCount) {
+    sampleRate_ = sampleRate;
+    channelCount_ = channelCount;
+    klarinet_fx_prepare(rust_, sampleRate, channelCount);
+}
+
+void LowPassFilter::reset() {
+    klarinet_fx_reset(rust_);
+}
+
+} // namespace klarinet
+#else
 namespace klarinet {
 
 LowPassFilter::LowPassFilter() : AudioEffect(EffectType::LowPassFilter) {}
@@ -68,3 +102,5 @@ void LowPassFilter::reset() {
 }
 
 } // namespace klarinet
+
+#endif

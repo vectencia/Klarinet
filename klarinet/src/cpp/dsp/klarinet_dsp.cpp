@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <mutex>
 #include <memory>
+#include <cmath>
 
 // ---------------------------------------------------------------------------
 // Global registry: keeps shared_ptrs alive so raw-pointer handles stay valid.
@@ -165,3 +166,25 @@ void klarinet_chain_destroy(KlarinetEffectChainHandle chain) {
     if (!chain) return;
     delete static_cast<klarinet::EffectChain*>(chain);
 }
+
+#ifndef KLARINET_DSP_RUST_EFFECTS
+void klarinet_render_sine(
+    float* samples,
+    int frames,
+    float* phase,
+    float frequencyHz,
+    int sampleRate,
+    float amplitude
+) {
+    if (!samples || !phase || frames <= 0 || sampleRate <= 0) return;
+    const float twoPi = 6.283185307179586f;
+    const float inc = twoPi * frequencyHz / static_cast<float>(sampleRate);
+    float current = *phase;
+    for (int i = 0; i < frames; ++i) {
+        samples[i] = std::sin(current) * amplitude;
+        current += inc;
+        if (current > twoPi) current -= twoPi;
+    }
+    *phase = current;
+}
+#endif

@@ -17,12 +17,18 @@ actual class AudioFileWriter actual constructor(
 
     actual fun writeFrames(data: FloatArray, numFrames: Int) {
         check(encoderPtr != 0L) { "AudioFileWriter has been closed" }
+        if (numFrames < 0) throw AudioFileException("numFrames must be non-negative")
         if (!JniBridge.nativeEncoderWriteFrames(encoderPtr, data, numFrames)) {
             throw AudioFileException("Failed to write audio frames")
         }
     }
 
     actual fun close() {
-        if (encoderPtr != 0L) { JniBridge.nativeEncoderUninit(encoderPtr); encoderPtr = 0L }
+        if (encoderPtr != 0L) {
+            val flushed = JniBridge.nativeEncoderWriteFrames(encoderPtr, FloatArray(0), 0)
+            JniBridge.nativeEncoderUninit(encoderPtr)
+            encoderPtr = 0L
+            if (!flushed) throw AudioFileException("Failed to write audio frames")
+        }
     }
 }
