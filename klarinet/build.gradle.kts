@@ -325,6 +325,7 @@ val configureDspTests = tasks.register<Exec>("configureDspTests") {
         "-B", dspBuildDir.get().asFile.absolutePath,
         "-DKLARINET_DSP_BUILD_TESTS=ON",
         "-DKLARINET_DSP_RUST_QUEUES=ON",
+        "-DKLARINET_DSP_RUST_EFFECTS=ON",
     )
 }
 
@@ -441,38 +442,87 @@ val jvmNativeSources = fileTree(jvmNativeCppDir) {
 val packagedNativeDir = layout.projectDirectory.dir("src/jvmMain/resources/natives")
 
 val buildJvmNativeTasks = jvmNativeTargets.map { target ->
-    tasks.register("buildJvmNative_${target.id.replace('-', '_')}") {
+    // Copy into serializable values. The task action must not capture this script
+    // or JvmNativeTarget, or the configuration cache cannot store the task.
+    val targetId = target.id
+    val fileName = target.fileName
+    val jniMd = target.jniMd
+    val cmakeSystemName = target.cmakeSystemName
+    val cmakeSystemProcessor = target.cmakeSystemProcessor
+    val extraCmake = target.extraCmake
+    val zigTarget = target.zigTarget
+    val enableRustEffects = targetId == "macos-arm64"
+    val cmakeSource = jvmNativeCppDir.asFile.absolutePath
+    val jniMdInclude = jvmNativeCppDir.dir("jni-md/$jniMd").asFile.absolutePath
+    val zigToolDir = layout.buildDirectory.dir("zig-toolchains")
+    tasks.register("buildJvmNative_${targetId.replace('-', '_')}") {
         group = "build"
-        description = "Cross-compile libklarinet_jvm for ${target.id}"
-        val buildDir = layout.buildDirectory.dir("jvm-native/${target.id}")
-        val destFile = packagedNativeDir.dir(target.id).file(target.fileName)
+        description = "Cross-compile libklarinet_jvm for $targetId"
+        val buildDir = layout.buildDirectory.dir("jvm-native/$targetId")
+        val destFile = packagedNativeDir.dir(targetId).file(fileName)
         inputs.files(jvmNativeSources)
         inputs.files(dspSources)
+        if (enableRustEffects) {
+            inputs.files(rustDspSources)
+        }
         outputs.file(destFile)
         doLast {
+            val javaHome = File(System.getProperty("java.home"))
+            val jniInclude = listOf(
+                javaHome.resolve("include"),
+                javaHome.resolve("../include"),
+            ).firstOrNull { it.resolve("jni.h").isFile }?.absolutePath
+                ?: error("jni.h not found under java.home=${javaHome.absolutePath}")
             val cmakeArgs = mutableListOf(
                 "cmake",
-                "-S", jvmNativeCppDir.asFile.absolutePath,
+                "-S", cmakeSource,
                 "-B", buildDir.get().asFile.absolutePath,
                 "-DCMAKE_BUILD_TYPE=Release",
                 "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
-                "-DKLARINET_JNI_INCLUDE=${jniIncludeDir().absolutePath}",
-                "-DKLARINET_JNI_MD_INCLUDE=${jvmNativeCppDir.dir("jni-md/${target.jniMd}").asFile.absolutePath}",
+                "-DKLARINET_JNI_INCLUDE=$jniInclude",
+                "-DKLARINET_JNI_MD_INCLUDE=$jniMdInclude",
             )
-            target.cmakeSystemName?.let { cmakeArgs += "-DCMAKE_SYSTEM_NAME=$it" }
-            target.cmakeSystemProcessor?.let { cmakeArgs += "-DCMAKE_SYSTEM_PROCESSOR=$it" }
-            target.extraCmake.forEach { cmakeArgs += it }
-            val zigTarget = target.zigTarget
+            if (cmakeSystemName != null) {
+                cmakeArgs += "-DCMAKE_SYSTEM_NAME=$cmakeSystemName"
+            }
+            if (cmakeSystemProcessor != null) {
+                cmakeArgs += "-DCMAKE_SYSTEM_PROCESSOR=$cmakeSystemProcessor"
+            }
+            extraCmake.forEach { cmakeArgs += it }
+            if (enableRustEffects) {
+                cmakeArgs += "-DKLARINET_DSP_RUST_EFFECTS=ON"
+            }
             if (zigTarget != null) {
-                findZig()
-                cmakeArgs += "-DCMAKE_C_COMPILER=${zigToolchainScript(zigTarget, "cc").absolutePath}"
-                cmakeArgs += "-DCMAKE_CXX_COMPILER=${zigToolchainScript(zigTarget, "c++").absolutePath}"
-                cmakeArgs += "-DCMAKE_AR=${zigToolchainScript(zigTarget, "ar").absolutePath}"
-                cmakeArgs += "-DCMAKE_RANLIB=${zigToolchainScript(zigTarget, "ranlib").absolutePath}"
+                val zig = System.getenv("PATH")
+                    ?.split(File.pathSeparator)
+                    ?.firstNotNullOfOrNull { dir -> File(dir, "zig").takeIf { it.canExecute() } }
+                    ?: error("zig is required to cross-compile JVM natives. Install zig and retry.")
+                check(zig.canExecute())
+                fun toolScript(tool: String): File {
+                    val dir = zigToolDir.get().asFile
+                    dir.mkdirs()
+                    val script = dir.resolve("zig-$zigTarget-$tool.sh")
+                    val body = when (tool) {
+                        "cc" -> "#!/bin/sh\nexec zig cc -target $zigTarget \"\$@\"\n"
+                        "c++" -> "#!/bin/sh\nexec zig c++ -target $zigTarget \"\$@\"\n"
+                        else -> "#!/bin/sh\nexec zig $tool \"\$@\"\n"
+                    }
+                    script.writeText(body)
+                    script.setExecutable(true)
+                    return script
+                }
+                cmakeArgs += "-DCMAKE_C_COMPILER=${toolScript("cc").absolutePath}"
+                cmakeArgs += "-DCMAKE_CXX_COMPILER=${toolScript("c++").absolutePath}"
+                cmakeArgs += "-DCMAKE_AR=${toolScript("ar").absolutePath}"
+                cmakeArgs += "-DCMAKE_RANLIB=${toolScript("ranlib").absolutePath}"
                 cmakeArgs += "-DCMAKE_SHARED_LINKER_FLAGS=-s"
             }
-            runProcess(cmakeArgs)
-            runProcess(
+            fun run(args: List<String>) {
+                val result = ProcessBuilder(args).inheritIO().start().waitFor()
+                check(result == 0) { "Command failed ($result): ${args.joinToString(" ")}" }
+            }
+            run(cmakeArgs)
+            run(
                 listOf(
                     "cmake",
                     "--build",
@@ -484,12 +534,12 @@ val buildJvmNativeTasks = jvmNativeTargets.map { target ->
             )
             val builtDir = buildDir.get().asFile
             val built = listOf(
-                builtDir.resolve(target.fileName),
-                builtDir.resolve("lib${target.fileName}"),
-                builtDir.resolve("Release/${target.fileName}"),
-                builtDir.resolve("Release/lib${target.fileName}"),
+                builtDir.resolve(fileName),
+                builtDir.resolve("lib$fileName"),
+                builtDir.resolve("Release/$fileName"),
+                builtDir.resolve("Release/lib$fileName"),
             ).firstOrNull { it.isFile }
-                ?: error("Expected ${target.fileName} under ${builtDir.absolutePath} after compiling ${target.id}")
+                ?: error("Expected $fileName under ${builtDir.absolutePath} after compiling $targetId")
             destFile.asFile.parentFile.mkdirs()
             built.copyTo(destFile.asFile, overwrite = true)
         }

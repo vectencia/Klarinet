@@ -9,6 +9,37 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+#ifdef KLARINET_DSP_RUST_EFFECTS
+#include "klarinet_fx.h"
+
+namespace klarinet {
+
+LFO::LFO() : rust_(klarinet_lfo_create()) {}
+
+LFO::~LFO() {
+    if (rust_ != nullptr) {
+        klarinet_lfo_destroy(rust_);
+    }
+}
+
+void LFO::prepare(float sampleRate) {
+    klarinet_lfo_prepare(rust_, sampleRate);
+}
+
+void LFO::setFrequency(float hz) {
+    klarinet_lfo_set_frequency(rust_, hz);
+}
+
+float LFO::nextSample() {
+    return klarinet_lfo_next(rust_);
+}
+
+void LFO::reset() {
+    klarinet_lfo_reset(rust_);
+}
+
+} // namespace klarinet
+#else
 namespace klarinet {
 
 /// Two-pi constant used for phase wrapping and increment calculation.
@@ -40,3 +71,5 @@ void LFO::reset() {
 }
 
 } // namespace klarinet
+
+#endif

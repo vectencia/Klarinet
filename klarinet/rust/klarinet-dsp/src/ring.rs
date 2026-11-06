@@ -76,6 +76,7 @@ impl Ring {
         true
     }
 
+    #[cfg(feature = "queues")]
     pub fn is_empty(&self) -> bool {
         self.read_pos.load(Ordering::Acquire) == self.write_pos.load(Ordering::Acquire)
     }
@@ -93,6 +94,9 @@ impl Drop for Ring {
     }
 }
 
+// The chain uses `Ring` on the effects build. These exports are the Phase 1
+// queues ABI, so the effects-only JVM library must not publish them.
+#[cfg(feature = "queues")]
 #[no_mangle]
 pub extern "C" fn klarinet_ring_create(
     capacity: i32,
@@ -105,6 +109,7 @@ pub extern "C" fn klarinet_ring_create(
     }
 }
 
+#[cfg(feature = "queues")]
 #[no_mangle]
 pub extern "C" fn klarinet_ring_destroy(ring: *mut Ring) {
     if ring.is_null() {
@@ -113,6 +118,7 @@ pub extern "C" fn klarinet_ring_destroy(ring: *mut Ring) {
     unsafe { drop(Box::from_raw(ring)) }
 }
 
+#[cfg(feature = "queues")]
 #[no_mangle]
 pub extern "C" fn klarinet_ring_push(ring: *mut Ring, item: *const u8) -> i32 {
     if ring.is_null() {
@@ -121,6 +127,7 @@ pub extern "C" fn klarinet_ring_push(ring: *mut Ring, item: *const u8) -> i32 {
     i32::from(unsafe { (*ring).push(item) })
 }
 
+#[cfg(feature = "queues")]
 #[no_mangle]
 pub extern "C" fn klarinet_ring_pop(ring: *mut Ring, item: *mut u8) -> i32 {
     if ring.is_null() {
@@ -129,6 +136,7 @@ pub extern "C" fn klarinet_ring_pop(ring: *mut Ring, item: *mut u8) -> i32 {
     i32::from(unsafe { (*ring).pop(item) })
 }
 
+#[cfg(feature = "queues")]
 #[no_mangle]
 pub extern "C" fn klarinet_ring_is_empty(ring: *const Ring) -> i32 {
     if ring.is_null() {

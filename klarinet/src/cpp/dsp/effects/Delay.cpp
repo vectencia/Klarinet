@@ -1,6 +1,40 @@
 #include "Delay.h"
 #include <algorithm>
 
+#ifdef KLARINET_DSP_RUST_EFFECTS
+#include "klarinet_fx.h"
+
+namespace klarinet {
+
+Delay::Delay() : AudioEffect(EffectType::Delay) {
+    rust_ = klarinet_fx_create(static_cast<int32_t>(EffectType::Delay));
+}
+
+void Delay::process(float* buffer, int32_t numFrames, int32_t channelCount) {
+    if (!isEnabled()) return;
+    klarinet_fx_process(rust_, buffer, numFrames, channelCount);
+}
+
+void Delay::setParameter(int32_t paramId, float value) {
+    klarinet_fx_set_parameter(rust_, paramId, value);
+}
+
+float Delay::getParameter(int32_t paramId) const {
+    return klarinet_fx_get_parameter(rust_, paramId);
+}
+
+void Delay::prepare(int32_t sampleRate, int32_t channelCount) {
+    sampleRate_ = sampleRate;
+    channelCount_ = channelCount;
+    klarinet_fx_prepare(rust_, sampleRate, channelCount);
+}
+
+void Delay::reset() {
+    klarinet_fx_reset(rust_);
+}
+
+} // namespace klarinet
+#else
 namespace klarinet {
 
 Delay::Delay() : AudioEffect(EffectType::Delay) {}
@@ -87,3 +121,5 @@ void Delay::reset() {
 }
 
 } // namespace klarinet
+
+#endif

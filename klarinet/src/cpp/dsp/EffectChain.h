@@ -63,6 +63,13 @@ public:
     /// Destructor. Frees the active chain and any pending-delete list.
     ~EffectChain();
 
+#ifdef KLARINET_DSP_RUST_EFFECTS
+    EffectChain(const EffectChain&) = delete;
+    EffectChain& operator=(const EffectChain&) = delete;
+    EffectChain(EffectChain&&) = delete;
+    EffectChain& operator=(EffectChain&&) = delete;
+#endif
+
     // -----------------------------------------------------------------------
     // Audio thread
     // -----------------------------------------------------------------------
@@ -152,6 +159,9 @@ public:
     int32_t getEffectCount() const;
 
 private:
+#ifdef KLARINET_DSP_RUST_EFFECTS
+    void* rust_ = nullptr;
+#else
     /// Convenience typedef for the vector of shared effect pointers.
     using EffectList = std::vector<std::shared_ptr<AudioEffect>>;
 
@@ -178,6 +188,7 @@ private:
     RingBuffer<ParameterChange, 512> paramQueue_; ///< Lock-free SPSC queue for parameter changes (control -> audio).
     int32_t sampleRate_ = 48000;             ///< Current sample rate cached for preparing new effects.
     int32_t channelCount_ = 1;               ///< Current channel count cached for preparing new effects.
+#endif
 };
 
 } // namespace klarinet

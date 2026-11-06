@@ -44,6 +44,12 @@ namespace klarinet {
  */
 class EnvelopeFollower {
 public:
+#ifdef KLARINET_DSP_RUST_EFFECTS
+    EnvelopeFollower();
+    ~EnvelopeFollower();
+    EnvelopeFollower(const EnvelopeFollower&) = delete;
+    EnvelopeFollower& operator=(const EnvelopeFollower&) = delete;
+#endif
     /**
      * @brief Set the sample rate for coefficient calculation.
      *
@@ -96,6 +102,9 @@ private:
     float releaseCoeff_ = 0.0f;  ///< One-pole coefficient for falling envelope.
     float envelope_ = 0.0f;      ///< Current smoothed envelope level.
     float sampleRate_ = 48000.0f;///< Cached sample rate in Hz.
+#ifdef KLARINET_DSP_RUST_EFFECTS
+    void* rust_ = nullptr;
+#endif
 
     /**
      * @brief Convert a time constant in milliseconds to a one-pole filter coefficient.

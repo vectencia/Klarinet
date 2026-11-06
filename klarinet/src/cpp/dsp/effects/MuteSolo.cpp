@@ -1,5 +1,39 @@
 #include "MuteSolo.h"
 
+#ifdef KLARINET_DSP_RUST_EFFECTS
+#include "klarinet_fx.h"
+
+namespace klarinet {
+
+MuteSolo::MuteSolo() : AudioEffect(EffectType::MuteSolo) {
+    rust_ = klarinet_fx_create(static_cast<int32_t>(EffectType::MuteSolo));
+}
+
+void MuteSolo::process(float* buffer, int32_t numFrames, int32_t channelCount) {
+    if (!isEnabled()) return;
+    klarinet_fx_process(rust_, buffer, numFrames, channelCount);
+}
+
+void MuteSolo::setParameter(int32_t paramId, float value) {
+    klarinet_fx_set_parameter(rust_, paramId, value);
+}
+
+float MuteSolo::getParameter(int32_t paramId) const {
+    return klarinet_fx_get_parameter(rust_, paramId);
+}
+
+void MuteSolo::prepare(int32_t sampleRate, int32_t channelCount) {
+    sampleRate_ = sampleRate;
+    channelCount_ = channelCount;
+    klarinet_fx_prepare(rust_, sampleRate, channelCount);
+}
+
+void MuteSolo::reset() {
+    klarinet_fx_reset(rust_);
+}
+
+} // namespace klarinet
+#else
 namespace klarinet {
 
 MuteSolo::MuteSolo() : AudioEffect(EffectType::MuteSolo) {}
@@ -43,3 +77,5 @@ void MuteSolo::reset() {
 }
 
 } // namespace klarinet
+
+#endif

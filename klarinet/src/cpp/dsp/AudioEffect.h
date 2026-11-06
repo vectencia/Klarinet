@@ -76,8 +76,13 @@ public:
      */
     explicit AudioEffect(EffectType type) : type_(type) {}
 
+#ifdef KLARINET_DSP_RUST_EFFECTS
+    /// Virtual destructor. Frees the Rust effect when this object owns one.
+    virtual ~AudioEffect();
+#else
     /// Virtual destructor for safe polymorphic deletion.
     virtual ~AudioEffect() = default;
+#endif
 
     /**
      * @brief Process audio samples in-place.
@@ -156,6 +161,9 @@ public:
 protected:
     int32_t sampleRate_ = 48000;   ///< Current sample rate in Hz (set by prepare()).
     int32_t channelCount_ = 1;     ///< Current channel count (set by prepare()).
+#ifdef KLARINET_DSP_RUST_EFFECTS
+    void* rust_ = nullptr;         ///< Rust effect. Null for effects implemented in C++.
+#endif
 
 private:
     EffectType type_;              ///< Immutable type tag set at construction.

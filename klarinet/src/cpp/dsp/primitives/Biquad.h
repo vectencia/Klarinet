@@ -65,7 +65,14 @@ enum class BiquadType {
  */
 class Biquad {
 public:
+#ifdef KLARINET_DSP_RUST_EFFECTS
+    Biquad();
+    ~Biquad();
+    Biquad(const Biquad&) = delete;
+    Biquad& operator=(const Biquad&) = delete;
+#else
     Biquad() = default;
+#endif
 
     /**
      * @brief Compute filter coefficients for the given filter type and parameters.
@@ -117,6 +124,9 @@ private:
     float x2_ = 0.0f;  ///< Two-samples-ago input x[n-2].
     float y1_ = 0.0f;  ///< Previous output sample y[n-1].
     float y2_ = 0.0f;  ///< Two-samples-ago output y[n-2].
+#ifdef KLARINET_DSP_RUST_EFFECTS
+    void* rust_ = nullptr;
+#endif
 };
 
 } // namespace klarinet
