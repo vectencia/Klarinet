@@ -1,0 +1,24 @@
+[package]
+name = "klarinet_jvm"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Klarinet JVM cdylib. JNI entry points over wrapped miniaudio and the DSP C ABI."
+
+[lib]
+name = "klarinet_jvm"
+crate-type = ["cdylib"]
+path = "src/lib.rs"
+
+[features]
+default = ["dsp-effects"]
+dsp-effects = ["dep:klarinet_dsp_core"]
+
+[dependencies]
+klarinet_dsp_core = { path = "../klarinet-dsp", default-features = false, features = ["effects"], optional = true }
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"

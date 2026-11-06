@@ -314,6 +314,9 @@ val dspSources = fileTree(dspSourceDir) {
 val rustDspSources = fileTree(layout.projectDirectory.dir("rust/klarinet-dsp")) {
     exclude("target/**")
 }
+val rustJvmSources = fileTree(layout.projectDirectory.dir("rust/klarinet-jvm")) {
+    exclude("target/**")
+}
 
 val configureDspTests = tasks.register<Exec>("configureDspTests") {
     workingDir = dspSourceDir.asFile
@@ -351,6 +354,7 @@ data class JvmNativeTarget(
     val cmakeSystemProcessor: String?,
     val zigTarget: String?,
     val jniMd: String,
+    val rustTriple: String? = null,
     val extraCmake: List<String> = emptyList(),
 )
 
@@ -371,6 +375,7 @@ val jvmNativeTargets = listOf(
         cmakeSystemProcessor = null,
         zigTarget = null,
         jniMd = "darwin",
+        rustTriple = "x86_64-apple-darwin",
         extraCmake = listOf("-DCMAKE_OSX_ARCHITECTURES=x86_64"),
     ),
     JvmNativeTarget(
@@ -380,6 +385,7 @@ val jvmNativeTargets = listOf(
         cmakeSystemProcessor = "x86_64",
         zigTarget = "x86_64-linux-gnu",
         jniMd = "linux",
+        rustTriple = "x86_64-unknown-linux-gnu",
     ),
     JvmNativeTarget(
         id = "linux-arm64",
@@ -388,6 +394,7 @@ val jvmNativeTargets = listOf(
         cmakeSystemProcessor = "aarch64",
         zigTarget = "aarch64-linux-gnu",
         jniMd = "linux",
+        rustTriple = "aarch64-unknown-linux-gnu",
     ),
     JvmNativeTarget(
         id = "windows-x64",
@@ -396,6 +403,7 @@ val jvmNativeTargets = listOf(
         cmakeSystemProcessor = "x86_64",
         zigTarget = "x86_64-windows-gnu",
         jniMd = "win32",
+        rustTriple = "x86_64-pc-windows-gnu",
     ),
 )
 
@@ -452,6 +460,12 @@ val buildJvmNativeTasks = jvmNativeTargets.map { target ->
     val extraCmake = target.extraCmake
     val zigTarget = target.zigTarget
     val enableRustEffects = targetId == "macos-arm64"
+    val enableRustJvm = targetId == "macos-arm64" ||
+        targetId == "macos-x64" ||
+        targetId == "linux-x64" ||
+        targetId == "linux-arm64" ||
+        targetId == "windows-x64"
+    val rustTriple = target.rustTriple
     val cmakeSource = jvmNativeCppDir.asFile.absolutePath
     val jniMdInclude = jvmNativeCppDir.dir("jni-md/$jniMd").asFile.absolutePath
     val zigToolDir = layout.buildDirectory.dir("zig-toolchains")
@@ -464,6 +478,9 @@ val buildJvmNativeTasks = jvmNativeTargets.map { target ->
         inputs.files(dspSources)
         if (enableRustEffects) {
             inputs.files(rustDspSources)
+        }
+        if (enableRustJvm) {
+            inputs.files(rustJvmSources)
         }
         outputs.file(destFile)
         doLast {
@@ -492,6 +509,15 @@ val buildJvmNativeTasks = jvmNativeTargets.map { target ->
             if (enableRustEffects) {
                 cmakeArgs += "-DKLARINET_DSP_RUST_EFFECTS=ON"
             }
+            if (enableRustJvm) {
+                cmakeArgs += "-DKLARINET_JVM_RUST=ON"
+                if (rustTriple != null) {
+                    cmakeArgs += "-DKLARINET_JVM_RUST_TARGET=$rustTriple"
+                }
+                if (enableRustEffects) {
+                    cmakeArgs += "-DKLARINET_JVM_RUST_EFFECTS=ON"
+                }
+            }
             if (zigTarget != null) {
                 val zig = System.getenv("PATH")
                     ?.split(File.pathSeparator)
@@ -516,6 +542,10 @@ val buildJvmNativeTasks = jvmNativeTargets.map { target ->
                 cmakeArgs += "-DCMAKE_AR=${toolScript("ar").absolutePath}"
                 cmakeArgs += "-DCMAKE_RANLIB=${toolScript("ranlib").absolutePath}"
                 cmakeArgs += "-DCMAKE_SHARED_LINKER_FLAGS=-s"
+                if (enableRustJvm) {
+                    cmakeArgs += "-DKLARINET_JVM_RUST_LINKER=${cmakeSource}/zig_rust_link.py"
+                    cmakeArgs += "-DKLARINET_JVM_RUST_ZIG_TARGET=$zigTarget"
+                }
             }
             fun run(args: List<String>) {
                 val result = ProcessBuilder(args).inheritIO().start().waitFor()

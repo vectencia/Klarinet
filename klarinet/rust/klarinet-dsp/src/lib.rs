@@ -25,3 +25,14 @@ mod chain;
 mod fx;
 #[cfg(feature = "effects")]
 mod primitives;
+
+/// Keeps the effects C ABI in a downstream cdylib.
+///
+/// The JVM crate links this rlib and the C++ shims. Those shims call the
+/// `klarinet_fx_*` and `klarinet_echain_*` symbols. Referencing this function
+/// from the cdylib stops rustc from dropping the exports before the linker
+/// sees the C++ references.
+#[cfg(feature = "effects")]
+pub fn link_effects() {
+    abi::keep_exports();
+}

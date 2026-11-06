@@ -467,3 +467,52 @@ pub extern "C" fn klarinet_echain_count(chain: *const Chain) -> i32 {
         (*chain).count()
     }
 }
+
+pub(crate) fn keep_exports() {
+    let exports: [*const (); 43] = [
+        klarinet_fx_create as *const (),
+        klarinet_fx_destroy as *const (),
+        klarinet_fx_process as *const (),
+        klarinet_fx_set_parameter as *const (),
+        klarinet_fx_get_parameter as *const (),
+        klarinet_fx_prepare as *const (),
+        klarinet_fx_reset as *const (),
+        klarinet_biquad_create as *const (),
+        klarinet_biquad_destroy as *const (),
+        klarinet_biquad_configure as *const (),
+        klarinet_biquad_process as *const (),
+        klarinet_biquad_reset as *const (),
+        klarinet_circ_create as *const (),
+        klarinet_circ_destroy as *const (),
+        klarinet_circ_set_size as *const (),
+        klarinet_circ_clear as *const (),
+        klarinet_circ_write as *const (),
+        klarinet_circ_read as *const (),
+        klarinet_circ_read_linear as *const (),
+        klarinet_circ_size as *const (),
+        klarinet_lfo_create as *const (),
+        klarinet_lfo_destroy as *const (),
+        klarinet_lfo_prepare as *const (),
+        klarinet_lfo_set_frequency as *const (),
+        klarinet_lfo_next as *const (),
+        klarinet_lfo_reset as *const (),
+        klarinet_env_create as *const (),
+        klarinet_env_destroy as *const (),
+        klarinet_env_prepare as *const (),
+        klarinet_env_set_attack as *const (),
+        klarinet_env_set_release as *const (),
+        klarinet_env_process as *const (),
+        klarinet_env_reset as *const (),
+        klarinet_echain_create as *const (),
+        klarinet_echain_destroy as *const (),
+        klarinet_echain_add as *const (),
+        klarinet_echain_remove as *const (),
+        klarinet_echain_reorder as *const (),
+        klarinet_echain_clear as *const (),
+        klarinet_echain_enqueue as *const (),
+        klarinet_echain_prepare as *const (),
+        klarinet_echain_process as *const (),
+        klarinet_echain_count as *const (),
+    ];
+    let _ = std::hint::black_box(exports);
+}

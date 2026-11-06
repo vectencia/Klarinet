@@ -11,7 +11,7 @@ queues = []
 effects = []
 
 [lib]
-crate-type = ["staticlib"]
+crate-type = ["staticlib", "rlib"]
 path = "src/lib.rs"
 
 [profile.dev]
