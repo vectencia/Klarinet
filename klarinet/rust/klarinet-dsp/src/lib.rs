@@ -36,3 +36,12 @@ mod primitives;
 pub fn link_effects() {
     abi::keep_exports();
 }
+
+/// Keeps the FIFO C ABI in a downstream staticlib.
+///
+/// Ring and offload are not part of this set. Android calls `klarinet_fifo_*`
+/// only, and the C++ ring in `EffectChain` stays compiled out of that path.
+#[cfg(feature = "queues")]
+pub fn link_queues() {
+    fifo::keep_exports();
+}

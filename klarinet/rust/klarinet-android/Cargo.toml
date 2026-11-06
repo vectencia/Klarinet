@@ -1,0 +1,20 @@
+[package]
+name = "klarinet_android"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Klarinet Android JNI staticlib. Oboe stays in the C++ adapter."
+
+[lib]
+name = "klarinet_android"
+crate-type = ["staticlib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+klarinet_dsp_core = { path = "../klarinet-dsp", features = ["effects"] }
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"

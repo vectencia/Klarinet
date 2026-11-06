@@ -194,3 +194,21 @@ pub extern "C" fn klarinet_fifo_capacity(fifo: *const AudioFifo) -> i32 {
     }
     unsafe { (*fifo).capacity() }
 }
+
+/// Keeps the FIFO C ABI in a downstream staticlib.
+///
+/// The Android JNI crate calls these symbols. Referencing them from that
+/// crate stops rustc from dropping the exports. Ring and offload stay out of
+/// this list: Android does not call them.
+pub fn keep_exports() {
+    let exports: [*const (); 7] = [
+        klarinet_fifo_create as *const (),
+        klarinet_fifo_destroy as *const (),
+        klarinet_fifo_write as *const (),
+        klarinet_fifo_read as *const (),
+        klarinet_fifo_available_to_read as *const (),
+        klarinet_fifo_available_to_write as *const (),
+        klarinet_fifo_capacity as *const (),
+    ];
+    let _ = std::hint::black_box(exports);
+}

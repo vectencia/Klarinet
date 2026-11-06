@@ -4,12 +4,15 @@ project(klarinet-dsp LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Host dspTests sets both options ON.
+# Host dspTests sets both options ON and links this crate's staticlib.
 # The host JVM shared library sets KLARINET_DSP_RUST_EFFECTS only, so its
 # offload stays the C++ AudioCallbackOffload.cpp.
-# Android, Apple, native desktop, and the other JVM ABIs leave both OFF.
+# Android arm64-v8a sets KLARINET_DSP_RUST_EFFECTS and turns
+# KLARINET_DSP_RUST_LINK_CORE OFF. Its JNI crate cross-compiles the rlib.
+# The other Android ABIs, Apple, and native desktop leave the Rust flags OFF.
 option(KLARINET_DSP_RUST_QUEUES "Link Rust FIFO, ring, and offload into this static library" OFF)
 option(KLARINET_DSP_RUST_EFFECTS "Link Rust primitives, effects, and effect chain into this static library" OFF)
+option(KLARINET_DSP_RUST_LINK_CORE "Link the Rust staticlib into klarinet-dsp" ON)
 
 set(KLARINET_DSP_SOURCES
     AudioEffect.cpp
@@ -56,7 +59,7 @@ if(KLARINET_DSP_RUST_EFFECTS)
     target_compile_definitions(klarinet-dsp PUBLIC KLARINET_DSP_RUST_EFFECTS=1)
 endif()
 
-if(KLARINET_DSP_RUST_QUEUES OR KLARINET_DSP_RUST_EFFECTS)
+if(KLARINET_DSP_RUST_LINK_CORE AND (KLARINET_DSP_RUST_QUEUES OR KLARINET_DSP_RUST_EFFECTS))
     set(KLARINET_RUST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../rust/klarinet-dsp")
     set(KLARINET_RUST_MANIFEST "${KLARINET_RUST_DIR}/Cargo.toml")
     set(RUST_TARGET_DIR "${CMAKE_CURRENT_BINARY_DIR}/rust-target")
