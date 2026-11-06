@@ -27,6 +27,11 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - name: Set up Rust
+        uses: ./.github/actions/setup-klarinet-native
+        with:
+          suite: wasm
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
