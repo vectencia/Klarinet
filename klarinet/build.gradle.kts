@@ -311,21 +311,26 @@ val dspSources = fileTree(dspSourceDir) {
     exclude("build/**")
 }
 
+val rustDspSources = fileTree(layout.projectDirectory.dir("rust/klarinet-dsp")) {
+    exclude("target/**")
+}
+
 val configureDspTests = tasks.register<Exec>("configureDspTests") {
     workingDir = dspSourceDir.asFile
-    inputs.files(dspSources)
+    inputs.files(dspSources, rustDspSources)
     outputs.dir(dspBuildDir)
     commandLine(
         "cmake",
         "-S", dspSourceDir.asFile.absolutePath,
         "-B", dspBuildDir.get().asFile.absolutePath,
         "-DKLARINET_DSP_BUILD_TESTS=ON",
+        "-DKLARINET_DSP_RUST_QUEUES=ON",
     )
 }
 
 val compileDspTests = tasks.register<Exec>("compileDspTests") {
     dependsOn(configureDspTests)
-    inputs.files(dspSources)
+    inputs.files(dspSources, rustDspSources)
     outputs.dir(dspBuildDir)
     commandLine("cmake", "--build", dspBuildDir.get().asFile.absolutePath)
 }

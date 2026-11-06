@@ -1,0 +1,16 @@
+[package]
+name = "klarinet_dsp_core"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Klarinet DSP core. Phase 1 exports the queue and offload C ABI."
+
+[lib]
+crate-type = ["staticlib"]
+path = "src/lib.rs"
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
