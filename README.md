@@ -18,7 +18,7 @@
 
 **Klarinet** is an open-source Kotlin Multiplatform audio library that provides a unified, idiomatic API for low-latency audio playback, recording, file I/O, and real-time effects processing across **9 platforms and 14 KMP targets**.
 
-Write your audio code once in Kotlin. Klarinet delegates to the best native backend on each platform — Google Oboe on Android, AVAudioEngine on Apple, miniaudio on JVM/Linux/Windows, and the Web Audio API in the browser — while preserving low-latency characteristics and real-time safety.
+Write your audio code once in Kotlin. Klarinet delegates to the best native backend on each platform — Google Oboe on Android, AVAudioEngine on Apple, miniaudio on JVM/Linux/Windows, and the Web Audio API in the browser — and runs the shared DSP core in Rust, while preserving low-latency characteristics and real-time safety.
 
 ## Use Cases
 
@@ -143,10 +143,10 @@ repositories {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("com.vectencia.klarinet:klarinet:0.5.0")
+            implementation("com.vectencia.klarinet:klarinet:0.6.0")
 
             // Optional: Coroutines extensions
-            implementation("com.vectencia.klarinet:klarinet-coroutines:0.5.0")
+            implementation("com.vectencia.klarinet:klarinet-coroutines:0.6.0")
         }
     }
 }
