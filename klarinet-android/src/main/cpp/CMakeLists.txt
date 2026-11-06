@@ -8,13 +8,21 @@ if(NOT DEFINED KLARINET_DSP_DIR)
     set(KLARINET_DSP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../klarinet/src/cpp/dsp")
 endif()
 
-# arm64-v8a links the Rust JNI staticlib. That crate cross-compiles the DSP
-# rlib, so this static library must not also run the host-triple cargo build.
-# armeabi-v7a and x86_64 keep klarinet_jni.cpp, KlarinetEngine, and KlarinetCallback.
+# arm64-v8a and armeabi-v7a link the Rust JNI staticlib. That crate
+# cross-compiles the DSP rlib, so this static library must not also run the
+# host-triple cargo build. x86_64 keeps klarinet_jni.cpp, KlarinetEngine,
+# and KlarinetCallback.
 if(ANDROID_ABI STREQUAL "arm64-v8a")
-    set(KLARINET_DSP_RUST_EFFECTS ON CACHE BOOL "Rust effect shims for the arm64 JNI library" FORCE)
-    set(KLARINET_DSP_RUST_QUEUES OFF CACHE BOOL "Keep the C++ ring out of the arm64 effect shims" FORCE)
-    set(KLARINET_DSP_RUST_LINK_CORE OFF CACHE BOOL "The arm64 JNI crate links the DSP rlib" FORCE)
+    set(KLARINET_ANDROID_RUST_TARGET "aarch64-linux-android")
+    set(KLARINET_ANDROID_RUST_LINKER_ENV "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER")
+elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
+    set(KLARINET_ANDROID_RUST_TARGET "armv7-linux-androideabi")
+    set(KLARINET_ANDROID_RUST_LINKER_ENV "CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER")
+endif()
+if(KLARINET_ANDROID_RUST_TARGET)
+    set(KLARINET_DSP_RUST_EFFECTS ON CACHE BOOL "Rust effect shims for this ABI's JNI library" FORCE)
+    set(KLARINET_DSP_RUST_QUEUES OFF CACHE BOOL "Keep the C++ ring out of the effect shims" FORCE)
+    set(KLARINET_DSP_RUST_LINK_CORE OFF CACHE BOOL "The JNI crate links the DSP rlib" FORCE)
 endif()
 
 include(FetchContent)
@@ -29,15 +37,14 @@ add_subdirectory(${KLARINET_DSP_DIR} ${CMAKE_CURRENT_BINARY_DIR}/klarinet-dsp)
 
 message(STATUS "Klarinet Android ABI ${ANDROID_ABI} effects=${KLARINET_DSP_RUST_EFFECTS} queues=${KLARINET_DSP_RUST_QUEUES} link_core=${KLARINET_DSP_RUST_LINK_CORE}")
 
-if(ANDROID_ABI STREQUAL "arm64-v8a")
+if(KLARINET_ANDROID_RUST_TARGET)
     set(KLARINET_ANDROID_RUST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../klarinet/rust/klarinet-android")
     set(KLARINET_ANDROID_RUST_MANIFEST "${KLARINET_ANDROID_RUST_DIR}/Cargo.toml")
-    set(KLARINET_ANDROID_RUST_TARGET "aarch64-linux-android")
     set(KLARINET_ANDROID_RUST_TARGET_DIR "${CMAKE_CURRENT_BINARY_DIR}/rust-android")
     set(KLARINET_ANDROID_RUST_LIB "${KLARINET_ANDROID_RUST_TARGET_DIR}/${KLARINET_ANDROID_RUST_TARGET}/release/libklarinet_android.a")
     find_program(CARGO_EXECUTABLE cargo HINTS "$ENV{HOME}/.cargo/bin")
     if(NOT CARGO_EXECUTABLE)
-        message(FATAL_ERROR "cargo was not found; it is required to build the arm64 Rust JNI library")
+        message(FATAL_ERROR "cargo was not found; it is required to build the Rust JNI library")
     endif()
     if(NOT CMAKE_C_COMPILER)
         message(FATAL_ERROR "CMAKE_C_COMPILER was not set; the Android clang is the Rust linker")
@@ -64,7 +71,7 @@ if(ANDROID_ABI STREQUAL "arm64-v8a")
         OUTPUT "${KLARINET_ANDROID_RUST_LIB}"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${KLARINET_ANDROID_RUST_TARGET_DIR}"
         COMMAND ${CMAKE_COMMAND} -E env
-                "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=${CMAKE_C_COMPILER}"
+                "${KLARINET_ANDROID_RUST_LINKER_ENV}=${CMAKE_C_COMPILER}"
                 "${CARGO_EXECUTABLE}" build --release --locked
                 --manifest-path "${KLARINET_ANDROID_RUST_MANIFEST}"
                 --target-dir "${KLARINET_ANDROID_RUST_TARGET_DIR}"

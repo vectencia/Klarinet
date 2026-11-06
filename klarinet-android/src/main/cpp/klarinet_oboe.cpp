@@ -8,10 +8,15 @@
 #include <memory>
 #include <vector>
 
-static_assert(sizeof(KlarinetOboeOpen) == 56, "KlarinetOboeOpen size");
 static_assert(offsetof(KlarinetOboeOpen, audio) == 32, "KlarinetOboeOpen.audio");
-static_assert(sizeof(KlarinetOboeInfo) == 32, "KlarinetOboeInfo size");
 static_assert(offsetof(KlarinetOboeInfo, device_ids) == 24, "KlarinetOboeInfo.device_ids");
+#if UINTPTR_MAX == UINT64_MAX
+static_assert(sizeof(KlarinetOboeOpen) == 56, "KlarinetOboeOpen size");
+static_assert(sizeof(KlarinetOboeInfo) == 32, "KlarinetOboeInfo size");
+#else
+static_assert(sizeof(KlarinetOboeOpen) == 44, "KlarinetOboeOpen size");
+static_assert(sizeof(KlarinetOboeInfo) == 28, "KlarinetOboeInfo size");
+#endif
 
 namespace {
 

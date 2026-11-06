@@ -1,4 +1,4 @@
-//! Android JNI staticlib for `arm64-v8a`.
+//! Android JNI staticlib. Oboe stays in the C++ adapter.
 //!
 //! `on_audio` is the Oboe data callback. It does not allocate, lock, panic, or
 //! enter the JVM. Samples move through `klarinet_fifo_*`. Effect processing
@@ -26,11 +26,11 @@ pub(crate) fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 }
 
 pub(crate) fn usize_to_i64(value: usize) -> i64 {
-    i64::from_ne_bytes(value.to_ne_bytes())
+    value as i64
 }
 
 pub(crate) fn i64_to_usize(value: i64) -> usize {
-    usize::from_ne_bytes(value.to_ne_bytes())
+    value as usize
 }
 
 #[cfg(test)]

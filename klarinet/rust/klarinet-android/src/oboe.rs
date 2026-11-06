@@ -35,10 +35,18 @@ pub struct OboeInfo {
 }
 
 const _: () = {
-    assert!(size_of::<OboeOpen>() == 56);
     assert!(offset_of!(OboeOpen, audio) == 32);
-    assert!(size_of::<OboeInfo>() == 32);
     assert!(offset_of!(OboeInfo, device_ids) == 24);
+};
+#[cfg(target_pointer_width = "64")]
+const _: () = {
+    assert!(size_of::<OboeOpen>() == 56);
+    assert!(size_of::<OboeInfo>() == 32);
+};
+#[cfg(target_pointer_width = "32")]
+const _: () = {
+    assert!(size_of::<OboeOpen>() == 44);
+    assert!(size_of::<OboeInfo>() == 28);
 };
 
 const LOG_INFO: i32 = 4;
@@ -234,8 +242,22 @@ mod tests {
     #[test]
     fn open_struct_matches_the_c_header() {
         assert_eq!(offset_of!(OboeOpen, audio), 32);
-        assert_eq!(size_of::<OboeOpen>(), 56);
         assert_eq!(offset_of!(OboeInfo, device_ids), 24);
-        assert_eq!(size_of::<OboeInfo>(), 32);
+        assert_eq!(
+            size_of::<OboeOpen>(),
+            if cfg!(target_pointer_width = "64") {
+                56
+            } else {
+                44
+            }
+        );
+        assert_eq!(
+            size_of::<OboeInfo>(),
+            if cfg!(target_pointer_width = "64") {
+                32
+            } else {
+                28
+            }
+        );
     }
 }
