@@ -42,7 +42,7 @@ jobs:
         run: bash ./scripts/assemble-pages.sh
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: public
 
@@ -68,4 +68,4 @@ jobs:
       - name: Deploy to GitHub Pages
         if: steps.check.outputs.enabled == 'true'
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
