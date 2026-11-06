@@ -8,16 +8,18 @@ if(NOT DEFINED KLARINET_DSP_DIR)
     set(KLARINET_DSP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../klarinet/src/cpp/dsp")
 endif()
 
-# arm64-v8a and armeabi-v7a link the Rust JNI staticlib. That crate
-# cross-compiles the DSP rlib, so this static library must not also run the
-# host-triple cargo build. x86_64 keeps klarinet_jni.cpp, KlarinetEngine,
-# and KlarinetCallback.
+# Each Android ABI links the Rust JNI staticlib. That crate cross-compiles
+# the DSP rlib, so this static library must not also run the host-triple
+# cargo build.
 if(ANDROID_ABI STREQUAL "arm64-v8a")
     set(KLARINET_ANDROID_RUST_TARGET "aarch64-linux-android")
     set(KLARINET_ANDROID_RUST_LINKER_ENV "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER")
 elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
     set(KLARINET_ANDROID_RUST_TARGET "armv7-linux-androideabi")
     set(KLARINET_ANDROID_RUST_LINKER_ENV "CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER")
+elseif(ANDROID_ABI STREQUAL "x86_64")
+    set(KLARINET_ANDROID_RUST_TARGET "x86_64-linux-android")
+    set(KLARINET_ANDROID_RUST_LINKER_ENV "CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER")
 endif()
 if(KLARINET_ANDROID_RUST_TARGET)
     set(KLARINET_DSP_RUST_EFFECTS ON CACHE BOOL "Rust effect shims for this ABI's JNI library" FORCE)
