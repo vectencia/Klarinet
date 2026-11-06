@@ -1,54 +1,82 @@
 import java.io.File
+import org.gradle.api.tasks.testing.Test
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 private val hostIsMac: Boolean =
     System.getProperty("os.name").orEmpty().lowercase().contains("mac")
 
 fun dspCmakeArguments(targetName: String): List<String> = when (targetName) {
-    "macosArm64" -> listOf("-DCMAKE_OSX_ARCHITECTURES=arm64")
+    "macosArm64" -> listOf(
+        "-DCMAKE_OSX_ARCHITECTURES=arm64",
+        "-DKLARINET_DSP_RUST_QUEUES=ON",
+        "-DKLARINET_DSP_RUST_EFFECTS=ON",
+    )
     "iosSimulatorArm64" -> listOf(
         "-DCMAKE_SYSTEM_NAME=iOS",
         "-DCMAKE_OSX_SYSROOT=iphonesimulator",
         "-DCMAKE_OSX_ARCHITECTURES=arm64",
         "-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0",
+        "-DKLARINET_DSP_RUST_QUEUES=ON",
+        "-DKLARINET_DSP_RUST_EFFECTS=ON",
+        "-DKLARINET_RUST_CARGO_TARGET=aarch64-apple-ios-sim",
     )
     "iosArm64" -> listOf(
         "-DCMAKE_SYSTEM_NAME=iOS",
         "-DCMAKE_OSX_SYSROOT=iphoneos",
         "-DCMAKE_OSX_ARCHITECTURES=arm64",
         "-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0",
+        "-DKLARINET_DSP_RUST_QUEUES=ON",
+        "-DKLARINET_DSP_RUST_EFFECTS=ON",
+        "-DKLARINET_RUST_CARGO_TARGET=aarch64-apple-ios",
     )
     "iosX64" -> listOf(
         "-DCMAKE_SYSTEM_NAME=iOS",
         "-DCMAKE_OSX_SYSROOT=iphonesimulator",
         "-DCMAKE_OSX_ARCHITECTURES=x86_64",
         "-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0",
+        "-DKLARINET_DSP_RUST_QUEUES=ON",
+        "-DKLARINET_DSP_RUST_EFFECTS=ON",
+        "-DKLARINET_RUST_CARGO_TARGET=x86_64-apple-ios",
     )
     "tvosSimulatorArm64" -> listOf(
         "-DCMAKE_SYSTEM_NAME=tvOS",
         "-DCMAKE_OSX_SYSROOT=appletvsimulator",
         "-DCMAKE_OSX_ARCHITECTURES=arm64",
         "-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0",
+        "-DKLARINET_DSP_RUST_QUEUES=ON",
+        "-DKLARINET_DSP_RUST_EFFECTS=ON",
+        "-DKLARINET_RUST_CARGO_TARGET=aarch64-apple-tvos-sim",
     )
     "tvosArm64" -> listOf(
         "-DCMAKE_SYSTEM_NAME=tvOS",
         "-DCMAKE_OSX_SYSROOT=appletvos",
         "-DCMAKE_OSX_ARCHITECTURES=arm64",
         "-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0",
+        "-DKLARINET_DSP_RUST_QUEUES=ON",
+        "-DKLARINET_DSP_RUST_EFFECTS=ON",
+        "-DKLARINET_RUST_CARGO_TARGET=aarch64-apple-tvos",
     )
     "watchosSimulatorArm64" -> listOf(
         "-DCMAKE_SYSTEM_NAME=watchOS",
         "-DCMAKE_OSX_SYSROOT=watchsimulator",
         "-DCMAKE_OSX_ARCHITECTURES=arm64",
         "-DCMAKE_OSX_DEPLOYMENT_TARGET=8.0",
+        "-DKLARINET_DSP_RUST_QUEUES=ON",
+        "-DKLARINET_DSP_RUST_EFFECTS=ON",
+        "-DKLARINET_RUST_CARGO_TARGET=aarch64-apple-watchos-sim",
     )
     "watchosArm64" -> listOf(
         "-DCMAKE_SYSTEM_NAME=watchOS",
         "-DCMAKE_OSX_SYSROOT=watchos",
         "-DCMAKE_OSX_ARCHITECTURES=arm64",
         "-DCMAKE_OSX_DEPLOYMENT_TARGET=8.0",
+        "-DKLARINET_DSP_RUST_QUEUES=ON",
+        "-DKLARINET_DSP_RUST_EFFECTS=ON",
+        "-DKLARINET_RUST_CARGO_TARGET=aarch64-apple-watchos",
     )
     else -> emptyList()
+}.let { args ->
+    if (args.isEmpty()) args else args + "-DKLARINET_DSP_RUST_ANALYSIS=ON"
 }
 
 plugins {
@@ -72,6 +100,12 @@ kotlin {
         withDeviceTest {
             instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         }
+        optimization {
+            consumerKeepRules.apply {
+                publish = true
+                file("consumer-rules.pro")
+            }
+        }
     }
 
     jvm()
@@ -81,6 +115,7 @@ kotlin {
             testTask {
                 useKarma {
                     useChromeHeadlessNoSandbox()
+                    useConfigDirectory(layout.projectDirectory.dir("src/jsTest/karma").asFile)
                 }
             }
         }
@@ -92,17 +127,37 @@ kotlin {
         mingwX64(),
     )
 
+    val linuxNativeArchiveDir = layout.buildDirectory.dir("native-linuxX64")
     nativeDesktopTargets.forEach { target ->
         target.compilations.getByName("main") {
             cinterops {
                 create("klarinet_native") {
                     defFile(project.file("src/nativeInterop/cinterop/klarinet_native.def"))
                     includeDirs(project.file("src/nativeInterop/cinterop"))
+                    // Phase 5 ships linuxX64 first. linuxArm64 and mingwX64 stay on
+                    // klarinet_native.c until this archive has been linked.
+                    if (target.name == "linuxX64") {
+                        extraOpts(
+                            "-libraryPath", linuxNativeArchiveDir.get().asFile.absolutePath,
+                            "-staticLibrary", "libklarinet_native.a",
+                        )
+                    }
                 }
                 create("klarinet_dsp") {
                     defFile(project.file("src/nativeInterop/cinterop/klarinet_dsp.def"))
                     includeDirs(project.file("src/cpp/dsp"))
                 }
+            }
+        }
+    }
+
+    // Headers only. The symbols live in libklarinet_native.a, which the
+    // linuxX64 klarinet_native cinterop already passes as -staticLibrary.
+    nativeDesktopTargets.single { it.name == "linuxX64" }.compilations.getByName("test") {
+        cinterops {
+            create("klarinet_audio_test") {
+                defFile(project.file("src/linuxX64Test/cinterop/klarinet_audio_test.def"))
+                includeDirs(project.file("src/linuxX64Test/cinterop"))
             }
         }
     }
@@ -167,7 +222,51 @@ kotlin {
             }
         }
         target.binaries.all {
+            // macosArm64 still contains the C++ shims, so -lc++ stays.
             linkerOpts("-lc++")
+        }
+        val rustArchiveRelative = when (target.name) {
+            "macosArm64" -> "rust-target/release/libklarinet_dsp_core.a"
+            "iosSimulatorArm64" -> "rust-target/aarch64-apple-ios-sim/release/libklarinet_dsp_core.a"
+            "iosArm64" -> "rust-target/aarch64-apple-ios/release/libklarinet_dsp_core.a"
+            "iosX64" -> "rust-target/x86_64-apple-ios/release/libklarinet_dsp_core.a"
+            "tvosSimulatorArm64" -> "rust-target/aarch64-apple-tvos-sim/release/libklarinet_dsp_core.a"
+            "tvosArm64" -> "rust-target/aarch64-apple-tvos/release/libklarinet_dsp_core.a"
+            "watchosSimulatorArm64" -> "rust-target/aarch64-apple-watchos-sim/release/libklarinet_dsp_core.a"
+            "watchosArm64" -> "rust-target/aarch64-apple-watchos/release/libklarinet_dsp_core.a"
+            else -> null
+        }
+        if (rustArchiveRelative != null) {
+            val rustDspArchive = dspOut.map { it.file(rustArchiveRelative) }
+            compileDsp.configure {
+                inputs.files(
+                    fileTree(layout.projectDirectory.dir("rust/klarinet-dsp")) { exclude("target/**") },
+                )
+                val dspArchivePath = dspLib.get().asFile.absolutePath
+                val rustArchivePath = rustDspArchive.get().asFile.absolutePath
+                // CMake's static-archive rule does not depend on the Rust
+                // staticlib. Delete the published archive before cmake --build
+                // so make recreates it from the C++ objects, then merge that
+                // fresh archive. Merging the published file in place would
+                // append a second copy of the Rust objects on the next run.
+                doFirst {
+                    File(dspArchivePath).delete()
+                }
+                doLast {
+                    val merged = File("$dspArchivePath.merged")
+                    val result = ProcessBuilder(
+                        "libtool",
+                        "-static",
+                        "-o",
+                        merged.absolutePath,
+                        dspArchivePath,
+                        rustArchivePath,
+                    ).inheritIO().start().waitFor()
+                    check(result == 0) { "libtool merge failed ($result)" }
+                    check(File(dspArchivePath).delete()) { "could not replace $dspArchivePath" }
+                    check(merged.renameTo(File(dspArchivePath))) { "could not move merged archive" }
+                }
+            }
         }
         if (hostIsMac) {
             tasks.matching { task ->
@@ -179,6 +278,11 @@ kotlin {
                     )
             }.configureEach {
                 dependsOn(compileDsp)
+                if (rustArchiveRelative != null) {
+                    // The staticlib is copied into the klib. dependsOn does not
+                    // make that copy an input.
+                    inputs.file(dspLib)
+                }
             }
         }
     }
@@ -192,6 +296,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {}
+        getByName("jsMain").kotlin.srcDir(layout.buildDirectory.dir("generated/jsWasm"))
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
@@ -216,6 +321,13 @@ kotlin {
         getByName("linuxMain").dependsOn(nativeDesktopMain)
         getByName("mingwMain").dependsOn(nativeDesktopMain)
 
+        // JVM, Android, JS, and Apple call the Rust analysis ABI. Native
+        // desktop keeps this Kotlin body.
+        val kotlinAnalysisMain = create("kotlinAnalysisMain") {
+            dependsOn(getByName("commonMain"))
+        }
+        nativeDesktopMain.dependsOn(kotlinAnalysisMain)
+
         getByName("androidHostTest").dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.kotlin.testJunit)
@@ -232,6 +344,17 @@ kotlin {
             implementation(libs.kotlin.test)
             implementation(libs.kotlin.testJunit)
         }
+    }
+}
+
+// The host JVM cannot load libklarinet-jni.so. AndroidAnalysisPathTest
+// covers these types on a device. The common tests run on JVM, JS, and Apple.
+tasks.withType<Test>().matching { it.name == "testAndroidHostTest" }.configureEach {
+    filter {
+        excludeTestsMatching("com.vectencia.klarinet.FftTest")
+        excludeTestsMatching("com.vectencia.klarinet.AudioAnalyzerTest")
+        excludeTestsMatching("com.vectencia.klarinet.AudioMathTest")
+        excludeTestsMatching("com.vectencia.klarinet.LinearResamplerTest")
     }
 }
 
@@ -282,7 +405,8 @@ tasks.register("verifyDspEmbeddedInAppleKlibs") {
                 .redirectErrorStream(true)
                 .start()
             val out = nm.inputStream.bufferedReader().readText()
-            check(nm.waitFor() == 0) { "nm failed on $archive\n$out" }
+            // Xcode nm exits non-zero on LLVM 23 Rust objects after printing their symbols.
+            nm.waitFor()
             symbols.forEach { symbol ->
                 val defined = out.lineSequence().any { line ->
                     line.contains(symbol) && (
@@ -311,21 +435,95 @@ val dspSources = fileTree(dspSourceDir) {
     exclude("build/**")
 }
 
+val rustDspSources = fileTree(layout.projectDirectory.dir("rust/klarinet-dsp")) {
+    exclude("target/**")
+}
+val rustJvmSources = fileTree(layout.projectDirectory.dir("rust/klarinet-jvm")) {
+    exclude("target/**")
+}
+val rustWavSources = fileTree(layout.projectDirectory.dir("rust/klarinet-wav")) {
+    exclude("target/**")
+}
+
+val generateKlarinetWasm = tasks.register("generateKlarinetWasm") {
+    group = "build"
+    description = "Compile the effect and analysis crate to wasm."
+    inputs.files(fileTree(layout.projectDirectory.dir("rust/klarinet-wasm")) { exclude("target/**") })
+    inputs.files(rustDspSources)
+    inputs.files(rustWavSources)
+    val manifest = layout.projectDirectory.file("rust/klarinet-wasm/Cargo.toml").asFile.absolutePath
+    val outPath = layout.buildDirectory.file("generated/jsWasm/KlarinetWasm.kt").get().asFile.absolutePath
+    outputs.file(outPath)
+    doLast {
+        val cargo = run {
+            val candidates = mutableListOf(
+                File(System.getProperty("user.home"), ".cargo/bin/cargo"),
+                File("/opt/homebrew/bin/cargo"),
+            )
+            System.getenv("PATH")?.split(File.pathSeparator)?.forEach { dir ->
+                candidates += File(dir, "cargo")
+            }
+            candidates.firstOrNull { it.canExecute() } ?: error("cargo was not found")
+        }
+        val result = ProcessBuilder(
+            cargo.absolutePath,
+            "build",
+            "--release",
+            "--locked",
+            "--manifest-path",
+            manifest,
+            "--target",
+            "wasm32-unknown-unknown",
+        ).inheritIO().start().waitFor()
+        check(result == 0) { "wasm cargo build failed ($result)" }
+        val wasm = File(manifest).parentFile.resolve(
+            "target/wasm32-unknown-unknown/release/klarinet_wasm.wasm",
+        )
+        check(wasm.isFile) { "missing ${wasm.absolutePath}" }
+        val alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+        val data = wasm.readBytes()
+        val encoded = buildString {
+            var i = 0
+            while (i < data.size) {
+                val b0 = data[i].toInt() and 0xff
+                val b1 = if (i + 1 < data.size) data[i + 1].toInt() and 0xff else 0
+                val b2 = if (i + 2 < data.size) data[i + 2].toInt() and 0xff else 0
+                append(alphabet[b0 shr 2])
+                append(alphabet[((b0 and 3) shl 4) or (b1 shr 4)])
+                if (i + 1 < data.size) append(alphabet[((b1 and 15) shl 2) or (b2 shr 6)]) else append('=')
+                if (i + 2 < data.size) append(alphabet[b2 and 63]) else append('=')
+                i += 3
+            }
+        }
+        val out = File(outPath)
+        out.parentFile.mkdirs()
+        out.writeText(
+            "package com.vectencia.klarinet\n\ninternal const val KLARINET_WASM_BASE64: String =\n    \"$encoded\"\n",
+        )
+    }
+}
+
+tasks.matching { it.name == "compileKotlinJs" }.configureEach {
+    dependsOn(generateKlarinetWasm)
+}
+
 val configureDspTests = tasks.register<Exec>("configureDspTests") {
     workingDir = dspSourceDir.asFile
-    inputs.files(dspSources)
+    inputs.files(dspSources, rustDspSources)
     outputs.dir(dspBuildDir)
     commandLine(
         "cmake",
         "-S", dspSourceDir.asFile.absolutePath,
         "-B", dspBuildDir.get().asFile.absolutePath,
         "-DKLARINET_DSP_BUILD_TESTS=ON",
+        "-DKLARINET_DSP_RUST_QUEUES=ON",
+        "-DKLARINET_DSP_RUST_EFFECTS=ON",
     )
 }
 
 val compileDspTests = tasks.register<Exec>("compileDspTests") {
     dependsOn(configureDspTests)
-    inputs.files(dspSources)
+    inputs.files(dspSources, rustDspSources)
     outputs.dir(dspBuildDir)
     commandLine("cmake", "--build", dspBuildDir.get().asFile.absolutePath)
 }
@@ -338,6 +536,128 @@ tasks.register<Exec>("dspTests") {
     commandLine("ctest", "--output-on-failure")
 }
 
+val linuxNativeOut = layout.buildDirectory.dir("native-linuxX64")
+val buildKlarinetNativeLinuxX64 = tasks.register("buildKlarinetNativeLinuxX64") {
+    group = "build"
+    description = "Rust klarinet_native staticlib for linuxX64, with vendored miniaudio wrapped in C."
+    val rustDir = layout.projectDirectory.dir("rust/klarinet-native").asFile
+    val includeDir = layout.projectDirectory.dir("src/nativeInterop/cinterop").asFile
+    val outDir = linuxNativeOut.get().asFile
+    inputs.files(fileTree(rustDir) { exclude("target/**") })
+    inputs.files(
+        fileTree(layout.projectDirectory.dir("rust/klarinet-dsp")) { exclude("target/**") },
+    )
+    inputs.file(includeDir.resolve("miniaudio.h"))
+    outputs.file(outDir.resolve("libklarinet_native.a"))
+    // Paths only. The action must not call a script function, or the
+    // configuration cache cannot store this task.
+    val manifest = rustDir.resolve("Cargo.toml").absolutePath
+    val miniaudioC = rustDir.resolve("c/miniaudio.c").absolutePath
+    val wrapperC = rustDir.resolve("c/klarinet_ma.c").absolutePath
+    val wrapperInclude = rustDir.resolve("c").absolutePath
+    val miniaudioInclude = includeDir.absolutePath
+    val outPath = outDir.absolutePath
+    doLast {
+        fun run(args: List<String>) {
+            val result = ProcessBuilder(args).inheritIO().start().waitFor()
+            check(result == 0) { "Command failed ($result): ${args.joinToString(" ")}" }
+        }
+        val out = File(outPath)
+        out.mkdirs()
+        val cargo = run {
+            val candidates = mutableListOf(
+                File(System.getProperty("user.home"), ".cargo/bin/cargo"),
+                File("/opt/homebrew/bin/cargo"),
+            )
+            System.getenv("PATH")?.split(File.pathSeparator)?.forEach { dir ->
+                candidates += File(dir, "cargo")
+            }
+            candidates.firstOrNull { it.canExecute() } ?: error("cargo was not found")
+        }
+        val targetDir = File(out, "target")
+        run(
+            listOf(
+                cargo.absolutePath,
+                "build",
+                "--release",
+                "--locked",
+                "--manifest-path",
+                manifest,
+                "--target",
+                "x86_64-unknown-linux-gnu",
+                "--target-dir",
+                targetDir.absolutePath,
+            ),
+        )
+        val zig = System.getenv("PATH")
+            ?.split(File.pathSeparator)
+            ?.firstNotNullOfOrNull { dir -> File(dir, "zig").takeIf { it.canExecute() } }
+            ?: error("zig is required to compile the linuxX64 miniaudio wrapper")
+        val maObj = File(out, "miniaudio.o")
+        val wrapObj = File(out, "klarinet_ma.o")
+        run(
+            listOf(
+                zig.absolutePath,
+                "cc",
+                "-target",
+                "x86_64-linux-gnu",
+                "-c",
+                "-O2",
+                "-I",
+                miniaudioInclude,
+                miniaudioC,
+                "-o",
+                maObj.absolutePath,
+            ),
+        )
+        run(
+            listOf(
+                zig.absolutePath,
+                "cc",
+                "-target",
+                "x86_64-linux-gnu",
+                "-c",
+                "-O2",
+                "-I",
+                wrapperInclude,
+                "-I",
+                miniaudioInclude,
+                wrapperC,
+                "-o",
+                wrapObj.absolutePath,
+            ),
+        )
+        val archive = File(out, "libklarinet_native.a")
+        val rustLib = File(targetDir, "x86_64-unknown-linux-gnu/release/libklarinet_native.a")
+        if (archive.exists()) {
+            check(archive.delete()) { "could not replace ${archive.absolutePath}" }
+        }
+        run(listOf("cp", rustLib.absolutePath, archive.absolutePath))
+        run(
+            listOf(
+                zig.absolutePath,
+                "ar",
+                "r",
+                archive.absolutePath,
+                maObj.absolutePath,
+                wrapObj.absolutePath,
+            ),
+        )
+    }
+}
+
+val linuxNativeArchive = linuxNativeOut.map { it.file("libklarinet_native.a") }
+tasks.matching { task ->
+    val name = task.name
+    name == "cinteropKlarinet_nativeLinuxX64" ||
+        (name.startsWith("link") && name.contains("LinuxX64"))
+}.configureEach {
+    dependsOn(buildKlarinetNativeLinuxX64)
+    // `-staticLibrary` is copied into the klib. dependsOn does not make that
+    // copy an input, so a later Rust edit would leave cinterop UP-TO-DATE.
+    inputs.file(linuxNativeArchive)
+}
+
 data class JvmNativeTarget(
     val id: String,
     val fileName: String,
@@ -345,6 +665,7 @@ data class JvmNativeTarget(
     val cmakeSystemProcessor: String?,
     val zigTarget: String?,
     val jniMd: String,
+    val rustTriple: String? = null,
     val extraCmake: List<String> = emptyList(),
 )
 
@@ -365,6 +686,7 @@ val jvmNativeTargets = listOf(
         cmakeSystemProcessor = null,
         zigTarget = null,
         jniMd = "darwin",
+        rustTriple = "x86_64-apple-darwin",
         extraCmake = listOf("-DCMAKE_OSX_ARCHITECTURES=x86_64"),
     ),
     JvmNativeTarget(
@@ -374,6 +696,7 @@ val jvmNativeTargets = listOf(
         cmakeSystemProcessor = "x86_64",
         zigTarget = "x86_64-linux-gnu",
         jniMd = "linux",
+        rustTriple = "x86_64-unknown-linux-gnu",
     ),
     JvmNativeTarget(
         id = "linux-arm64",
@@ -382,6 +705,7 @@ val jvmNativeTargets = listOf(
         cmakeSystemProcessor = "aarch64",
         zigTarget = "aarch64-linux-gnu",
         jniMd = "linux",
+        rustTriple = "aarch64-unknown-linux-gnu",
     ),
     JvmNativeTarget(
         id = "windows-x64",
@@ -390,6 +714,7 @@ val jvmNativeTargets = listOf(
         cmakeSystemProcessor = "x86_64",
         zigTarget = "x86_64-windows-gnu",
         jniMd = "win32",
+        rustTriple = "x86_64-pc-windows-gnu",
     ),
 )
 
@@ -436,38 +761,110 @@ val jvmNativeSources = fileTree(jvmNativeCppDir) {
 val packagedNativeDir = layout.projectDirectory.dir("src/jvmMain/resources/natives")
 
 val buildJvmNativeTasks = jvmNativeTargets.map { target ->
-    tasks.register("buildJvmNative_${target.id.replace('-', '_')}") {
+    // Copy into serializable values. The task action must not capture this script
+    // or JvmNativeTarget, or the configuration cache cannot store the task.
+    val targetId = target.id
+    val fileName = target.fileName
+    val jniMd = target.jniMd
+    val cmakeSystemName = target.cmakeSystemName
+    val cmakeSystemProcessor = target.cmakeSystemProcessor
+    val extraCmake = target.extraCmake
+    val zigTarget = target.zigTarget
+    val enableRustEffects = targetId == "macos-arm64"
+    val enableRustJvm = targetId == "macos-arm64" ||
+        targetId == "macos-x64" ||
+        targetId == "linux-x64" ||
+        targetId == "linux-arm64" ||
+        targetId == "windows-x64"
+    val rustTriple = target.rustTriple
+    val cmakeSource = jvmNativeCppDir.asFile.absolutePath
+    val jniMdInclude = jvmNativeCppDir.dir("jni-md/$jniMd").asFile.absolutePath
+    val zigToolDir = layout.buildDirectory.dir("zig-toolchains")
+    tasks.register("buildJvmNative_${targetId.replace('-', '_')}") {
         group = "build"
-        description = "Cross-compile libklarinet_jvm for ${target.id}"
-        val buildDir = layout.buildDirectory.dir("jvm-native/${target.id}")
-        val destFile = packagedNativeDir.dir(target.id).file(target.fileName)
+        description = "Cross-compile libklarinet_jvm for $targetId"
+        val buildDir = layout.buildDirectory.dir("jvm-native/$targetId")
+        val destFile = packagedNativeDir.dir(targetId).file(fileName)
         inputs.files(jvmNativeSources)
         inputs.files(dspSources)
+        if (enableRustJvm || enableRustEffects) {
+            inputs.files(rustDspSources)
+        }
+        if (enableRustJvm) {
+            inputs.files(rustJvmSources)
+            inputs.files(rustWavSources)
+        }
         outputs.file(destFile)
         doLast {
+            val javaHome = File(System.getProperty("java.home"))
+            val jniInclude = listOf(
+                javaHome.resolve("include"),
+                javaHome.resolve("../include"),
+            ).firstOrNull { it.resolve("jni.h").isFile }?.absolutePath
+                ?: error("jni.h not found under java.home=${javaHome.absolutePath}")
             val cmakeArgs = mutableListOf(
                 "cmake",
-                "-S", jvmNativeCppDir.asFile.absolutePath,
+                "-S", cmakeSource,
                 "-B", buildDir.get().asFile.absolutePath,
                 "-DCMAKE_BUILD_TYPE=Release",
                 "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
-                "-DKLARINET_JNI_INCLUDE=${jniIncludeDir().absolutePath}",
-                "-DKLARINET_JNI_MD_INCLUDE=${jvmNativeCppDir.dir("jni-md/${target.jniMd}").asFile.absolutePath}",
+                "-DKLARINET_JNI_INCLUDE=$jniInclude",
+                "-DKLARINET_JNI_MD_INCLUDE=$jniMdInclude",
             )
-            target.cmakeSystemName?.let { cmakeArgs += "-DCMAKE_SYSTEM_NAME=$it" }
-            target.cmakeSystemProcessor?.let { cmakeArgs += "-DCMAKE_SYSTEM_PROCESSOR=$it" }
-            target.extraCmake.forEach { cmakeArgs += it }
-            val zigTarget = target.zigTarget
-            if (zigTarget != null) {
-                findZig()
-                cmakeArgs += "-DCMAKE_C_COMPILER=${zigToolchainScript(zigTarget, "cc").absolutePath}"
-                cmakeArgs += "-DCMAKE_CXX_COMPILER=${zigToolchainScript(zigTarget, "c++").absolutePath}"
-                cmakeArgs += "-DCMAKE_AR=${zigToolchainScript(zigTarget, "ar").absolutePath}"
-                cmakeArgs += "-DCMAKE_RANLIB=${zigToolchainScript(zigTarget, "ranlib").absolutePath}"
-                cmakeArgs += "-DCMAKE_SHARED_LINKER_FLAGS=-s"
+            if (cmakeSystemName != null) {
+                cmakeArgs += "-DCMAKE_SYSTEM_NAME=$cmakeSystemName"
             }
-            runProcess(cmakeArgs)
-            runProcess(
+            if (cmakeSystemProcessor != null) {
+                cmakeArgs += "-DCMAKE_SYSTEM_PROCESSOR=$cmakeSystemProcessor"
+            }
+            extraCmake.forEach { cmakeArgs += it }
+            if (enableRustEffects) {
+                cmakeArgs += "-DKLARINET_DSP_RUST_EFFECTS=ON"
+            }
+            if (enableRustJvm) {
+                cmakeArgs += "-DKLARINET_JVM_RUST=ON"
+                if (rustTriple != null) {
+                    cmakeArgs += "-DKLARINET_JVM_RUST_TARGET=$rustTriple"
+                }
+                if (enableRustEffects) {
+                    cmakeArgs += "-DKLARINET_JVM_RUST_EFFECTS=ON"
+                }
+            }
+            if (zigTarget != null) {
+                val zig = System.getenv("PATH")
+                    ?.split(File.pathSeparator)
+                    ?.firstNotNullOfOrNull { dir -> File(dir, "zig").takeIf { it.canExecute() } }
+                    ?: error("zig is required to cross-compile JVM natives. Install zig and retry.")
+                check(zig.canExecute())
+                fun toolScript(tool: String): File {
+                    val dir = zigToolDir.get().asFile
+                    dir.mkdirs()
+                    val script = dir.resolve("zig-$zigTarget-$tool.sh")
+                    val body = when (tool) {
+                        "cc" -> "#!/bin/sh\nexec zig cc -target $zigTarget \"\$@\"\n"
+                        "c++" -> "#!/bin/sh\nexec zig c++ -target $zigTarget \"\$@\"\n"
+                        else -> "#!/bin/sh\nexec zig $tool \"\$@\"\n"
+                    }
+                    script.writeText(body)
+                    script.setExecutable(true)
+                    return script
+                }
+                cmakeArgs += "-DCMAKE_C_COMPILER=${toolScript("cc").absolutePath}"
+                cmakeArgs += "-DCMAKE_CXX_COMPILER=${toolScript("c++").absolutePath}"
+                cmakeArgs += "-DCMAKE_AR=${toolScript("ar").absolutePath}"
+                cmakeArgs += "-DCMAKE_RANLIB=${toolScript("ranlib").absolutePath}"
+                cmakeArgs += "-DCMAKE_SHARED_LINKER_FLAGS=-s"
+                if (enableRustJvm) {
+                    cmakeArgs += "-DKLARINET_JVM_RUST_LINKER=${cmakeSource}/zig_rust_link.py"
+                    cmakeArgs += "-DKLARINET_JVM_RUST_ZIG_TARGET=$zigTarget"
+                }
+            }
+            fun run(args: List<String>) {
+                val result = ProcessBuilder(args).inheritIO().start().waitFor()
+                check(result == 0) { "Command failed ($result): ${args.joinToString(" ")}" }
+            }
+            run(cmakeArgs)
+            run(
                 listOf(
                     "cmake",
                     "--build",
@@ -479,12 +876,12 @@ val buildJvmNativeTasks = jvmNativeTargets.map { target ->
             )
             val builtDir = buildDir.get().asFile
             val built = listOf(
-                builtDir.resolve(target.fileName),
-                builtDir.resolve("lib${target.fileName}"),
-                builtDir.resolve("Release/${target.fileName}"),
-                builtDir.resolve("Release/lib${target.fileName}"),
+                builtDir.resolve(fileName),
+                builtDir.resolve("lib$fileName"),
+                builtDir.resolve("Release/$fileName"),
+                builtDir.resolve("Release/lib$fileName"),
             ).firstOrNull { it.isFile }
-                ?: error("Expected ${target.fileName} under ${builtDir.absolutePath} after compiling ${target.id}")
+                ?: error("Expected $fileName under ${builtDir.absolutePath} after compiling $targetId")
             destFile.asFile.parentFile.mkdirs()
             built.copyTo(destFile.asFile, overwrite = true)
         }

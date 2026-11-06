@@ -31,9 +31,13 @@ class JsAudioWorkletTest {
         val stream = engine.openStream(
             AudioStreamConfig(channelCount = 1, performanceMode = PerformanceMode.LOW_LATENCY),
         )
+        val gain = engine.createEffect(AudioEffectType.GAIN)
+        val chain = engine.createEffectChain()
+        chain.add(gain)
+        stream.effectChain = chain
         stream.start()
         return ensureKlarinetWorklet(engine.context)
-            .then { waitMs(50) }
+            .then { waitMs(600) }
             .then {
                 assertTrue(
                     stream.usesAudioWorklet(),
@@ -41,6 +45,8 @@ class JsAudioWorkletTest {
                 )
                 stream.close()
                 engine.close()
+                gain.release()
+                chain.release()
                 null
             }
     }

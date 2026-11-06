@@ -7,3 +7,17 @@
  * AudioEffect are emitted in exactly one object file.
  */
 #include "AudioEffect.h"
+
+#ifdef KLARINET_DSP_RUST_EFFECTS
+#include "klarinet_fx.h"
+
+namespace klarinet {
+
+AudioEffect::~AudioEffect() {
+    if (rust_ != nullptr) {
+        klarinet_fx_destroy(rust_);
+    }
+}
+
+} // namespace klarinet
+#endif

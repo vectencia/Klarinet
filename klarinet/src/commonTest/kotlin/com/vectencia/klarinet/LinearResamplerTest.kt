@@ -4,6 +4,7 @@ import kotlin.math.abs
 import kotlin.math.min
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class LinearResamplerTest {
@@ -75,6 +76,20 @@ class LinearResamplerTest {
         for (i in 0 until b) {
             assertTrue(abs(second[i] - 0.25f) < 1e-5f)
         }
+    }
+
+    @Test
+    fun thrownReadPropagatesAndTheNextRenderUsesTheNewSource() {
+        val resampler = LinearResampler(44100, 1)
+        val dest = FloatArray(4)
+        assertFailsWith<IllegalStateException> {
+            resampler.render(44100, dest, 2) { throw IllegalStateException("stop") }
+        }
+        val source = floatArrayOf(0.25f, 0.5f)
+        val got = resampler.render(44100, dest, 2, sequentialReader(source, 1))
+        assertEquals(2, got)
+        assertEquals(0.25f, dest[0], 0.0001f)
+        assertEquals(0.5f, dest[1], 0.0001f)
     }
 
     @Test

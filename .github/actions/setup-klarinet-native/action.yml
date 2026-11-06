@@ -1,0 +1,42 @@
+name: Set up Klarinet native toolchain
+description: Install Rust, the targets this job cross-compiles, and Zig when linuxX64 klarinet_native is built.
+
+inputs:
+  suite:
+    description: "full (macOS library build), android (JNI ABIs), or wasm (JS worklet)"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Choose Rust targets
+      id: targets
+      shell: bash
+      run: |
+        case "${{ inputs.suite }}" in
+          full)
+            targets="aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios aarch64-apple-tvos aarch64-apple-tvos-sim aarch64-apple-watchos aarch64-apple-watchos-sim aarch64-linux-android armv7-linux-androideabi x86_64-linux-android wasm32-unknown-unknown x86_64-unknown-linux-gnu"
+            ;;
+          android)
+            targets="aarch64-linux-android armv7-linux-androideabi x86_64-linux-android"
+            ;;
+          wasm)
+            targets="wasm32-unknown-unknown"
+            ;;
+          *)
+            echo "Unknown suite: ${{ inputs.suite }}" >&2
+            exit 1
+            ;;
+        esac
+        echo "targets=$targets" >> "$GITHUB_OUTPUT"
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ steps.targets.outputs.targets }}
+
+    - name: Install Zig
+      if: inputs.suite == 'full'
+      uses: mlugg/setup-zig@v2
+      with:
+        version: 0.14.1

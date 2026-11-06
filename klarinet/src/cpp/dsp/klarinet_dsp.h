@@ -249,6 +249,71 @@ void klarinet_offload_set_xrun_callback(KlarinetOffloadHandle handle, KlarinetXr
 /** Audio-thread only: move samples through the FIFO. Never calls Kotlin. */
 void klarinet_offload_process(KlarinetOffloadHandle handle, float* audio, int numFrames);
 
+/**
+ * Analysis and linear resampling. These handles are not in the effect registry.
+ * Create and destroy run on the caller thread and preallocate tables or the
+ * resampler ring. klarinet_fft_forward and klarinet_resample_linear do not
+ * allocate, lock, or panic. NULL handles are no-ops.
+ */
+typedef void* KlarinetFftHandle;
+typedef void* KlarinetAnalyzerHandle;
+typedef void* KlarinetResamplerHandle;
+/** Writes at most max_frames into dst. Returns that count, 0 at end, or a negative value to abort. */
+typedef int (*KlarinetResamplerRead)(void* user, float* dst, int max_frames);
+
+KlarinetFftHandle klarinet_fft_create(int size);
+void klarinet_fft_destroy(KlarinetFftHandle handle);
+void klarinet_fft_forward(KlarinetFftHandle handle, float* real, float* imag, int length);
+void klarinet_fft_magnitude(KlarinetFftHandle handle, const float* real, const float* imag, float* out, int out_len);
+
+float klarinet_math_rms(const float* data, int offset, int length);
+float klarinet_math_peak(const float* data, int offset, int length);
+float klarinet_math_linear_to_db(float linear);
+float klarinet_math_db_to_linear(float db);
+void klarinet_math_hann(float* out, int size);
+
+KlarinetAnalyzerHandle klarinet_analyzer_create(int fft_size, int sample_rate);
+void klarinet_analyzer_destroy(KlarinetAnalyzerHandle handle);
+void klarinet_analyzer_analyze(
+    KlarinetAnalyzerHandle handle,
+    const float* buffer,
+    int buffer_samples,
+    int num_frames,
+    int channel_count,
+    float* spectrum,
+    int spectrum_len,
+    float* rms,
+    float* rms_db,
+    float* peak,
+    float* peak_db
+);
+float klarinet_analyzer_band_energy(const float* spectrum, int spectrum_len, float resolution, float low_hz, float high_hz);
+
+KlarinetResamplerHandle klarinet_resampler_create(int source_rate, int channels);
+void klarinet_resampler_destroy(KlarinetResamplerHandle handle);
+int klarinet_resampler_has_buffered(KlarinetResamplerHandle handle);
+int klarinet_resample_linear(
+    KlarinetResamplerHandle handle,
+    int dest_rate,
+    float* dest,
+    int dest_frames,
+    KlarinetResamplerRead read,
+    void* user
+);
+
+/**
+ * Fill interleaved mono frames with a sine and advance phase.
+ * Audio thread: no allocation. phase is in radians.
+ */
+void klarinet_render_sine(
+    float* samples,
+    int frames,
+    float* phase,
+    float frequency_hz,
+    int sample_rate,
+    float amplitude
+);
+
 #ifdef __cplusplus
 }
 #endif

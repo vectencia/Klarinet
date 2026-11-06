@@ -4,8 +4,55 @@
  *
  * One thread produces, one thread consumes. Used on Android to move
  * Kotlin/JNI audio work off the Oboe callback thread.
+ *
+ * `KLARINET_DSP_RUST_QUEUES` (the host dspTests library only) compiles this
+ * class as a shim over the Rust FIFO. Every other target keeps the C++ body.
  */
 #pragma once
+
+#ifdef KLARINET_DSP_RUST_QUEUES
+
+#include "klarinet_queues.h"
+
+namespace klarinet {
+
+class AudioFifo {
+public:
+    explicit AudioFifo(int32_t capacitySamples)
+        : fifo_(klarinet_fifo_create(capacitySamples)) {}
+
+    ~AudioFifo() { klarinet_fifo_destroy(fifo_); }
+
+    AudioFifo(const AudioFifo&) = delete;
+    AudioFifo& operator=(const AudioFifo&) = delete;
+    AudioFifo(AudioFifo&&) = delete;
+    AudioFifo& operator=(AudioFifo&&) = delete;
+
+    int32_t write(const float* src, int32_t count) {
+        return klarinet_fifo_write(fifo_, src, count);
+    }
+
+    int32_t read(float* dst, int32_t count) {
+        return klarinet_fifo_read(fifo_, dst, count);
+    }
+
+    int32_t availableToRead() const {
+        return klarinet_fifo_available_to_read(fifo_);
+    }
+
+    int32_t availableToWrite() const {
+        return klarinet_fifo_available_to_write(fifo_);
+    }
+
+    int32_t capacity() const { return klarinet_fifo_capacity(fifo_); }
+
+private:
+    KlarinetFifo* fifo_;
+};
+
+} // namespace klarinet
+
+#else
 
 #include <algorithm>
 #include <atomic>
@@ -96,3 +143,5 @@ private:
 };
 
 } // namespace klarinet
+
+#endif

@@ -27,8 +27,54 @@
  *
  * @tparam T        Element type (must be trivially copyable for lock-free safety).
  * @tparam Capacity Total number of slots (usable capacity is Capacity - 1).
+ *
+ * `KLARINET_DSP_RUST_QUEUES` (the host dspTests library only) compiles this
+ * class as a shim over the Rust ring. Every other target keeps the C++ body.
  */
 #pragma once
+
+#ifdef KLARINET_DSP_RUST_QUEUES
+
+#include "klarinet_queues.h"
+
+namespace klarinet {
+
+template <typename T, int32_t Capacity = 256>
+class RingBuffer {
+public:
+    RingBuffer()
+        : ring_(klarinet_ring_create(
+              Capacity,
+              static_cast<int32_t>(sizeof(T)),
+              static_cast<int32_t>(alignof(T)))) {}
+
+    ~RingBuffer() { klarinet_ring_destroy(ring_); }
+
+    RingBuffer(const RingBuffer&) = delete;
+    RingBuffer& operator=(const RingBuffer&) = delete;
+    RingBuffer(RingBuffer&&) = delete;
+    RingBuffer& operator=(RingBuffer&&) = delete;
+
+    bool push(const T& item) {
+        return klarinet_ring_push(ring_, &item) != 0;
+    }
+
+    bool pop(T& item) {
+        return klarinet_ring_pop(ring_, &item) != 0;
+    }
+
+    bool isEmpty() const {
+        return klarinet_ring_is_empty(ring_) != 0;
+    }
+
+private:
+    KlarinetRing* ring_;
+};
+
+} // namespace klarinet
+
+#else
+
 #include <atomic>
 #include <array>
 #include <cstdint>
@@ -92,3 +138,5 @@ private:
 };
 
 } // namespace klarinet
+
+#endif

@@ -30,12 +30,24 @@ actual class AudioEffect internal constructor(
         return params[paramId] ?: 0f
     }
 
-    internal fun attach(context: AudioContext): WebEffectGraph {
+    internal fun attachWeb(context: AudioContext): WebEffectGraph {
+        check(type != AudioEffectType.GAIN)
         graph?.dispose()
-        val created = WebEffectGraph.create(context, type)
+        val created = WebEffectGraph.create(context, type, null)
         created.apply(params, enabledField)
         graph = created
         return created
+    }
+
+    internal fun installWasm(port: MessagePort): WasmGainSpec {
+        val previous = graph
+        graph = null
+        previous?.dispose()
+        val id = allocateWasmEffectId()
+        val linear = AudioMath.dbToLinear(params[GainParams.GAIN_DB] ?: 0f)
+        val fadeMs = params[GainParams.FADE_MS] ?: 0f
+        graph = WebEffectGraph.forWasm(port, id)
+        return WasmGainSpec(id, linear, fadeMs, enabledField)
     }
 
     actual fun release() {

@@ -1,5 +1,39 @@
 #include "Tremolo.h"
 
+#ifdef KLARINET_DSP_RUST_EFFECTS
+#include "klarinet_fx.h"
+
+namespace klarinet {
+
+Tremolo::Tremolo() : AudioEffect(EffectType::Tremolo) {
+    rust_ = klarinet_fx_create(static_cast<int32_t>(EffectType::Tremolo));
+}
+
+void Tremolo::process(float* buffer, int32_t numFrames, int32_t channelCount) {
+    if (!isEnabled()) return;
+    klarinet_fx_process(rust_, buffer, numFrames, channelCount);
+}
+
+void Tremolo::setParameter(int32_t paramId, float value) {
+    klarinet_fx_set_parameter(rust_, paramId, value);
+}
+
+float Tremolo::getParameter(int32_t paramId) const {
+    return klarinet_fx_get_parameter(rust_, paramId);
+}
+
+void Tremolo::prepare(int32_t sampleRate, int32_t channelCount) {
+    sampleRate_ = sampleRate;
+    channelCount_ = channelCount;
+    klarinet_fx_prepare(rust_, sampleRate, channelCount);
+}
+
+void Tremolo::reset() {
+    klarinet_fx_reset(rust_);
+}
+
+} // namespace klarinet
+#else
 namespace klarinet {
 
 Tremolo::Tremolo() : AudioEffect(EffectType::Tremolo) {}
@@ -66,3 +100,5 @@ void Tremolo::reset() {
 }
 
 } // namespace klarinet
+
+#endif

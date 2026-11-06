@@ -133,21 +133,117 @@ internal fun createWorkletModuleUrl(source: String): String =
 internal fun addAudioWorkletModule(ctx: AudioContext, url: String): Promise<JsAny?> =
     js("ctx.audioWorklet.addModule(url)")
 
-internal fun createAudioWorkletNode(ctx: AudioContext, channelCount: Int): AudioWorkletNode =
+internal fun postWasmModule(port: MessagePort) {
+    val base64 = KLARINET_WASM_BASE64
     js(
+        """
+        var bytes = Uint8Array.from(atob(base64), function(c) { return c.charCodeAt(0); });
+        port.postMessage({ type: 'wasm-bytes', bytes: bytes });
+        """,
+    )
+}
+
+internal fun createAudioWorkletNode(
+    ctx: AudioContext,
+    channelCount: Int,
+    direction: String,
+): AudioWorkletNode {
+    val node: AudioWorkletNode = js(
         """
         new AudioWorkletNode(ctx, 'klarinet-processor', {
             numberOfInputs: 1,
             numberOfOutputs: 1,
             outputChannelCount: [channelCount],
             channelCount: channelCount,
-            channelCountMode: 'explicit'
+            channelCountMode: 'explicit',
+            processorOptions: { role: 'io', direction: direction, channels: channelCount }
         })
         """,
     )
+    postWasmModule(node.port)
+    return node
+}
+
+internal fun createEffectWorkletNode(ctx: AudioContext, channelCount: Int): AudioWorkletNode {
+    val node: AudioWorkletNode = js(
+        """
+        new AudioWorkletNode(ctx, 'klarinet-processor', {
+            numberOfInputs: 1,
+            numberOfOutputs: 1,
+            outputChannelCount: [channelCount],
+            channelCount: channelCount,
+            channelCountMode: 'explicit',
+            processorOptions: { role: 'insert', channels: channelCount }
+        })
+        """,
+    )
+    postWasmModule(node.port)
+    return node
+}
 
 internal fun postWorkletOutput(port: MessagePort, samples: Float32Array) {
-    js("port.postMessage({ type: 'out', samples: samples })")
+    js(
+        """
+        var copy = new Float32Array(samples.length);
+        for (var i = 0; i < samples.length; i++) copy[i] = samples[i];
+        port.postMessage({ type: 'out', samples: copy });
+        """,
+    )
+}
+
+internal fun postWorkletChain(
+    port: MessagePort,
+    sampleRate: Int,
+    channels: Int,
+    effects: List<WasmGainSpec>,
+) {
+    val payload = buildString {
+        append('[')
+        effects.forEachIndexed { index, spec ->
+            if (index > 0) append(',')
+            append("{\"id\":")
+            append(spec.id)
+            append(",\"linear\":")
+            append(spec.linear.toDouble())
+            append(",\"fadeMs\":")
+            append(spec.fadeMs.toDouble())
+            append(",\"enabled\":")
+            append(if (spec.enabled) 1 else 0)
+            append('}')
+        }
+        append(']')
+    }
+    js(
+        "port.postMessage({type:'chain', sampleRate: sampleRate, channels: channels, effects: JSON.parse(payload)})",
+    )
+}
+
+internal fun postWorkletParam(
+    port: MessagePort,
+    id: Int,
+    linear: Float,
+    fadeMs: Float,
+    enabled: Boolean,
+) {
+    val enabledBit = if (enabled) 1 else 0
+    js(
+        "port.postMessage({type:'param', id: id, linear: linear, fadeMs: fadeMs, enabled: enabledBit})",
+    )
+}
+
+internal fun postWorkletDrop(port: MessagePort, id: Int) {
+    js("port.postMessage({type:'drop', id: id})")
+}
+
+internal fun postWorkletTransport(port: MessagePort, type: String) {
+    js("port.postMessage({type: type})")
+}
+
+internal fun startWorkletPump(tick: () -> Unit): Int =
+    js("setInterval(function() { tick(); }, 10)|0")
+
+internal fun stopWorkletPump(id: Int) {
+    js("clearInterval(id)")
 }
 
 internal fun floatArrayToFloat32(src: FloatArray, samples: Int): Float32Array {

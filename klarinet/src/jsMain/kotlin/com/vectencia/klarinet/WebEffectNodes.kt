@@ -9,6 +9,17 @@ import kotlin.math.sinh
 
 internal fun dbToGain(db: Float): Float = 10f.pow(db / 20f)
 
+private var wasmEffectIds = 1
+
+internal fun allocateWasmEffectId(): Int = wasmEffectIds++
+
+internal class WasmGainSpec(
+    val id: Int,
+    val linear: Float,
+    val fadeMs: Float,
+    val enabled: Boolean,
+)
+
 /** RBJ: Q = 1 / (2 * sinh(ln(2)/2 * bandwidthOctaves)). */
 internal fun bandwidthOctavesToQ(octaves: Float): Float {
     val bw = max(0.001f, octaves)
@@ -102,10 +113,11 @@ internal fun defaultEffectParams(type: AudioEffectType): MutableMap<Int, Float> 
 }
 
 internal class WebEffectGraph(
-    val input: GainNode,
-    val output: GainNode,
+    val input: GainNode?,
+    val output: GainNode?,
     private val applyParams: (Map<Int, Float>, Boolean) -> Unit,
     private val disposers: List<() -> Unit>,
+    val wasmId: Int = 0,
 ) {
     fun apply(params: Map<Int, Float>, enabled: Boolean) {
         applyParams(params, enabled)
@@ -119,17 +131,39 @@ internal class WebEffectGraph(
             }
         }
         try {
-            input.disconnect()
+            input?.disconnect()
         } catch (_: Throwable) {
         }
         try {
-            output.disconnect()
+            output?.disconnect()
         } catch (_: Throwable) {
         }
     }
 
     companion object {
-        fun create(ctx: AudioContext, type: AudioEffectType): WebEffectGraph {
+        fun forWasm(port: MessagePort?, id: Int): WebEffectGraph {
+            val apply: (Map<Int, Float>, Boolean) -> Unit = { params, enabled ->
+                if (port != null) {
+                    val db = params[GainParams.GAIN_DB] ?: 0f
+                    postWorkletParam(
+                        port,
+                        id,
+                        AudioMath.dbToLinear(db),
+                        params[GainParams.FADE_MS] ?: 0f,
+                        enabled,
+                    )
+                }
+            }
+            val disposers = listOf {
+                if (port != null) postWorkletDrop(port, id)
+            }
+            return WebEffectGraph(null, null, apply, disposers, id)
+        }
+
+        fun create(ctx: AudioContext, type: AudioEffectType, port: MessagePort?): WebEffectGraph {
+            if (type == AudioEffectType.GAIN) {
+                return forWasm(port, allocateWasmEffectId())
+            }
             val input = ctx.createGain()
             val output = ctx.createGain()
             val dry = ctx.createGain()
@@ -216,24 +250,7 @@ private fun buildGraph(
     }
 
     return when (type) {
-        AudioEffectType.GAIN -> {
-            val gain = ctx.createGain()
-            input.connect(gain)
-            gain.connect(wet)
-            var lastGainDb: Float? = null
-            val apply: (Map<Int, Float>, Boolean) -> Unit = { params, enabled ->
-                wireMix(dry, wet, enabled)
-                val db = params[GainParams.GAIN_DB] ?: 0f
-                val fadeMs = params[GainParams.FADE_MS] ?: 0f
-                val target = dbToGain(db)
-                val gainChanged = lastGainDb == null || lastGainDb != db
-                lastGainDb = db
-                if (gainChanged) {
-                    applyLinearGain(ctx, gain.gain, target, fadeMs)
-                }
-            }
-            apply
-        }
+        AudioEffectType.GAIN -> error("Gain is a wasm handle, not a Web Audio node")
         AudioEffectType.PAN -> {
             val pan = ctx.createStereoPanner()
             input.connect(pan)

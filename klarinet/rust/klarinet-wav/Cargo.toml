@@ -1,0 +1,12 @@
+[package]
+name = "klarinet_wav"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "16-bit PCM and 32-bit float WAV encode and decode shared by JS wasm and the JVM."
+
+[lib]
+path = "src/lib.rs"
+
+[profile.release]
+panic = "abort"

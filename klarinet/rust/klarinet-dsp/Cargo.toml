@@ -1,0 +1,22 @@
+[package]
+name = "klarinet_dsp_core"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Klarinet DSP core. Queues, offload, primitives, effects, and the effect chain."
+
+[features]
+default = ["queues"]
+queues = []
+effects = []
+analysis = []
+
+[lib]
+crate-type = ["staticlib", "rlib"]
+path = "src/lib.rs"
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"

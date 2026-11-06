@@ -15,6 +15,11 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - name: Set up Rust and Zig
+        uses: ./.github/actions/setup-klarinet-native
+        with:
+          suite: full
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 

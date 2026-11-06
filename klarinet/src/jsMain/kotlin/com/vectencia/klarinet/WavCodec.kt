@@ -1,4 +1,8 @@
+@file:OptIn(ExperimentalWasmJsInterop::class)
+
 package com.vectencia.klarinet
+
+import kotlin.js.ExperimentalWasmJsInterop
 
 internal data class DecodedWav(
     val samples: FloatArray,
@@ -7,114 +11,89 @@ internal data class DecodedWav(
 )
 
 internal fun encodeWav16(samples: FloatArray, sampleRate: Int, channelCount: Int): ByteArray {
-    val dataSize = samples.size * 2
-    val bytes = ByteArray(44 + dataSize)
-    writeAscii(bytes, 0, "RIFF")
-    writeInt32(bytes, 4, 36 + dataSize)
-    writeAscii(bytes, 8, "WAVE")
-    writeAscii(bytes, 12, "fmt ")
-    writeInt32(bytes, 16, 16)
-    writeInt16(bytes, 20, 1)
-    writeInt16(bytes, 22, channelCount)
-    writeInt32(bytes, 24, sampleRate)
-    writeInt32(bytes, 28, sampleRate * channelCount * 2)
-    writeInt16(bytes, 32, channelCount * 2)
-    writeInt16(bytes, 34, 16)
-    writeAscii(bytes, 36, "data")
-    writeInt32(bytes, 40, dataSize)
-    var offset = 44
-    for (sample in samples) {
-        val pcm = (sample.coerceIn(-1f, 1f) * 32767f).toInt().coerceIn(-32768, 32767)
-        writeInt16(bytes, offset, pcm)
-        offset += 2
-    }
-    return bytes
+    val count = samples.size
+    val outCap = 44 + count * 2
+    val wasm = wasmExports()
+    val packed: dynamic = js(
+        """
+        var inBytes = count * 4;
+        var inPtr = count === 0 ? 0 : wasm.klarinet_wasm_alloc(inBytes);
+        var outPtr = wasm.klarinet_wasm_alloc(outCap);
+        if ((count !== 0 && !inPtr) || !outPtr) {
+          throw new Error('wasm alloc failed');
+        }
+        if (count !== 0) {
+          var view = new Float32Array(wasm.memory.buffer, inPtr, count);
+          for (var i = 0; i < count; i++) view[i] = samples[i];
+        }
+        var n = wasm.encode_wav16(inPtr, count, sampleRate | 0, channelCount | 0, outPtr, outCap);
+        if (inPtr) wasm.klarinet_wasm_free(inPtr, inBytes);
+        if (n < 0) {
+          wasm.klarinet_wasm_free(outPtr, outCap);
+          throw new Error('encode failed');
+        }
+        var copy = new Uint8Array(wasm.memory.buffer, outPtr, n);
+        var out = new Array(n);
+        for (var j = 0; j < n; j++) out[j] = copy[j] > 127 ? copy[j] - 256 : copy[j];
+        wasm.klarinet_wasm_free(outPtr, outCap);
+        out
+        """,
+    )
+    val length = jsLength(packed)
+    return ByteArray(length) { index -> (jsIndex(packed, index) as Int).toByte() }
 }
 
 internal fun decodeWav(bytes: ByteArray): DecodedWav {
-    if (bytes.size < 12 || !asciiEquals(bytes, 0, "RIFF") || !asciiEquals(bytes, 8, "WAVE")) {
-        throw AudioFileException("Not a WAV file")
-    }
-    var offset = 12
-    var format = 1
-    var channels = 1
-    var sampleRate = 44100
-    var bits = 16
-    var dataOffset = -1
-    var dataSize = 0
-    while (offset + 8 <= bytes.size) {
-        val size = readInt32(bytes, offset + 4)
-        val start = offset + 8
-        val end = (start + size).coerceAtMost(bytes.size)
-        when {
-            asciiEquals(bytes, offset, "fmt ") -> {
-                if (end < start + 16) throw AudioFileException("Invalid WAV fmt chunk")
-                format = readInt16(bytes, start)
-                channels = readInt16(bytes, start + 2)
-                sampleRate = readInt32(bytes, start + 4)
-                bits = readInt16(bytes, start + 14)
-            }
-            asciiEquals(bytes, offset, "data") -> {
-                dataOffset = start
-                dataSize = size
-            }
+    val byteLen = bytes.size
+    val sampleCap = if (byteLen > 0) byteLen / 2 else 0
+    val wasm = wasmExports()
+    val decoded: dynamic = js(
+        """
+        var inPtr = byteLen === 0 ? 0 : wasm.klarinet_wasm_alloc(byteLen);
+        var outBytes = sampleCap * 4;
+        var outPtr = sampleCap === 0 ? 0 : wasm.klarinet_wasm_alloc(outBytes);
+        var infoPtr = wasm.klarinet_wasm_alloc(16);
+        if ((byteLen !== 0 && !inPtr) || (sampleCap !== 0 && !outPtr) || !infoPtr) {
+          throw new Error('wasm alloc failed');
         }
-        offset = start + size
-        if (size % 2 == 1) offset++
-    }
-    if (dataOffset < 0 || channels <= 0 || sampleRate <= 0) {
-        throw AudioFileException("WAV file is missing a data chunk")
-    }
-    val available = (bytes.size - dataOffset).coerceAtMost(dataSize)
-    val samples = when {
-        format == 1 && bits == 16 -> {
-            val count = available / 2
-            FloatArray(count) { index ->
-                readInt16(bytes, dataOffset + index * 2) / 32768f
-            }
+        if (byteLen !== 0) {
+          var input = new Uint8Array(wasm.memory.buffer, inPtr, byteLen);
+          for (var i = 0; i < byteLen; i++) input[i] = bytes[i] & 255;
         }
-        format == 3 && bits == 32 -> {
-            val count = available / 4
-            FloatArray(count) { index ->
-                Float.fromBits(readInt32(bytes, dataOffset + index * 4))
-            }
+        var n = wasm.decode_wav(inPtr, byteLen, outPtr, sampleCap, infoPtr, infoPtr + 4, infoPtr + 8, infoPtr + 12);
+        var info = new Int32Array(wasm.memory.buffer, infoPtr, 4);
+        var rate = info[0];
+        var channels = info[1];
+        var format = info[2];
+        var bits = info[3];
+        var samples = [];
+        if (n > 0) {
+          var view = new Float32Array(wasm.memory.buffer, outPtr, n);
+          for (var s = 0; s < n; s++) samples.push(view[s]);
         }
-        else -> throw AudioFileException("Unsupported WAV format (format=$format bits=$bits)")
+        if (inPtr) wasm.klarinet_wasm_free(inPtr, byteLen);
+        if (outPtr) wasm.klarinet_wasm_free(outPtr, outBytes);
+        wasm.klarinet_wasm_free(infoPtr, 16);
+        ({ code: n, rate: rate, channels: channels, format: format, bits: bits, samples: samples })
+        """,
+    )
+    val code = decoded.code as Int
+    if (code < 0) {
+        wasmDecodeError(code, decoded.format as Int, decoded.bits as Int)
     }
-    return DecodedWav(samples, sampleRate, channels)
+    val sampleList = decoded.samples
+    val length = jsLength(sampleList)
+    val samples = FloatArray(length) { index -> (jsIndex(sampleList, index) as Float) }
+    return DecodedWav(samples, decoded.rate as Int, decoded.channels as Int)
 }
 
-private fun writeAscii(bytes: ByteArray, offset: Int, value: String) {
-    for (i in value.indices) bytes[offset + i] = value[i].code.toByte()
-}
-
-private fun writeInt16(bytes: ByteArray, offset: Int, value: Int) {
-    bytes[offset] = (value and 0xFF).toByte()
-    bytes[offset + 1] = ((value ushr 8) and 0xFF).toByte()
-}
-
-private fun writeInt32(bytes: ByteArray, offset: Int, value: Int) {
-    bytes[offset] = (value and 0xFF).toByte()
-    bytes[offset + 1] = ((value ushr 8) and 0xFF).toByte()
-    bytes[offset + 2] = ((value ushr 16) and 0xFF).toByte()
-    bytes[offset + 3] = ((value ushr 24) and 0xFF).toByte()
-}
-
-private fun readInt16(bytes: ByteArray, offset: Int): Int {
-    val value = (bytes[offset].toInt() and 0xFF) or ((bytes[offset + 1].toInt() and 0xFF) shl 8)
-    return if (value >= 0x8000) value - 0x10000 else value
-}
-
-private fun readInt32(bytes: ByteArray, offset: Int): Int =
-    (bytes[offset].toInt() and 0xFF) or
-        ((bytes[offset + 1].toInt() and 0xFF) shl 8) or
-        ((bytes[offset + 2].toInt() and 0xFF) shl 16) or
-        ((bytes[offset + 3].toInt() and 0xFF) shl 24)
-
-private fun asciiEquals(bytes: ByteArray, offset: Int, value: String): Boolean {
-    if (offset + value.length > bytes.size) return false
-    for (i in value.indices) {
-        if ((bytes[offset + i].toInt() and 0xFF).toChar() != value[i]) return false
-    }
-    return true
+private fun wasmDecodeError(code: Int, format: Int, bits: Int): Nothing {
+    throw AudioFileException(
+        when (code) {
+            -2 -> "WAV file is missing a data chunk"
+            -3 -> "Invalid WAV fmt chunk"
+            -4 -> "Unsupported WAV format (format=$format bits=$bits)"
+            else -> "Not a WAV file"
+        },
+    )
 }

@@ -58,4 +58,53 @@ internal object JniBridge {
     external fun nativeGetDeviceName(index: Int): String
     external fun nativeGetDeviceSampleRates(index: Int): IntArray
     external fun nativeGetDeviceChannelCounts(index: Int): IntArray
+
+    external fun nativeFftCreate(size: Int): Long
+    external fun nativeFftDestroy(handle: Long)
+    external fun nativeFftForward(handle: Long, real: FloatArray, imag: FloatArray, length: Int)
+    external fun nativeFftMagnitude(
+        handle: Long,
+        real: FloatArray,
+        imag: FloatArray,
+        out: FloatArray,
+        outLen: Int,
+    )
+
+    external fun nativeMathRms(data: FloatArray, offset: Int, length: Int): Float
+    external fun nativeMathPeak(data: FloatArray, offset: Int, length: Int): Float
+    external fun nativeMathLinearToDb(linear: Float): Float
+    external fun nativeMathDbToLinear(db: Float): Float
+    external fun nativeMathHann(out: FloatArray, size: Int)
+
+    external fun nativeAnalyzerCreate(fftSize: Int, sampleRate: Int): Long
+    external fun nativeAnalyzerDestroy(handle: Long)
+    external fun nativeAnalyzerAnalyze(
+        handle: Long,
+        buffer: FloatArray,
+        bufferSamples: Int,
+        numFrames: Int,
+        channelCount: Int,
+        spectrum: FloatArray,
+        spectrumLen: Int,
+        levels: FloatArray,
+    )
+    external fun nativeAnalyzerBandEnergy(
+        spectrum: FloatArray,
+        spectrumLen: Int,
+        resolution: Float,
+        lowHz: Float,
+        highHz: Float,
+    ): Float
+
+    external fun nativeResamplerCreate(sourceRate: Int, channels: Int): Long
+    external fun nativeResamplerDestroy(handle: Long)
+    external fun nativeResamplerHasBuffered(handle: Long): Int
+    external fun nativeResampleLinear(
+        handle: Long,
+        destRate: Int,
+        dest: FloatArray,
+        destFrames: Int,
+        channels: Int,
+        read: ResamplerRead,
+    ): Int
 }

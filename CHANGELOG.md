@@ -7,21 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-06
+
+The published Kotlin API is unchanged.
+
 ### Changed
 
+- The shared DSP core is Rust: queues, the effect chain, the sixteen effects, and callback offload. The audio callback still does not allocate, lock, or enter Kotlin
+- JVM, Android (`arm64-v8a`, `armeabi-v7a`, `x86_64`), `linuxX64`, and every Gradle Apple DSP archive link that core. Vendored Oboe and miniaudio stay wrapped, not rewritten
+- `Fft`, `AudioAnalyzer`, `AudioMath`, and `LinearResampler` run in Rust on JVM, Android, JS, and Apple. Native desktop keeps the Kotlin body
+- JS Gain runs in the wasm worklet and uses `AudioMath.dbToLinear`. Other effect types stay Web Audio nodes. `SampleRing` stays the main-thread queue. A `FADE_MS` or enable change does not restart an in-progress gain ramp
+- JS and JVM WAV encode and decode use one Rust codec. Native desktop keeps miniaudio. Android keeps `MediaCodec`. Apple keeps `ExtAudioFile`. Compressed decode on JS stays `decodeAudioData`
+- iOS, tvOS, and watchOS demo sine callbacks fill through `klarinet_render_sine`
 - Android native backend uses Google Oboe 1.11.0. Data, error, and routing callbacks are `shared_ptr`s (`setDataCallback`, `setErrorCallback`, `setRoutingCallback`)
 - GitHub Pages site assembly is `scripts/assemble-pages.sh`, shared by the workflow and `make pages`
 
 ### Added
 
 - Android `observeRouteChanges` / `routeChangeFlow` emit `reason = "RoutingChanged"` when Oboe reports a routing change on API 37+. `previousRoute` is the previous device id list, or `unspecified`. Older Android versions still disconnect the stream and do not emit here
-- Demos (Compose, web, SwiftUI): 0.5.0 session APIs (`requestRecordPermission`, `routeChangeFlow` / `clearRouteChanges`, `AnalyzingCallback`, `asFlow`, BPF bandwidth in octaves, underrun counts) and a studio visual system with animated screen transitions
+- Demos (Compose, web, SwiftUI): session APIs (`requestRecordPermission`, `routeChangeFlow` / `clearRouteChanges`, `AnalyzingCallback`, `asFlow`, BPF bandwidth in octaves, underrun counts) and a studio visual system with animated screen transitions
 - `:sample` `perm` listen path for `hasRecordPermission` / `requestRecordPermission`
 
 ### Docs
 
 - GitHub Pages maintainer guide ([GITHUB_PAGES.md](GITHUB_PAGES.md)): published tree, enablement, workflow, `make pages` local preview, CORS/mic, troubleshooting
 - README and CONTRIBUTING link the live demo/`/api/` URLs to that guide
+- README installation samples use `0.6.0`
 
 ## [0.5.0] - 2026-09-13
 

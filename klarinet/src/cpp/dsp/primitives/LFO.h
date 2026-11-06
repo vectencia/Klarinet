@@ -29,6 +29,12 @@ namespace klarinet {
  */
 class LFO {
 public:
+#ifdef KLARINET_DSP_RUST_EFFECTS
+    LFO();
+    ~LFO();
+    LFO(const LFO&) = delete;
+    LFO& operator=(const LFO&) = delete;
+#endif
     /**
      * @brief Set the sample rate used for frequency-to-increment conversion.
      *
@@ -67,6 +73,9 @@ private:
     float phase_ = 0.0f;           ///< Current phase in radians [0, 2*PI).
     float phaseIncrement_ = 0.0f;  ///< Per-sample phase step (2*PI*freq/sampleRate).
     float sampleRate_ = 48000.0f;  ///< Cached sample rate in Hz.
+#ifdef KLARINET_DSP_RUST_EFFECTS
+    void* rust_ = nullptr;
+#endif
 };
 
 } // namespace klarinet

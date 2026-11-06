@@ -56,22 +56,78 @@ build_target() {
 
     mkdir -p "$build_dir"
 
-    cmake -S "$DSP_SRC" -B "$build_dir" \
-        -DCMAKE_SYSTEM_NAME=Darwin \
-        -DCMAKE_OSX_SYSROOT="$sysroot" \
-        -DCMAKE_OSX_ARCHITECTURES="$arch" \
-        -D"$deploy_var"="$deploy_val" \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_C_COMPILER="$(xcrun --sdk "$sdk" --find clang)" \
-        -DCMAKE_CXX_COMPILER="$(xcrun --sdk "$sdk" --find clang++)" \
-        -G "Unix Makefiles" \
-        > /dev/null 2>&1
-
-    cmake --build "$build_dir" --config Release -j "$(sysctl -n hw.logicalcpu)" \
-        > /dev/null 2>&1
+    # Bash 3.2 treats "${empty[@]}" as unbound when set -u is on. Append the
+    # Rust flags only for the target that moved, and keep the C++ targets on
+    # the original quiet cmake invocation.
+    local -a cmake_cmd=(
+        cmake -S "$DSP_SRC" -B "$build_dir"
+        -DCMAKE_SYSTEM_NAME=Darwin
+        -DCMAKE_OSX_SYSROOT="$sysroot"
+        -DCMAKE_OSX_ARCHITECTURES="$arch"
+        -D"$deploy_var"="$deploy_val"
+        -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_C_COMPILER="$(xcrun --sdk "$sdk" --find clang)"
+        -DCMAKE_CXX_COMPILER="$(xcrun --sdk "$sdk" --find clang++)"
+        -G "Unix Makefiles"
+    )
+    local rust_rel=""
+    if [[ "$kotlin_target" == "macosArm64" ]]; then
+        cmake_cmd+=(-DKLARINET_DSP_RUST_QUEUES=ON -DKLARINET_DSP_RUST_EFFECTS=ON)
+        rust_rel="rust-target/release/libklarinet_dsp_core.a"
+    elif [[ "$kotlin_target" == "iosSimulatorArm64" ]]; then
+        cmake_cmd+=(
+            -DKLARINET_DSP_RUST_QUEUES=ON
+            -DKLARINET_DSP_RUST_EFFECTS=ON
+            -DKLARINET_RUST_CARGO_TARGET=aarch64-apple-ios-sim
+        )
+        rust_rel="rust-target/aarch64-apple-ios-sim/release/libklarinet_dsp_core.a"
+    elif [[ "$kotlin_target" == "iosArm64" ]]; then
+        cmake_cmd+=(
+            -DKLARINET_DSP_RUST_QUEUES=ON
+            -DKLARINET_DSP_RUST_EFFECTS=ON
+            -DKLARINET_RUST_CARGO_TARGET=aarch64-apple-ios
+        )
+        rust_rel="rust-target/aarch64-apple-ios/release/libklarinet_dsp_core.a"
+    elif [[ "$kotlin_target" == "iosX64" ]]; then
+        cmake_cmd+=(
+            -DKLARINET_DSP_RUST_QUEUES=ON
+            -DKLARINET_DSP_RUST_EFFECTS=ON
+            -DKLARINET_RUST_CARGO_TARGET=x86_64-apple-ios
+        )
+        rust_rel="rust-target/x86_64-apple-ios/release/libklarinet_dsp_core.a"
+    elif [[ "$kotlin_target" == "tvosSimulatorArm64" ]]; then
+        cmake_cmd+=(
+            -DKLARINET_DSP_RUST_QUEUES=ON
+            -DKLARINET_DSP_RUST_EFFECTS=ON
+            -DKLARINET_RUST_CARGO_TARGET=aarch64-apple-tvos-sim
+        )
+        rust_rel="rust-target/aarch64-apple-tvos-sim/release/libklarinet_dsp_core.a"
+    elif [[ "$kotlin_target" == "tvosArm64" ]]; then
+        cmake_cmd+=(
+            -DKLARINET_DSP_RUST_QUEUES=ON
+            -DKLARINET_DSP_RUST_EFFECTS=ON
+            -DKLARINET_RUST_CARGO_TARGET=aarch64-apple-tvos
+        )
+        rust_rel="rust-target/aarch64-apple-tvos/release/libklarinet_dsp_core.a"
+    fi
+    if [[ -n "$rust_rel" ]]; then
+        cmake_cmd+=(-DKLARINET_DSP_RUST_ANALYSIS=ON)
+        "${cmake_cmd[@]}"
+        cmake --build "$build_dir" --config Release -j "$(sysctl -n hw.logicalcpu)"
+    else
+        "${cmake_cmd[@]}" > /dev/null 2>&1
+        cmake --build "$build_dir" --config Release -j "$(sysctl -n hw.logicalcpu)" \
+            > /dev/null 2>&1
+    fi
 
     # Copy the static library to the output directory
     cp "$build_dir/libklarinet-dsp.a" "$out_dir/libklarinet-dsp.a"
+    if [[ -n "$rust_rel" ]]; then
+        local rust_lib="$build_dir/$rust_rel"
+        local merged="$out_dir/libklarinet-dsp.merged.a"
+        libtool -static -o "$merged" "$out_dir/libklarinet-dsp.a" "$rust_lib"
+        mv "$merged" "$out_dir/libklarinet-dsp.a"
+    fi
 
     echo "-- $kotlin_target: done -> $out_dir/libklarinet-dsp.a"
 }

@@ -1,6 +1,40 @@
 #include "NoiseGate.h"
 #include <algorithm>
 
+#ifdef KLARINET_DSP_RUST_EFFECTS
+#include "klarinet_fx.h"
+
+namespace klarinet {
+
+NoiseGate::NoiseGate() : AudioEffect(EffectType::NoiseGate) {
+    rust_ = klarinet_fx_create(static_cast<int32_t>(EffectType::NoiseGate));
+}
+
+void NoiseGate::process(float* buffer, int32_t numFrames, int32_t channelCount) {
+    if (!isEnabled()) return;
+    klarinet_fx_process(rust_, buffer, numFrames, channelCount);
+}
+
+void NoiseGate::setParameter(int32_t paramId, float value) {
+    klarinet_fx_set_parameter(rust_, paramId, value);
+}
+
+float NoiseGate::getParameter(int32_t paramId) const {
+    return klarinet_fx_get_parameter(rust_, paramId);
+}
+
+void NoiseGate::prepare(int32_t sampleRate, int32_t channelCount) {
+    sampleRate_ = sampleRate;
+    channelCount_ = channelCount;
+    klarinet_fx_prepare(rust_, sampleRate, channelCount);
+}
+
+void NoiseGate::reset() {
+    klarinet_fx_reset(rust_);
+}
+
+} // namespace klarinet
+#else
 namespace klarinet {
 
 NoiseGate::NoiseGate() : AudioEffect(EffectType::NoiseGate) {}
@@ -106,3 +140,5 @@ void NoiseGate::reset() {
 }
 
 } // namespace klarinet
+
+#endif

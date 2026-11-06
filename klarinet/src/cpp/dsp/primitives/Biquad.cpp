@@ -23,6 +23,34 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+#ifdef KLARINET_DSP_RUST_EFFECTS
+#include "klarinet_fx.h"
+
+namespace klarinet {
+
+Biquad::Biquad() : rust_(klarinet_biquad_create()) {}
+
+Biquad::~Biquad() {
+    if (rust_ != nullptr) {
+        klarinet_biquad_destroy(rust_);
+    }
+}
+
+void Biquad::configure(BiquadType type, float frequency, float q, float gainDb, float sampleRate) {
+    klarinet_biquad_configure(
+        rust_, static_cast<int32_t>(type), frequency, q, gainDb, sampleRate);
+}
+
+float Biquad::process(float input) {
+    return klarinet_biquad_process(rust_, input);
+}
+
+void Biquad::reset() {
+    klarinet_biquad_reset(rust_);
+}
+
+} // namespace klarinet
+#else
 namespace klarinet {
 
 void Biquad::configure(BiquadType type, float frequency, float q, float gainDb, float sampleRate) {
@@ -169,3 +197,5 @@ void Biquad::reset() {
 }
 
 } // namespace klarinet
+
+#endif
