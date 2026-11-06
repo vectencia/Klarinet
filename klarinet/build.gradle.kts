@@ -405,7 +405,8 @@ tasks.register("verifyDspEmbeddedInAppleKlibs") {
                 .redirectErrorStream(true)
                 .start()
             val out = nm.inputStream.bufferedReader().readText()
-            check(nm.waitFor() == 0) { "nm failed on $archive\n$out" }
+            // Xcode nm exits non-zero on LLVM 23 Rust objects after printing their symbols.
+            nm.waitFor()
             symbols.forEach { symbol ->
                 val defined = out.lineSequence().any { line ->
                     line.contains(symbol) && (
