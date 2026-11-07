@@ -85,6 +85,12 @@ tasks.withType<Test>().matching { it.name == "testAndroidHostTest" }.configureEa
 
 dokka {
     moduleName.set("Klarinet Coroutines")
+    dokkaSourceSets.configureEach {
+        includes.from(layout.projectDirectory.file("dokka/module.md"))
+    }
+    dokkaPublications.html {
+        includes.from(layout.projectDirectory.file("dokka/module.md"))
+    }
 }
 
 mavenPublishing {

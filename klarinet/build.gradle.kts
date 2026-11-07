@@ -360,6 +360,12 @@ tasks.withType<Test>().matching { it.name == "testAndroidHostTest" }.configureEa
 
 dokka {
     moduleName.set("Klarinet")
+    dokkaSourceSets.configureEach {
+        includes.from(layout.projectDirectory.file("dokka/module.md"))
+    }
+    dokkaPublications.html {
+        includes.from(layout.projectDirectory.file("dokka/module.md"))
+    }
 }
 
 val appleDspTargets = listOf(
@@ -503,7 +509,7 @@ val generateKlarinetWasm = tasks.register("generateKlarinetWasm") {
     }
 }
 
-tasks.matching { it.name == "compileKotlinJs" }.configureEach {
+tasks.matching { it.name == "compileKotlinJs" || it.name == "jsSourcesJar" }.configureEach {
     dependsOn(generateKlarinetWasm)
 }
 

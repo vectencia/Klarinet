@@ -467,7 +467,7 @@ Minimal command-line demos that play a 440 Hz sine wave for 3 seconds, proving l
 
 ## API Reference
 
-Hosted Dokka HTML (same Pages deploy as the web demo): [vectencia.github.io/Klarinet/api/](https://vectencia.github.io/Klarinet/api/). Generate locally with `./gradlew :dokkaGenerate` (`build/dokka/html/`).
+Hosted Dokka HTML (same Pages deploy as the web demo): [vectencia.github.io/Klarinet/api/](https://vectencia.github.io/Klarinet/api/). The Klarinet module page has install, a playback and effects implementation, and the Android, Apple, and browser host steps. Generate locally with `./gradlew :dokkaGenerate` (`build/dokka/html/`).
 
 ### Core Types
 

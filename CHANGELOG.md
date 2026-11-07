@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.6.0] - 2026-11-06
+## [0.6.0] - 2026-11-07
 
 The published Kotlin API is unchanged.
 
@@ -28,11 +28,16 @@ The published Kotlin API is unchanged.
 - Demos (Compose, web, SwiftUI): session APIs (`requestRecordPermission`, `routeChangeFlow` / `clearRouteChanges`, `AnalyzingCallback`, `asFlow`, BPF bandwidth in octaves, underrun counts) and a studio visual system with animated screen transitions
 - `:sample` `perm` listen path for `hasRecordPermission` / `requestRecordPermission`
 
+### Fixed
+
+- Maven publish builds `:klarinet:jsSourcesJar` after `generateKlarinetWasm`, so the generated wasm source is in the jar
+
 ### Docs
 
 - GitHub Pages maintainer guide ([GITHUB_PAGES.md](GITHUB_PAGES.md)): published tree, enablement, workflow, `make pages` local preview, CORS/mic, troubleshooting
 - README and CONTRIBUTING link the live demo/`/api/` URLs to that guide
 - README installation samples use `0.6.0`
+- Dokka module pages for Klarinet and Klarinet Coroutines include the install coordinates, a playback and effects implementation, and the Android, Apple, JVM, and browser host steps
 
 ## [0.5.0] - 2026-09-13
 
