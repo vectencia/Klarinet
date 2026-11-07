@@ -32,6 +32,12 @@ jobs:
         with:
           suite: wasm
 
+      # Dokka compiles linuxX64, and that cinterop builds the miniaudio wrapper with zig.
+      - name: Set up Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.14.1
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
