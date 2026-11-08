@@ -1,4 +1,4 @@
-.PHONY: build klarinet demo sample docs pages test test-klarinet test-coroutines test-dsp test-android test-ios test-js test-all clean publish
+.PHONY: build klarinet demo sample spiritbox docs pages test test-klarinet test-coroutines test-dsp test-android test-ios test-js test-all clean publish
 
 build:
 	./gradlew build
@@ -11,6 +11,9 @@ demo:
 
 sample:
 	./gradlew :sample:run
+
+spiritbox:
+	demos/spirit-box/gradlew -p demos/spirit-box :composeApp:jvmTest
 
 docs:
 	./gradlew :dokkaGenerate

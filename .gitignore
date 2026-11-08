@@ -19,5 +19,7 @@ captures
 node_modules/
 .claude/
 .worktrees/
-/docs/
+# klarinet.md is published. The rest of docs/ stays local.
+/docs/**
+!/docs/klarinet.md
 /public/
